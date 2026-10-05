@@ -240,6 +240,17 @@ var Store = (function (data) {
     a.push(entry); a.sort(byDay);
     return { ok: true };
   }
+  /* "Training in Kalender eintragen": a free slot gets the snapshot of today's checklist, a slot that only holds the bare letter
+     (an entry from the old version or one added by hand) gets the details, a slot that already has details is left untouched. */
+  function logSession(state, key, day, today) {
+    if (!parseKey(key)) return { ok: false, reason: 'invalid' };
+    if (key > today) return { ok: false, reason: 'future' };
+    var snap = snapshot(state, day), cur = logEntry(state, key, day);
+    if (!cur) return addLog(state, key, snap, today);
+    if (entrySummary(cur).hasDetails) return { ok: false, reason: 'exists' };
+    cur.sets = snap.sets; cur.weights = snap.weights;
+    return { ok: true, filled: true };
+  }
   function removeLog(state, key, day) {
     var a = state.log[key];
     if (!a) return null;
@@ -373,7 +384,7 @@ var Store = (function (data) {
     isObj: isObj, pad: pad, keyOf: keyOf, todayKey: todayKey, parseKey: parseKey, addDays: addDays, num: num, fmt: fmt, numStr: numStr, uid: uid,
     newState: newState, migrate: migrate, schemaOf: schemaOf, parseBackup: parseBackup, toText: toText,
     load: load, save: save, backupBefore: backupBefore, counts: counts, isEmpty: isEmpty, refreshDays: refreshDays,
-    logEntry: logEntry, snapshot: snapshot, blankEntry: blankEntry, addLog: addLog, removeLog: removeLog, restoreLog: restoreLog, moveLog: moveLog,
+    logEntry: logEntry, snapshot: snapshot, blankEntry: blankEntry, addLog: addLog, logSession: logSession, removeLog: removeLog, restoreLog: restoreLog, moveLog: moveLog,
     setEntrySets: setEntrySets, setEntryWeight: setEntryWeight, setEntryNote: setEntryNote, entrySummary: entrySummary, loggedDate: loggedDate,
     entryTotals: entryTotals, dayTotals: dayTotals, partsOf: partsOf,
     newDraft: newDraft, draftFromEntry: draftFromEntry, entryFromDraft: entryFromDraft, isBlankEntry: isBlankEntry, copyEntry: copyEntry,

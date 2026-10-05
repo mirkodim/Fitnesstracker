@@ -297,3 +297,24 @@ test('Datumshilfen', () => {
   assert.equal(Store.parseKey('2026-05-05').getDate(), 5);
   assert.match(Store.todayKey(), /^\d{4}-\d{2}-\d{2}$/);
 });
+
+test('Training eintragen: freier Platz, nackter Eintrag bekommt Details, Eintrag mit Details bleibt unberührt', () => {
+  const today = '2026-10-05';
+  const s = Store.newState();
+  s.sets.A = { 'a-box': 3, 'a-hip': 2 };
+  s.weights = { 'a-box': '60' };
+  // freier Platz
+  assert.deepEqual(Store.logSession(s, '2026-10-05', 'A', today), { ok: true });
+  assert.deepEqual(s.log['2026-10-05'][0], { day: 'A', sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: '' });
+  // Eintrag mit Details wird nicht überschrieben
+  s.sets.A = { 'a-box': 1 };
+  assert.deepEqual(Store.logSession(s, '2026-10-05', 'A', today), { ok: false, reason: 'exists' });
+  assert.deepEqual(s.log['2026-10-05'][0].sets, { 'a-box': 3, 'a-hip': 2 });
+  // nackter Eintrag (alt oder von Hand) bekommt die Details, die Notiz bleibt
+  s.log['2026-10-04'] = [{ day: 'A', sets: {}, weights: {}, note: 'von Hand' }];
+  assert.deepEqual(Store.logSession(s, '2026-10-04', 'A', today), { ok: true, filled: true });
+  assert.deepEqual(s.log['2026-10-04'][0], { day: 'A', sets: { 'a-box': 1 }, weights: { 'a-box': '60' }, note: 'von Hand' });
+  // ungültig / Zukunft
+  assert.equal(Store.logSession(s, '2026-10-06', 'A', today).reason, 'future');
+  assert.equal(Store.logSession(s, 'x', 'A', today).reason, 'invalid');
+});
