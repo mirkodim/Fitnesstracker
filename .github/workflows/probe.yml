@@ -1,0 +1,32 @@
+name: Probe
+# Nur zur Fehlersuche: welche Art von Job bekommt auf GitHub keinen Runner? (Nur auf diesem Test-Zweig.)
+on:
+  push:
+    branches: ['claude/pages-probe']
+
+jobs:
+  plain:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain
+  second:
+    needs: plain
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo second
+  env-job:
+    runs-on: ubuntu-latest
+    environment: probe-env
+    steps:
+      - run: echo env
+  perms:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - run: echo perms
+  pinned:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo pinned
