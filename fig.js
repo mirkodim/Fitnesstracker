@@ -16,12 +16,36 @@ var FIG = (function () {
   }
 
   /* pose spec -> normalised pose: hip, th (torso angle from vertical, + = leaning forward), ankle, fa (foot angle, + = toes down),
-     wr (wrist relative to shoulder) or wrist (absolute), ankle2/fa2 (second leg), ha (head angle), round (spine bulge), es (elbow side) */
+     wr (wrist relative to shoulder), wrist (absolute) or wt (wrist relative to the hip, in the torso's frame: [along the torso towards
+     the knees, out of the front], for a bar resting on the hips), ankle2/fa2 (second leg), ha (head angle), round (spine bulge), es (elbow side).
+     Two more ways to describe the body make a move follow its true circle instead of the straight line between two keyframes,
+     so segment lengths and a straight body stay intact while it moves:
+       { ankle, lean, torso }  legs straight from the ankle at angle lean (from vertical), torso at angle torso (default: same, a straight body)
+       { sh, th }              shoulder pinned (on a bench), torso angle th, the hip follows */
+  function rigApply(q) {
+    var r = q.rig, sh, hip, t;
+    if (r.k === 'ank') {
+      t = r.a * D2R;
+      hip = [q.ankle[0] + (LT + LS) * Math.sin(t), q.ankle[1] - (LT + LS) * Math.cos(t)];
+      t = r.t * D2R;
+      sh = [hip[0] + LB * Math.sin(t), hip[1] - LB * Math.cos(t)];
+    } else {
+      sh = r.sh; t = r.th * D2R;
+      hip = [sh[0] - LB * Math.sin(t), sh[1] + LB * Math.cos(t)];
+    }
+    q.hip = hip;
+    q.th = Math.atan2(sh[0] - hip[0], -(sh[1] - hip[1])) / D2R;
+  }
   function norm(p) {
-    var q = { hip: p.hip.slice() };
-    if (p.sh) q.th = Math.atan2(p.sh[0] - p.hip[0], -(p.sh[1] - p.hip[1])) / D2R; else q.th = p.th;
+    var q = {};
+    if (p.lean != null) { q.ankle = p.ankle.slice(); q.rig = { k: 'ank', a: p.lean, t: p.torso != null ? p.torso : p.lean }; rigApply(q); }
+    else if (p.sh && p.th != null && !p.hip) { q.ankle = p.ankle.slice(); q.rig = { k: 'sh', th: p.th, sh: p.sh.slice() }; rigApply(q); }
+    else {
+      q.hip = p.hip.slice();
+      if (p.sh) q.th = Math.atan2(p.sh[0] - p.hip[0], -(p.sh[1] - p.hip[1])) / D2R; else q.th = p.th;
+    }
     q.ankle = p.ankle.slice(); q.fa = p.fa || 0;
-    if (p.wr) q.wr = p.wr.slice(); else q.wrist = p.wrist.slice();
+    if (p.wt) q.wt = p.wt.slice(); else if (p.wr) q.wr = p.wr.slice(); else q.wrist = p.wrist.slice();
     if (p.ankle2) { q.ankle2 = p.ankle2.slice(); q.fa2 = p.fa2 || 0; }
     q.ha = p.ha != null ? p.ha : (Math.abs(q.th) < 45 ? q.th * 0.5 : q.th - (q.th > 0 ? 10 : -10));
     q.round = p.round || 0;
@@ -34,15 +58,21 @@ var FIG = (function () {
   function mix(a, b, t) {
     var q = { hip: lerpP(a.hip, b.hip, t), th: lerp(a.th, b.th, t), ankle: lerpP(a.ankle, b.ankle, t), fa: lerp(a.fa, b.fa, t),
       ha: lerp(a.ha, b.ha, t), round: lerp(a.round, b.round, t), es: b.es };
-    if (a.wr) q.wr = lerpP(a.wr, b.wr, t); else q.wrist = lerpP(a.wrist, b.wrist, t);
+    if (a.wt) q.wt = lerpP(a.wt, b.wt, t); else if (a.wr) q.wr = lerpP(a.wr, b.wr, t); else q.wrist = lerpP(a.wrist, b.wrist, t);
     if (a.ankle2) { q.ankle2 = lerpP(a.ankle2, b.ankle2, t); q.fa2 = lerp(a.fa2, b.fa2, t); }
+    if (a.rig && b.rig && a.rig.k === b.rig.k) {
+      q.rig = a.rig.k === 'ank' ? { k: 'ank', a: lerp(a.rig.a, b.rig.a, t), t: lerp(a.rig.t, b.rig.t, t) }
+        : { k: 'sh', th: lerp(a.rig.th, b.rig.th, t), sh: lerpP(a.rig.sh, b.rig.sh, t) };
+      rigApply(q);
+    }
     return q;
   }
 
   function solve(q) {
     var r = q.th * D2R, hip = q.hip;
     var sh = [hip[0] + LB * Math.sin(r), hip[1] - LB * Math.cos(r)];
-    var wrist = q.wr ? [sh[0] + q.wr[0], sh[1] + q.wr[1]] : q.wrist;
+    var wrist = q.wt ? [hip[0] - Math.sin(r) * q.wt[0] + Math.cos(r) * q.wt[1], hip[1] + Math.cos(r) * q.wt[0] + Math.sin(r) * q.wt[1]]
+      : (q.wr ? [sh[0] + q.wr[0], sh[1] + q.wr[1]] : q.wrist);
     var hr = q.ha * D2R, hd = NECK + HR;
     var fr = q.fa * D2R;
     var j = { hip: hip, sh: sh, th: q.th, round: q.round, ankle: q.ankle, wrist: wrist,
@@ -109,6 +139,11 @@ var FIG = (function () {
     var phi = Math.atan2(ank[1] - sh[1], -(ank[0] - sh[0])) + delta * D2R;
     return [sh[0] - LB * Math.cos(phi), sh[1] + LB * Math.sin(phi)];
   }
+  function leanOf(sh, ank) { return Math.atan2(sh[0] - ank[0], -(sh[1] - ank[1])) / D2R; }   // lean angle of a straight body (shoulder exactly 118 from the ankle)
+  function bendBody(ank, sh, side) {           // legs straight, hip off the ankle-shoulder line (side +1 = below / in front); lengths stay exact
+    var h = ik(ank, sh, LT + LS, LB, side);
+    return { lean: Math.atan2(h[0] - ank[0], -(h[1] - ank[1])) / D2R, torso: Math.atan2(sh[0] - h[0], -(sh[1] - h[1])) / D2R };
+  }
   function floorBody(ankle, shY) { return [ankle[0] + Math.sqrt(118 * 118 - (ankle[1] - shY) * (ankle[1] - shY)), shY]; }
   function body(shoulder, ankle, o) {            // straight body line from ankle to shoulder (hands/forearms pinned)
     o = o || {};
@@ -139,8 +174,8 @@ var FIG = (function () {
   (function () {
     var hand = [190, G - 2], A = [190 - Math.sqrt(118 * 118 - 40 * 40), G - 12];
     var shUp = [190, 122], shDn = floorBody(A, 150);
-    var up = norm(body(shUp, A, { fa: 70, wrist: hand }));
-    var dn = norm(body(shDn, A, { fa: 70, wrist: hand }));
+    var up = norm({ ankle: A, lean: leanOf(shUp, A), fa: 70, wrist: hand });     // same poses as before, but the body pivots about the feet,
+    var dn = norm({ ankle: A, lean: leanOf(shDn, A), fa: 70, wrist: hand });     // so it stays one straight line on the way down and up
     var sag = norm(body(shUp, A, { fa: 70, wrist: hand, delta: 20 }));
     ANIM['a-push'] = { reps: 2, hl: ['torso', 'upper', 'fore'], props: [],
       steps: [
@@ -151,16 +186,40 @@ var FIG = (function () {
       ] };
   })();
 
-  /* Trizeps-Drücken (Band) */
+  /* TRX-Trizepsstrecken: the body pivots about the feet, the hands stay where the straps hold them.
+     Start: straight arms in front of the head. Down: only the elbows bend, the head sinks between the hands. Then press back up. */
   (function () {
-    var A = [150, G];
-    var top = norm({ hip: [148, G - 71], th: 8, ankle: A, wr: [26, 28] });
-    var bot = norm({ hip: [148, G - 71], th: 8, ankle: A, wr: [8, 49] });
-    ANIM['a-tri'] = { reps: 3, hl: ['upper'],
-      props: [{ t: 'box', x: 232, y: 8, w: 8, h: 170 }, { t: 'strap', anchor: [236, 18], at: 'wrist', band: true }],
+    var A = [100, G], AN = [120, 12], a0 = 44, a1 = 62;
+    var S0 = [A[0] + 118 * Math.sin(a0 * D2R), A[1] - 118 * Math.cos(a0 * D2R)];
+    var W = [S0[0] + 50 * Math.cos(-5 * D2R), S0[1] - 50 * Math.sin(-5 * D2R)];
+    var up = norm({ ankle: A, lean: a0, wrist: W, ha: 18 });
+    var dn = norm({ ankle: A, lean: a1, wrist: W, ha: 18 });
+    var d = [4, 7], b = bendBody(A, [S0[0] + d[0], S0[1] + d[1]], 1);      // hips drop, shoulders and hands go a little with them
+    var sag = norm({ ankle: A, lean: b.lean, torso: b.torso, wrist: [W[0] + d[0], W[1] + d[1]], ha: 18 });
+    ANIM['a-tri'] = { reps: 2, hl: ['upper'], sweep: true,
+      props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: AN, at: 'wrist' }],
       steps: [
-        { pose: top, ms: 1600, hold: 500, label: 'Langsam zurück, Ellbogen bleiben am Körper' },
-        { pose: bot, ms: 1000, hold: 700, label: 'Arme nach unten ganz durchstrecken' }
+        { pose: up, ms: 1000, hold: 500, label: 'Kräftig hochdrücken, bis die Arme gestreckt sind' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Nur die Ellbogen beugen, der Kopf sinkt zwischen die Hände' },
+        { pose: up, ms: 1000, hold: 300, label: 'Kräftig hochdrücken, bis die Arme gestreckt sind' },
+        { pose: sag, ms: 800, hold: 1100, bad: true, label: 'Falsch: Hüfte hängt durch' }
+      ] };
+  })();
+
+  /* Hip Thrust: upper back on the bench (shoulder stays put), the hips go up and down, the feet stay put, the bar rests on the hips.
+     The figure is flat and low, so it is drawn larger (zoom). */
+  (function () {
+    var S = [105, 138], A = [187, G], WT = [3.74, 5];   // bar just above the hip crease, arms straight
+    var top = norm({ sh: S, th: -90, ankle: A, wt: WT, ha: -62, es: -1 });
+    var bot = norm({ sh: S, th: -55, ankle: A, wt: WT, ha: -62, es: -1 });
+    var bad = norm({ sh: S, th: -102, ankle: A, wt: WT, ha: -62, round: -7, es: -1 });
+    ANIM['a-hip'] = { reps: 2, hl: ['thigh'], sweep: true, zoom: 1.5,
+      props: [{ t: 'box', x: 78, y: 141, w: 36, h: 7 }, { t: 'box', x: 91, y: 148, w: 10, h: 29 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 11 }],
+      steps: [
+        { pose: top, ms: 1200, hold: 900, label: 'Hüfte hochdrücken, oben das Gesäß fest anspannen' },
+        { pose: bot, ms: 1800, hold: 500, label: 'Kontrolliert ablassen, die Hüfte bleibt knapp über dem Boden' },
+        { pose: top, ms: 1200, hold: 300, label: 'Hüfte hochdrücken, oben das Gesäß fest anspannen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, Hüfte zu hoch, Rippen offen' }
       ] };
   })();
 
@@ -199,8 +258,8 @@ var FIG = (function () {
     var A = [200, G], AN = [262, 22];
     function lean(a) { return [A[0] - 118 * Math.sin(a * D2R), A[1] - 118 * Math.cos(a * D2R)]; }
     var shS = lean(36), shE = lean(14);
-    var start = norm(body(shS, A, { wrist: [shS[0] + 45, shS[1] - 19], ha: -6 }));
-    var end = norm(body(shE, A, { wrist: [shE[0] + 11, shE[1] + 10], ha: -4 }));
+    var start = norm({ ankle: A, lean: -36, wrist: [shS[0] + 45, shS[1] - 19], ha: -6 });   // same poses as before, body pivots about the feet
+    var end = norm({ ankle: A, lean: -14, wrist: [shE[0] + 11, shE[1] + 10], ha: -4 });
     ANIM['b-row'] = { reps: 3, hl: ['torso', 'upper'],
       props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: AN, at: 'wrist' }],
       steps: [
@@ -256,23 +315,33 @@ var FIG = (function () {
   function ox(id) {
     var A = ANIM[id], lo = 1e9, hi = -1e9;
     function take(x) { if (x < lo) lo = x; if (x > hi) hi = x; }
-    A.steps.forEach(function (s) {
-      var j = solve(s.pose), k;
+    function pose(q) {
+      var j = solve(q), k;
       for (k in j) if (j[k] && j[k].length === 2) take(j[k][0]);
       take(j.head[0] - 9); take(j.head[0] + 9);
-    });
+      if (A.sweep) A.props.forEach(function (p) { if (p.t === 'plate') { var c = propPt(j, p); take(c[0] - p.r); take(c[0] + p.r); } });
+    }
+    A.steps.forEach(function (s) { pose(s.pose); });
+    if (A.sweep) {                       // moves along arcs: the in-between frames count for the bounds too
+      A.steps.forEach(function (s, i) {
+        var from = A.steps[(i + A.steps.length - 1) % A.steps.length].pose;
+        for (var u = 1; u < 10; u++) pose(mix(from, s.pose, u / 10));
+      });
+    }
     A.props.forEach(function (p) {
       if (p.t === 'box') { take(p.x); take(p.x + p.w); }
       if (p.t === 'anchor') { take(p.x - 12); take(p.x + 12); }
     });
-    return Math.round((W - (lo + hi)) / 2);
+    var z = A.zoom || 1;
+    return z === 1 ? Math.round((W - (lo + hi)) / 2) : Math.round(W / 2 - z * (lo + hi) / 2);
   }
   Object.keys(ANIM).forEach(function (id) { ANIM[id].ox = ox(id); });
 
   function frame(id, q, bad) {
-    var A = ANIM[id];
+    var A = ANIM[id], z = A.zoom || 1;
+    var tf = z === 1 ? 'translate(' + A.ox + ' 0)' : 'translate(' + A.ox + ' ' + FLOOR + ') scale(' + z + ') translate(0 -' + FLOOR + ')';
     return '<line class="fl" x1="6" y1="' + FLOOR + '" x2="' + (W - 6) + '" y2="' + FLOOR + '"/>' +
-      '<g transform="translate(' + A.ox + ' 0)">' + drawJoints(solve(q), { hl: A.hl, bad: bad, props: A.props }) + '</g>';
+      '<g transform="' + tf + '">' + drawJoints(solve(q), { hl: A.hl, bad: bad, props: A.props }) + '</g>';
   }
 
   return { ANIM: ANIM, solve: solve, mix: mix, frame: frame, W: W, H: H };
