@@ -4,7 +4,7 @@ var KNEE_NOTE = '<b>Knie:</b> Tiefe und Gewicht so, wie du es mit Physio oder MT
 
 var PLAN = {
   A: {
-    label: 'Tag A', focus: 'Kniebeuge + Hüftstrecker + Push',
+    label: 'Tag A', focus: 'Kniebeuge + Hüfte + Push',
     exercises: [
       { id: 'a-box', name: 'Box-Kniebeugen', gear: 'Langhantel', sets: 3, big: '8–10', unit: 'Wdh.', rest: 90, weight: true, knee: true,
         cues: ['Kontrolliert auf die Box setzen, kurz absetzen, wieder hoch.', 'Brust offen, Knie zeigen in Richtung der Zehen.'] },

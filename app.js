@@ -535,7 +535,7 @@
       var n = Math.min(e.sets[ex.id] || 0, ex.sets);
       h += '<div class="xrow"><p class="xname">' + ex.name + (ex.gear ? '<small>' + ex.gear + '</small>' : '') + '</p>' +
         '<div class="step"><button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="-1" aria-label="' + ex.name + ': einen Satz weniger"' + (n <= 0 ? ' disabled' : '') + '>−</button>' +
-        '<span class="cnt" role="status">' + n + '<small>von ' + ex.sets + ' Sätzen</small></span>' +
+        '<span class="cnt" role="status">' + n + ' <small>von ' + ex.sets + ' Sätzen</small></span>' +
         '<button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="1" aria-label="' + ex.name + ': einen Satz mehr"' + (n >= ex.sets ? ' disabled' : '') + '>+</button></div>';
       if (ex.weight) {
         h += '<div class="field"><label for="ew-' + ex.id + '">Gewicht (kg)</label>' +

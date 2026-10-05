@@ -318,6 +318,9 @@ button.row { cursor: pointer; }
 .fe-del { width: 48px; height: 48px; }
 .field input { min-height: 48px; }
 
+/* keep what is scrolled or tabbed to clear of the sticky header and the bottom bar */
+html { scroll-padding: 150px 0 90px; }
+
 /* update bar: lives outside #app, so a re-render never touches it */
 .upd { position: fixed; left: 0; right: 0; bottom: calc(65px + env(safe-area-inset-bottom, 0px)); z-index: 15; padding: 0 16px 8px; pointer-events: none; }
 .upd[hidden] { display: none; }
@@ -361,7 +364,7 @@ body.has-upd .wrap { padding-block-end: calc(104px + 76px + env(safe-area-inset-
 }
 .step button:disabled { opacity: .35; cursor: default; }
 .step .cnt { text-align: center; font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-.step .cnt small { margin-left: 4px; font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--muted); }
+.step .cnt small { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--muted); }
 .entry-body .fcol, .entry-body .calform { padding-top: 12px; }
 .entry-body textarea {
   width: 100%; min-width: 0; padding: 12px 14px; font: inherit; font-size: 17px; resize: vertical;
@@ -378,6 +381,8 @@ body.has-upd .wrap { padding-block-end: calc(104px + 76px + env(safe-area-inset-
 .fe .fe-del { position: absolute; top: 6px; right: 6px; margin: 0; }
 .fe.editing { border-color: var(--accent); background: var(--accent-soft); }
 .fe-hint { margin: 0 0 -2px; font-size: 14px; color: var(--muted); }
+.fe-src { display: block; }
+.entry-body .hint { padding-top: 10px; }
 .edit-actions { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
 
 /* backup panel */
