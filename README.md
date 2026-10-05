@@ -7,10 +7,10 @@ Kleine App zum Abhaken von zwei Trainingstagen (**Tag A** und **Tag B**): immer 
 ## Auf dem Handy installieren (Android, Chrome)
 
 1. Chrome öffnen und die Adresse oben eingeben.
-2. Menü **⋮** antippen und **„Installieren“** wählen (je nach Chrome-Version steht dort **„Zum Startbildschirm hinzufügen“** und dann **„Installieren“**).
-3. Die App erscheint auf dem Startbildschirm und öffnet sich ab jetzt **ohne Browser-Tab und ohne Adressleiste**.
-4. Die alte Verknüpfung (die einen neuen Tab öffnet) löschen.
-5. Alte Daten übernehmen: In der alten Version **„Daten sichern oder wiederherstellen“ → „Daten kopieren“**, dann in der neuen App im selben Menü den Text einfügen und **„Wiederherstellen“** tippen. Das ist nötig, weil der Speicher pro Adresse getrennt ist.
+2. Menü **⋮** antippen und **„Installieren“** wählen (je nach Chrome-Version steht dort **„Zum Startbildschirm hinzufügen“** und dann **„Installieren“**). Die App erscheint auf dem Startbildschirm und öffnet sich ab jetzt **ohne Browser-Tab und ohne Adressleiste**.
+3. Alte Daten übernehmen: In der alten Version **„Daten sichern oder wiederherstellen“ → „Daten kopieren“**, dann in der neuen App im selben Menü den Text einfügen und **„Wiederherstellen“** tippen. Das ist nötig, weil der Speicher pro Adresse getrennt ist.
+4. Im Kalender prüfen, ob die alten Einträge da sind.
+5. Erst dann die alte Verknüpfung (die einen neuen Tab öffnet) löschen.
 
 Den Text zur Sicherung kann man auch in eine Notiz legen. Zusätzlich gibt es **„Als Datei sichern“** und **„Aus Datei wiederherstellen“**. Eine Sicherung ersetzt die aktuellen Daten, deshalb fragt die App vorher nach, wenn schon etwas eingetragen ist.
 
@@ -24,6 +24,8 @@ Es gibt nichts zu installieren: Änderungen laufen über Git.
 4. Beim nächsten Öffnen der App erscheint unten die ruhige Leiste **„Neue Version bereit. Neu laden“**. Erst ein Tipp darauf lädt neu, nie mitten in einem Satz, einer Pause oder einem Plank. Die Daten bleiben dabei erhalten. Die Versionsnummer steht ganz unten in der App.
 
 Einmalig nötig: In den Repo-Einstellungen unter *Settings → Pages → Build and deployment → Source* **„GitHub Actions“** wählen. Das Repo muss öffentlich sein, weil GitHub Pages auf kostenlosen Konten sonst nicht läuft.
+
+Wenn ein Lauf nicht startet: GitHub lässt Jobs manchmal minutenlang auf *Queued* stehen, ohne dass es am Repo liegt (beim ersten Veröffentlichen kam das mehrfach vor). Dann im Tab *Actions* den Lauf öffnen, abbrechen und oben rechts **„Re-run failed jobs“** wählen. Dabei wird ein bereits fertiger Bau wiederverwendet; **„Re-run all jobs“** baut alles neu. Die veröffentlichte Seite bleibt in der Zwischenzeit unverändert.
 
 ## Daten und Datenschutz
 
