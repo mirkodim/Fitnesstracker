@@ -1,55 +1,90 @@
 name: Probe
-# Nur zur Fehlersuche: welche Art von Job bekommt auf GitHub keinen Runner? (Nur auf diesem Test-Zweig.)
+# Nur zur Fehlersuche: bekommen gleiche Jobs gleich oft einen Runner? (Nur auf diesem Test-Zweig.)
 on:
   push:
     branches: ['claude/pages-probe']
 
 jobs:
-  c1:
+  plain-1:
     runs-on: ubuntu-latest
     steps:
-      - run: echo control
-  c2:
+      - run: echo plain-1
+  plain-2:
     runs-on: ubuntu-latest
     steps:
-      - run: echo control
-  perm-contents:
+      - run: echo plain-2
+  plain-3:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-3
+  plain-4:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-4
+  plain-5:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-5
+  plain-6:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-6
+  plain-7:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-7
+  plain-8:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo plain-8
+  env-1:
+    runs-on: ubuntu-latest
+    environment: probe-env
+    steps:
+      - run: echo env-1
+  env-2:
+    runs-on: ubuntu-latest
+    environment: probe-env-b
+    steps:
+      - run: echo env-2
+  env-3:
+    runs-on: ubuntu-latest
+    environment: probe-env-c
+    steps:
+      - run: echo env-3
+  env-4:
+    runs-on: ubuntu-latest
+    environment: probe-env-d
+    steps:
+      - run: echo env-4
+  perm-contents-1:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - run: echo contents
+      - run: echo perm-contents-1
+  perm-contents-2:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo perm-contents-2
   perm-idtoken:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
-      - run: echo idtoken
+      - run: echo perm-idtoken
   perm-pages:
     runs-on: ubuntu-latest
     permissions:
       pages: write
     steps:
-      - run: echo pages
-  perm-empty:
+      - run: echo perm-pages
+  perm-both:
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      pages: write
+      id-token: write
     steps:
-      - run: echo empty
-  env-a:
-    runs-on: ubuntu-latest
-    environment: probe-env
-    steps:
-      - run: echo env
-  env-nodeploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: probe-env-nd
-      deployment: false
-    steps:
-      - run: echo env without deployment
-  env-b:
-    runs-on: ubuntu-latest
-    environment: probe-env-b
-    steps:
-      - run: echo env b
+      - run: echo perm-both
