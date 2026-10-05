@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trainings-Strichliste</title>
+<meta name="description" content="Trainingsplan zum Abhaken mit Pausen-Timer, Kalender und Essens-Tracker. Läuft ohne Internet, alle Daten bleiben auf dem Gerät.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ECF0F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1A1D" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="upd" id="upd" role="status" hidden>
+  <div class="upd-in"><span>Neue Version bereit.</span><button type="button" id="upd-go">Neu laden</button></div>
+</div>
+<noscript><div class="wrap"><p>Diese App braucht JavaScript.</p></div></noscript>
+<script src="version.js"></script>
+<script src="plan.js"></script>
+<script src="fig.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
