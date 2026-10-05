@@ -5,28 +5,51 @@ on:
     branches: ['claude/pages-probe']
 
 jobs:
-  plain:
+  c1:
     runs-on: ubuntu-latest
     steps:
-      - run: echo plain
-  second:
-    needs: plain
+      - run: echo control
+  c2:
     runs-on: ubuntu-latest
     steps:
-      - run: echo second
-  env-job:
+      - run: echo control
+  perm-contents:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo contents
+  perm-idtoken:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: echo idtoken
+  perm-pages:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+    steps:
+      - run: echo pages
+  perm-empty:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo empty
+  env-a:
     runs-on: ubuntu-latest
     environment: probe-env
     steps:
       - run: echo env
-  perms:
+  env-nodeploy:
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
+    environment:
+      name: probe-env-nd
+      deployment: false
     steps:
-      - run: echo perms
-  pinned:
-    runs-on: ubuntu-24.04
+      - run: echo env without deployment
+  env-b:
+    runs-on: ubuntu-latest
+    environment: probe-env-b
     steps:
-      - run: echo pinned
+      - run: echo env b
