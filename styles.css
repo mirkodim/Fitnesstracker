@@ -335,6 +335,9 @@ html { scroll-padding: 150px 0 90px; }
 }
 body.has-upd .wrap { padding-block-end: calc(104px + 76px + env(safe-area-inset-bottom, 0px)); }
 
+/* keep the right-hand figures of a header line together */
+.prog span:last-child { white-space: nowrap; }
+
 /* footer */
 .foot .ver { font-size: 13px; }
 .foot .warn { color: var(--warm); }
@@ -363,8 +366,8 @@ body.has-upd .wrap { padding-block-end: calc(104px + 76px + env(safe-area-inset-
   font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1;
 }
 .step button:disabled { opacity: .35; cursor: default; }
-.step .cnt { text-align: center; font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-.step .cnt small { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--muted); }
+.step .cnt { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.step .cnt small { font-family: var(--font-body); font-size: 14px; font-weight: 500; line-height: 1.1; color: var(--muted); }
 .entry-body .fcol, .entry-body .calform { padding-top: 12px; }
 .entry-body textarea {
   width: 100%; min-width: 0; padding: 12px 14px; font: inherit; font-size: 17px; resize: vertical;

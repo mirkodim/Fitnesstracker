@@ -1,11 +1,13 @@
 import { test as base, expect } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { startServer } from '../../tools/serve.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const SITE = path.join(ROOT, 'tests', 'out', 'site');
 export const KEY = 'strichliste.v1';
+export const EXE = process.env.CHROMIUM_PATH || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 export const TODAY = '2026-10-05';          // the fixed "today" of most tests (a Monday)
 export { expect };
 
@@ -19,7 +21,7 @@ export const test = base.extend({
   }, { scope: 'worker' }],
 
   diag: async ({ context, page, site }, use) => {
-    const d = { errors: [], external: [], failed: [], warnings: [], requests: [] };
+    const d = { errors: [], external: [], failed: [], warnings: [], requests: [], own: [] };       // own: further origins of the app itself (a test's own server)
     page.on('console', (m) => {
       if (m.type() === 'error') d.errors.push('console.error: ' + m.text());
       if (m.type() === 'warning') d.warnings.push(m.text());
@@ -28,7 +30,7 @@ export const test = base.extend({
     context.on('request', (r) => {
       const u = r.url();
       d.requests.push(u);
-      if (!u.startsWith(site.origin + '/') && !/^(data|blob|about):/.test(u)) d.external.push(u);
+      if (!u.startsWith(site.origin + '/') && !d.own.some((o) => u.startsWith(o + '/')) && !/^(data|blob|about):/.test(u)) d.external.push(u);
     });
     context.on('requestfailed', (r) => { if (!/net::ERR_ABORTED/.test(r.failure()?.errorText || '')) d.failed.push(r.url() + ' ' + (r.failure()?.errorText || '')); });
     await use(d);
@@ -50,3 +52,9 @@ export async function openApp(page, site, { now = TODAY + 'T10:00:00', state = n
 
 export const stored = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), KEY);
 export const tab = (page, name) => page.locator('nav.nav').getByRole('button', { name });
+
+/* Waits until the service worker controls the page (first visit: it installs, activates and claims). */
+export async function waitControlled(page) {
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 15_000 }).toBe(true);
+}

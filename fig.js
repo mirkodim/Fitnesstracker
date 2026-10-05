@@ -213,7 +213,7 @@ var FIG = (function () {
     var top = norm({ sh: S, th: -90, ankle: A, wt: WT, ha: -62, es: -1 });
     var bot = norm({ sh: S, th: -55, ankle: A, wt: WT, ha: -62, es: -1 });
     var bad = norm({ sh: S, th: -102, ankle: A, wt: WT, ha: -62, round: -7, es: -1 });
-    ANIM['a-hip'] = { reps: 2, hl: ['thigh'], sweep: true, zoom: 1.5,
+    ANIM['a-hip'] = { reps: 2, hl: ['thigh'], sweep: true, zoom: 1.8,
       props: [{ t: 'box', x: 78, y: 141, w: 36, h: 7 }, { t: 'box', x: 91, y: 148, w: 10, h: 29 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 11 }],
       steps: [
         { pose: top, ms: 1200, hold: 900, label: 'Hüfte hochdrücken, oben das Gesäß fest anspannen' },

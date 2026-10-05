@@ -7,8 +7,9 @@ const SHOTS = path.join(ROOT, 'tests', 'out', 'shots');
 /* Nothing may stick out sideways, and every control must be at least 48 px to tap (the month grid's day cells are 48 px tall,
    but seven columns cannot be 48 px wide on a phone, so only their height counts). */
 async function check(page, label, info) {
-  const r = await page.evaluate(() => {
-    const vw = window.innerWidth, out = [], small = [];
+  /* The declared width counts, not window.innerWidth: a phone-sized browser widens its window to fit overly wide content. */
+  const r = await page.evaluate((vw) => {
+    const out = [], small = [];
     const sel = 'button, input:not(.sr), textarea, select, label.filebtn, a[href], summary';
     for (const el of document.querySelectorAll('body *')) {
       const cs = getComputedStyle(el);
@@ -25,7 +26,7 @@ async function check(page, label, info) {
       if (b.height < 47.5 || (!calCell && b.width < 47.5)) small.push((el.textContent || el.getAttribute('aria-label') || el.id || el.tagName).trim().slice(0, 30) + ' ' + Math.round(b.width) + 'x' + Math.round(b.height));
     }
     return { vw, scrollW: document.documentElement.scrollWidth, bodyW: document.body.scrollWidth, out, small };
-  });
+  }, page.viewportSize().width);
   expect(r.scrollW, label + ': Seite scrollt seitwärts').toBeLessThanOrEqual(r.vw);
   expect(r.bodyW, label + ': Inhalt breiter als Bildschirm').toBeLessThanOrEqual(r.vw);
   expect(r.out, label + ': ragt seitlich heraus').toEqual([]);

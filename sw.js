@@ -34,7 +34,9 @@ self.addEventListener('install', function (event) {
         if (!res.ok) throw new Error(url + ' ' + res.status);
         return cache.put(url, res);
       });
-    }));
+    })).catch(function (err) {
+      return caches.delete(CACHE).then(function () { throw err; });      // a broken deployment leaves no half-filled cache behind
+    });
   }));
 });
 
@@ -56,13 +58,7 @@ self.addEventListener('fetch', function (event) {
   if (new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
     caches.open(CACHE).then(function (cache) {
-      return cache.match(req, { ignoreSearch: true }).then(function (hit) {
-        if (hit) return hit;
-        return fetch(req).catch(function (err) {
-          if (req.mode === 'navigate') return cache.match('./').then(function (shell) { if (shell) return shell; throw err; });
-          throw err;
-        });
-      });
+      return cache.match(req, { ignoreSearch: true }).then(function (hit) { return hit || fetch(req); });
     })
   );
 });
