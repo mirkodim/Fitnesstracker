@@ -354,6 +354,49 @@ test.describe('Essen', () => {
     await expect(field(page, 'p')).toHaveValue('12');
   });
 
+  test('Getränke: "pro 100 ml" rechnet wie "pro 100 g", benennt Menge und Einheit richtig und lässt sich zurückschalten', async ({ page, site }) => {
+    await openApp(page, site);
+    await tab(page, 'Essen').click();
+    // drei Bezugsgrössen zur Wahl, "pro 100 g" ist vorgewählt
+    const chips = page.locator('.seg.three .chip');
+    await expect(chips).toHaveText(['pro 100 g', 'pro 100 ml', 'ganze Menge']);
+    await expect(page.getByRole('button', { name: 'pro 100 g' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('label[for="f-g"]')).toHaveText('Menge in Gramm');
+    await page.getByRole('button', { name: 'pro 100 ml' }).click();
+    await expect(page.getByRole('button', { name: 'pro 100 ml' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('label[for="f-g"]')).toHaveText('Menge in Millilitern');
+    // Hafermilch: 200 ml mit 45 kcal und 1,2 g Protein pro 100 ml ergeben 90 kcal und 2,4 g Protein
+    await fill(page, { name: 'Hafermilch', g: '200', kcal: '45', p: '1,2' });
+    await expect(page.locator('#food-preview')).toHaveText('Bei 200 ml: 90 kcal · 2,4 g Protein');
+    await page.getByRole('button', { name: 'Hinzufügen' }).click();
+    const e = entry(page, 'Hafermilch');
+    await expect(e.locator('.fe-name small')).toHaveText('200 ml');
+    await expect(e.locator('.nchip').nth(0)).toHaveText('90 kcal');
+    await expect(e.locator('.nchip').nth(1)).toHaveText('2,4 g Protein');
+    await expect(e.locator('.fe-src')).toHaveText('Eingegeben pro 100 ml: 45 kcal · 1,2 g Protein.');
+    const s = await stored(page);
+    expect(s.food[TODAY][0]).toMatchObject({ name: 'Hafermilch', g: 200, mode: 'ml', v: { kcal: 45, p: 1.2 } });
+    // ohne Menge wird nichts eingerechnet und es steht "ml" da
+    await fill(page, { name: 'Cola', g: '', kcal: '42' });
+    await expect(page.locator('#food-preview')).toContainText('nur pro 100 ml gespeichert');
+    // Zuletzt gegessen übernimmt auch die Einheit
+    await page.getByRole('button', { name: 'pro 100 g' }).click();
+    await page.getByRole('button', { name: 'Hafermilch', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'pro 100 ml' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(field(page, 'g')).toHaveValue('200');
+    // Bearbeiten: von ml auf g umschalten ändert die Beschriftung und rechnet neu
+    await entry(page, 'Hafermilch').getByRole('button', { name: 'Hafermilch bearbeiten' }).click();
+    await expect(page.getByRole('button', { name: 'pro 100 ml' })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'pro 100 g' }).click();
+    await expect(page.locator('label[for="f-g"]')).toHaveText('Menge in Gramm');
+    await expect(page.locator('#food-preview')).toHaveText('Bei 200 g: 90 kcal · 2,4 g Protein');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    expect((await stored(page)).food[TODAY][0].mode).toBe('100');
+    await expect(entry(page, 'Hafermilch').locator('.fe-name small')).toHaveText('200 g');
+    // Tagesbilanz zählt ml wie g
+    await expect(page.locator('.prot-num b')).toHaveText('2,4');
+  });
+
   test('Eintrag bearbeiten: Formular füllt sich, Speichern, Abbrechen, nichts geht verloren', async ({ page, site }) => {
     const food = { id: 'q1', name: 'Magerquark', g: 250, mode: '100', v: { kcal: 67, p: 12, s: 4 } };
     await openApp(page, site, { state: { schema: 2, food: { [TODAY]: [food, { id: 'q2', name: 'Apfel', g: 150, mode: '100', v: { kcal: 52 } }] } } });

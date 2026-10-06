@@ -136,6 +136,7 @@ test('Training: Fokuskarte, Hinweise für jede Übung, Pause, Plank, Fertig', as
 test('Fertig-Karte, Kalender-Formular, Kalender mit offenem Eintrag', async ({ page, site }, info) => {
   const done = { A: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 } };
   await openApp(page, site, { state: { ...seed(), sets: done, stamp: { A: TODAY }, cur: 'A', last: ['A'] } });
+  await startFromList(page, 'A');
   await expect(page.locator('h2.name')).toHaveText('Fertig für heute');
   await check(page, 'fertig', info);
   await page.getByRole('button', { name: 'Training in Kalender eintragen' }).click();
@@ -149,7 +150,7 @@ test('Fertig-Karte, Kalender-Formular, Kalender mit offenem Eintrag', async ({ p
   await check(page, 'kalender leerer eintrag offen', info);
   await page.locator('button.cd[data-key="2026-10-04"]').click();
   await check(page, 'kalender leerer tag', info);
-  await page.getByRole('button', { name: 'Training eintragen' }).click();
+  await page.getByRole('button', { name: /Anderes Training/ }).click();
   await check(page, 'kalender training waehlen', info);
 });
 

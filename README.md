@@ -1,6 +1,15 @@
 # Trainings-Strichliste
 
-Kleine App zum Abhaken von zwei Trainingstagen (**Tag A** und **Tag B**): immer nur eine Übung im Fokus, grosse Knöpfe, Strichliste für die Sätze, automatische Pausen mit Timer, Plank-Timer, Kalender und Essens-Tracker. Die App läuft **ohne Internet** und speichert alle Daten **nur auf dem Handy**. Im Repo liegen nur Code und Übungstexte, keine persönlichen Daten.
+Eine ruhige Trainings-App für alle, die sich schwer tun, anzufangen: Sie fragt **„Was möchtest du heute trainieren?“**, hilft Schritt für Schritt, ein Training zusammenzustellen, oder schlägt ein fertiges vor. Immer nur eine Übung im Fokus, grosse Knöpfe, Strichliste für die Sätze, automatische Pausen mit Timer, Halte-Timer, Kalender und Essens-Tracker. Die App läuft **ohne Internet** und speichert alle Daten **nur auf dem Handy**. Im Repo liegen nur Code und Übungstexte, keine persönlichen Daten.
+
+## Was die App kann
+
+* **Startfrage und Assistent:** Bereich antippen (Beine, Gesäss, Arme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper, auch mehrere), dann **Neues Training erstellen** (Ausrüstung → Zeit → Erfahrung → Vorschlag, den man anpassen, tauschen und erweitern kann) oder **Bestehendes Training wählen**. Dazu **„Wenig Lust? Nur 10 Minuten“** und **„Überrasch mich“**.
+* **Übungsbibliothek mit 89 Übungen:** sortiert nach Bereichen und Gliedmassen (Oberschenkel, Unterschenkel, Gesäss, Oberarme, Unterarme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper). Eine Übung steht in jedem Bereich, den sie trainiert. Jede hat eine **Animation** (Strichfigur, auch „so nicht“ in Orange), „Darauf achten“, häufige Fehler, wo man es spürt und leichtere und schwerere Varianten.
+* **Ausrüstung als Filter:** Fitnessstudio, Homegym, Zuhause, Unterwegs, Physiotherapie oder einzeln (Kurz- und Langhanteln, Kettlebell, Medizinball, Maschinen, Kabelzug, Bank, Kiste, Klimmzugstange, TRX, Band). „Passt zu meiner Ausrüstung“ blendet aus, was nicht geht; ein bestehendes Training lässt sich an die Ausrüstung anpassen.
+* **Meine Trainings:** Eigene Trainings unter eigenem Namen speichern, bearbeiten, löschen (mit Rückgängig). **18 fertige Trainings** der App dauern 30 bis 90 Minuten; Tag A und Tag B der ersten Version sind unverändert dabei.
+* **Essen:** Nährwerte **pro 100 g, pro 100 ml** oder für die ganze Menge, Tagesbilanz, Protein-Ziel.
+* Schweizer Rechtschreibung (ss statt ß).
 
 **Live:** https://mirkodim.github.io/Fitnesstracker/
 
@@ -37,16 +46,23 @@ Wenn ein Lauf nicht startet: GitHub lässt Jobs manchmal minutenlang auf *Queued
 
 Die medizinischen Hinweise sind bewusst vorsichtig: keine Diagnosen, keine Therapieversprechen, Kniefragen gehen an Physio und MTT.
 
+
 ## Aufbau
 
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Schale, Metadaten, Manifest-Link, Skripte |
 | `styles.css` | Gestaltung (hell und dunkel automatisch, eigene Schriften) |
-| `plan.js` | Daten: Trainingsplan, Hinweistexte, Nährwertfelder |
-| `store.js` | Reine Logik ohne Oberfläche: Zustand, Migration, Prüfung, Import, Essensrechnung |
-| `app.js` | Oberfläche, Ereignisse, Timer, Service-Worker-Anbindung, Update-Leiste |
-| `fig.js` | Strichfiguren-Engine und Übungsanimationen |
+| `plan.js` | Daten: Bereiche, Ausrüstung, Voreinstellungen, Zeiten, Erfahrungsstufen, Nährwertfelder |
+| `lib.js` | Die Übungsbibliothek: eine Zeile pro Übung mit Bereichen, Ausrüstung, Stufe, Sätzen und allen Texten |
+| `trainings.js` | Die mitgelieferten Trainings (Tag A, Tag B und 18 Vorschläge) |
+| `builder.js` | Reine Logik für „Neues Training“: Zeitschätzung, Vorschlag, Alternativen, Anpassen an die Ausrüstung |
+| `store.js` | Reine Logik ohne Oberfläche: Zustand (Schema 3), Migration, eigene Trainings, Prüfung, Import, Essensrechnung |
+| `app.js` | Oberfläche des Trainings, Kalender und Essen, Ereignisse, Timer, Service-Worker-Anbindung, Update-Leiste |
+| `ui-flow.js` | Startfrage, Assistent, Editor, „Meine Trainings“ |
+| `ui-lib.js` | Reiter „Übungen“ mit Suche, Bereichen und Detailseite |
+| `fig.js` | Strichfiguren-Engine (Seiten- und Frontansicht, Requisiten, Vorschaubilder) |
+| `anims.js` | Die Animation jeder Übung, Schlüsselposen wie bei den Texten in `lib.js` |
 | `sw.js` | Service Worker: alles vorab speichern, dann zuerst aus dem Speicher; neue Version wartet auf den Tipp |
 | `manifest.webmanifest`, `icons/` | Installierbarkeit (Symbole per Skript erzeugt) |
 | `version.js` | Versionsnummer, wird beim Deploy gesetzt |
@@ -62,13 +78,20 @@ Alle Pfade sind relativ (`./…`), weil GitHub Pages unter `/<repo>/` läuft.
 npm install                  # einmalig (Playwright und sharp als Entwicklungswerkzeuge)
 npm run build                # baut _site/ (Version "dev")
 npm run serve                # http://localhost:4173/Fitnesstracker/  (wie GitHub Pages unter einem Unterpfad)
-npm run test:unit            # Logik, Migration, Animationsgeometrie, Vergleich mit der Referenz
+npm run test:unit            # Logik, Migration, Vorschlags-Generator, Animationsgeometrie, Vergleich mit der Referenz
 npm test                     # alles: Unit, Bauen, Prüfen, Browser-Tests
-npm run sheets -- a-hip a-tri   # Kontaktbögen der Animationen nach tests/out/ (zum Ansehen)
+npm run sheets -- x-squat x-pullup   # Kontaktbögen der Animationen nach tests/out/ (zum Ansehen)
 npm run icons                # Symbole neu erzeugen
 ```
 
-Die Browser-Tests (Playwright) laufen mit dem vorhandenen Chromium (`CHROMIUM_PATH` oder `/opt/pw-browsers/chromium`), bei 360×740 und 320×640, hell und dunkel, Sprache `de-DE`. Sie prüfen unter anderem: keine Konsolenfehler und keine fremden Hosts, Offline-Start, Installierbarkeit (Chromes eigene Prüfung), den Update-Ablauf mit zwei echten Versionen, Tag A und B komplett inklusive Plank, Kalender und Essen bearbeiten, Import des Altformats, kein seitliches Überlaufen bei 320 px und Tippziele ab 48 px.
+Die Browser-Tests (Playwright) laufen mit dem vorhandenen Chromium (`CHROMIUM_PATH` oder `/opt/pw-browsers/chromium`), bei 360×740 und 320×640, hell und dunkel, Sprache `de-DE`. Sie prüfen unter anderem: keine Konsolenfehler und keine fremden Hosts, Offline-Start, Installierbarkeit (Chromes eigene Prüfung), den Update-Ablauf mit zwei echten Versionen, Tag A und B komplett inklusive Plank, den ganzen Weg von der Startfrage über den Assistenten bis zum gespeicherten und gestarteten Training, bestehende Trainings (Filter, Anpassen, Löschen mit Rückgängig), die Zurück-Taste des Handys, die Bibliothek, **die Animation jeder einzelnen Übung** (alle 89 werden abgespielt), Kalender und Essen bearbeiten (auch pro 100 ml), Import des Altformats, kein scharfes S in der Oberfläche, kein seitliches Überlaufen bei 320 px und Tippziele ab 48 px.
+
+### Eine Übung oder ein Training ergänzen
+
+1. In `lib.js` einen Eintrag hinzufügen (eindeutige Id, nie wiederverwenden oder entfernen: gespeicherte Trainings und der Kalender verweisen darauf).
+2. In `anims.js` die Animation unter derselben Id zeichnen. `npm run sheets -- <id>` zeigt sie als Bild an, `npm run test:unit` prüft die Geometrie (Gliedlängen, Reichweite, Boden, Bildrand).
+3. Ein fertiges Training kommt in `trainings.js`; seine Dauer (30 bis 90 Minuten) und die Übungen prüft `tests/unit/plan.test.mjs`.
+4. Neue Dateien in `sw.js` (`PRECACHE`) und `tools/build.mjs` (`FILES`) eintragen.
 
 Hinweise:
 

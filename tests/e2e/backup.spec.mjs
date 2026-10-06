@@ -22,18 +22,19 @@ test('Altformat aus der claude.ai-Version: einfügen, wiederherstellen, alles is
   await expect(page.locator('#bk-msg')).toHaveText('Wiederhergestellt: 5 Trainings und 4 Essenseinträge.');
 
   const s = await stored(page);
-  expect(s.schema).toBe(2);
-  expect(s.day).toBe('B');
-  expect(s.plankSecs).toBe(60);
+  expect(s.schema).toBe(3);
+  expect(s.cur).toBe('B');
+  expect(s.holdSecs['a-plank']).toBe(60);
+  expect(s.plankSecs).toBeUndefined();
   expect(s.goalP).toBe(100);
   expect(s.weightKg).toBe(65);
   expect(s.weights).toEqual({ 'a-box': '40', 'b-rdl': '50', 'b-curl': '8' });
-  expect(s.log['2026-05-09']).toEqual([{ day: 'A', sets: {}, weights: {}, note: '' }, { day: 'B', sets: {}, weights: {}, note: '' }]);
+  expect(s.log['2026-05-09']).toMatchObject([{ day: 'A', sets: {}, weights: {}, note: '' }, { day: 'B', sets: {}, weights: {}, note: '' }]);
   expect(s.food['2026-05-12'].map((e) => e.name)).toEqual(['Magerquark', 'Haferflocken', 'Proteinriegel']);
   expect(s.recent.map((e) => e.name)).toEqual(['Magerquark', 'Haferflocken']);
 
   // Training: der angefangene Tag B ist noch da (heute = Tag der Sicherung)
-  await expect(page.locator('header.top').getByRole('button', { name: /Tag B/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('header.top')).toContainText('Tag B');
   await expect(page.locator('header.top')).toContainText('4 von 15 Sätzen');
   await expect(page.locator('h2.name')).toHaveText('TRX-Rudern');
   await page.locator('.list').getByRole('button', { name: /Bizeps-Curls/ }).click();
@@ -67,9 +68,9 @@ test('Altformat an einem späteren Tag: die Kalender- und Essensdaten bleiben, d
   await restoreFromText(page, OLD_TEXT);
   await expect(page.locator('#bk-msg')).toContainText('Wiederhergestellt');
   const s = await stored(page);
-  expect(s.sets).toEqual({ A: {}, B: {} });
+  expect(Object.values(s.sets).every((m) => Object.keys(m).length === 0)).toBe(true);
   expect(Object.keys(s.log)).toHaveLength(4);
-  await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();     // nichts Angefangenes von gestern
 });
 
 test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', async ({ page, site, context }) => {
@@ -89,7 +90,7 @@ test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', asy
   const file = path.join(ROOT, 'tests', 'out', 'sicherung.json');
   await download.saveAs(file);
   const exported = JSON.parse(readFileSync(file, 'utf8'));
-  expect(exported.schema).toBe(2);
+  expect(exported.schema).toBe(3);
   expect(exported.log[TODAY][0].note).toBe('Läuft gut „ä ö ü ß“');
   expect(exported.food['2026-05-12']).toHaveLength(3);
   await expect(page.locator('#bk-msg')).toContainText('Datei gespeichert');
@@ -103,7 +104,7 @@ test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', asy
   // App leeren und aus der Datei zurückholen
   await page.evaluate(() => localStorage.clear());
   await page.goto(site.url);
-  await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
   expect(await stored(page)).toBeNull();
   await openBackup(page);
   await page.locator('#bk-upload').setInputFiles(file);
@@ -166,7 +167,8 @@ test('Wiederherstellen bereinigt: Müll in der Sicherung gelangt nicht in die Ap
   expect(s.log['2026-05-01'].map((e) => e.day)).toEqual(['A', 'B']);
   expect(s.log['2026-05-01'][1].sets).toEqual({ 'b-row': 99 });
   expect(s.log['kein-datum']).toBeUndefined();
-  expect(s.plankSecs).toBe(45);
+  expect(s.holdSecs['a-plank']).toBeUndefined();
+  expect(s.plankSecs).toBeUndefined();
   expect(s.goalP).toBeNull();
   // nichts davon wird als HTML ausgeführt
   await page.getByRole('button', { name: 'Kalender' }).click();
