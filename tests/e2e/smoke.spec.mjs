@@ -4,8 +4,10 @@ test('startet ohne Konsolenfehler, ohne fremde Hosts, mit eigenen Schriften', as
   await openApp(page, site);
   await expect(page.getByRole('heading', { level: 1, name: 'Trainings-Strichliste' })).toBeAttached();
   await expect(page).toHaveTitle('Trainings-Strichliste');
-  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
-  for (const t of ['Training', 'Übungen', 'Kalender', 'Essen']) await expect(tab(page, t)).toBeVisible();
+  await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');                      // der erste Reiter
+  await expect(tab(page, 'Meine Trainings')).toHaveAttribute('aria-current', 'page');
+  for (const t of ['Meine Trainings', 'Erstellen', 'Kalender', 'Essen']) await expect(tab(page, t)).toBeVisible();
+  await expect(page.locator('nav.nav button')).toHaveCount(4);
 
   // alle sechs Schriftschnitte stammen von der eigenen Adresse und sind geladen
   await page.evaluate(() => document.fonts.ready);
@@ -35,9 +37,12 @@ test('Version steht im Fussbereich und stimmt mit dem Build überein', async ({ 
   expect(await page.evaluate(() => APP_VERSION)).toBe('e2e-1');
 });
 
-test('Alle vier Bereiche lassen sich öffnen', async ({ page, site }) => {
+test('Alle vier Reiter lassen sich öffnen', async ({ page, site }) => {
   await openApp(page, site);
-  await tab(page, 'Übungen').click();
+  await tab(page, 'Erstellen').click();
+  await expect(page.locator('h2.mt')).toHaveText('Neues Training');
+  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
   await expect(page.locator('h2.mt')).toHaveText('Übungen');
   await expect(page.locator('#lib-q')).toBeVisible();
   await tab(page, 'Kalender').click();
@@ -45,8 +50,9 @@ test('Alle vier Bereiche lassen sich öffnen', async ({ page, site }) => {
   await tab(page, 'Essen').click();
   await expect(page.locator('h2.mt')).toHaveText('Heute');
   await expect(page.getByRole('button', { name: 'Hinzufügen' })).toBeVisible();
-  await tab(page, 'Training').click();
-  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+  await tab(page, 'Meine Trainings').click();
+  await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
+  await expect(page.locator('.mrow')).toHaveCount(2);
 });
 
 test('Speicher nicht verfügbar: ruhiger Hinweis, die App läuft trotzdem', async ({ page, site }) => {

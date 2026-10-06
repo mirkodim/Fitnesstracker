@@ -207,7 +207,8 @@
   /* ---------- navigation: every step forward is one entry in the browser history, so the phone's back button steps back ---------- */
   var navStack = [], pendingPops = 0;
   function snap() { return { tab: R.tab, flow: R.flow, seg: R.seg, pv: R.pv, detail: R.detail ? { id: R.detail.id } : null, lib: JSON.parse(JSON.stringify(R.lib)), sel: R.sel.slice() }; }
-  function applySnap(s) { R.tab = s.tab; R.flow = s.flow; R.seg = s.seg; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.sel = s.sel; }
+  /* "Nur passende Übungen" is a setting of the person, not of the screen: it stays when stepping back */
+  function applySnap(s) { var mine = R.lib.mine; R.tab = s.tab; R.flow = s.flow; R.seg = s.seg; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.lib.mine = mine; R.sel = s.sel; }
   function resetTransient() {
     R.plank = null; R.confirm = false; R.undo = null; R.calUndo = null; R.edit = null; R.copyOpen = false; R.foodGoto = null; R.restore = null;
     R.calForm = false; R.calAdd = false; R.demoOpen = false; R.bookOpen = false;

@@ -21,7 +21,7 @@ test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktionie
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('nav.nav')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+  await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
   expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
   // die Schriften kommen aus dem Cache
   const fontsOk = await page.evaluate(async () => {
@@ -49,7 +49,8 @@ test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktionie
   await page.getByRole('button', { name: /Tag A eintragen/ }).click();
   await expect(page.locator('.entry-head[data-day="A"]')).toContainText('ohne Details');
   // und eine Übung der Bibliothek samt Animation ansehen
-  await tab(page, 'Übungen').click();
+  await tab(page, 'Erstellen').click();
+  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
   await page.locator('#lib-q').fill('Kniebeuge');
   await page.locator('#lib-res .row').first().click();
   await expect(page.locator('#fig-g > *').first()).toBeAttached();

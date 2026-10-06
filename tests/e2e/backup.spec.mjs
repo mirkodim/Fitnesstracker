@@ -70,7 +70,8 @@ test('Altformat an einem späteren Tag: die Kalender- und Essensdaten bleiben, d
   const s = await stored(page);
   expect(Object.values(s.sets).every((m) => Object.keys(m).length === 0)).toBe(true);
   expect(Object.keys(s.log)).toHaveLength(4);
-  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();     // nichts Angefangenes von gestern
+  await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
+  await expect(page.locator('.card.go')).toHaveCount(0);                                                  // nichts Angefangenes von gestern
 });
 
 test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', async ({ page, site, context }) => {
@@ -104,7 +105,7 @@ test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', asy
   // App leeren und aus der Datei zurückholen
   await page.evaluate(() => localStorage.clear());
   await page.goto(site.url);
-  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+  await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
   expect(await stored(page)).toBeNull();
   await openBackup(page);
   await page.locator('#bk-upload').setInputFiles(file);

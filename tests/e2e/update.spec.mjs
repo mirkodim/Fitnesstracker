@@ -54,7 +54,7 @@ test('Update: Leiste erscheint ruhig, nichts lädt von selbst neu, nach Tipp ist
     await page.getByRole('button', { name: 'Hinzufügen' }).click();
     await tab(page, 'Kalender').click();
     await page.getByRole('button', { name: /Tag A eintragen/ }).click();
-    await tab(page, 'Training').click();
+    await tab(page, 'Meine Trainings').click();
     const before = await stored(page);
     await page.evaluate(() => { window.__marker = 'noch-da'; });
 

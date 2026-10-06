@@ -5,7 +5,10 @@ const badge = (page) => page.locator('#fig-badge');
 
 async function pick(page, id) {
   const name = await page.evaluate((i) => EX[i].name, id);
-  if (!(await page.locator('#lib-q').isVisible().catch(() => false))) await tab(page, 'Übungen').click();
+  if (!(await page.locator('#lib-q').isVisible().catch(() => false))) {                // die Bibliothek ist der Teil "Übungen" des Reiters "Erstellen"
+    await tab(page, 'Erstellen').click();
+    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
+  }
   await page.locator('#lib-q').fill(name);
   await page.locator('#lib-res .row').filter({ has: page.getByText(name, { exact: true }) }).first().click();
   await expect(page.locator('h2.name')).toHaveText(name);
