@@ -300,6 +300,95 @@ x({ id: 'x-monster', name: 'Monster Walk', gear: 'Widerstandsband', reg: 'gesaes
   mistakes: ['Die Knie fallen nach innen.', 'Das Band hängt durch, die Füsse stehen zu nah.', 'Der Oberkörper schaukelt von Seite zu Seite.', 'Die Füsse schlurfen zusammen.'],
   feel: 'Seitliche Gesässmuskeln und Hüfte.' });
 
+/* ===== Rücken ===== */
+
+x({ id: 'x-pullup', name: 'Klimmzug', gear: 'Klimmzugstange', reg: 'ruecken oberarme', eq: 'stange', lvl: 3, pat: 'vpull',
+  sets: 3, reps: '4–8', rest: 120,
+  cues: ['Zuerst die Schulterblätter nach unten ziehen, dann mit den Ellbogen ziehen.', 'Kinn über die Stange, kontrolliert wieder ablassen.'],
+  watch: ['Die Stange etwa schulterbreit greifen, die Handflächen zeigen von dir weg.', 'Zuerst die Schulterblätter nach hinten unten ziehen, die Arme bleiben noch gestreckt.', 'Dann die Ellbogen nach unten zu den Hüften ziehen, bis das Kinn über der Stange ist.', 'Oben kurz halten und in etwa 3 Sekunden bis zu gestreckten Armen ablassen.', 'Der Körper bleibt ruhig, die Beine schwingen nicht.'],
+  mistakes: ['Mit Schwung und den Beinen hochkippen.', 'Die Schultern wandern zu den Ohren.', 'Nur halbe Wiederholungen, unten nicht ganz hängen.', 'Der Kopf wird nach vorn gestreckt, um die Stange zu erreichen.'],
+  feel: 'Breiter Rückenmuskel (Latissimus), dazu Bizeps und Unterarme.',
+  easier: 'Ein Gummiband unter den Knien, die Füsse auf einer Kiste abstützen oder nur langsam ablassen (Negative).',
+  harder: 'Zusatzgewicht an einem Gürtel oder 5 Sekunden zum Ablassen nehmen.' });
+
+x({ id: 'x-pulldown', name: 'Latziehen', gear: 'Kabelzug oder Maschine', reg: 'ruecken oberarme', eq: 'kz|ma', lvl: 1, pat: 'vpull',
+  sets: 3, reps: '10–12', rest: 75, weight: true,
+  cues: ['Brust raus, die Stange zur oberen Brust ziehen.', 'Die Ellbogen gehen nach unten, die Schultern nicht hochziehen.'],
+  watch: ['Setze dich so, dass die Oberschenkel unter dem Polster klemmen und die Füsse flach stehen.', 'Greife die Stange etwas breiter als die Schultern, mit gestreckten Armen.', 'Lehne den Oberkörper leicht zurück, die Brust bleibt offen.', 'Ziehe die Stange zur oberen Brust, die Ellbogen gehen nach unten und leicht nach hinten.', 'Lass die Stange langsam wieder nach oben gleiten, bis die Arme gestreckt sind.'],
+  mistakes: ['Mit dem ganzen Oberkörper nach hinten schwingen.', 'Die Stange hinter den Kopf ziehen.', 'Die Schultern wandern zu den Ohren.', 'Zu viel Gewicht, die Arme ziehen allein.'],
+  feel: 'Breiter Rückenmuskel an der Seite des Rückens, dazu der Bizeps.',
+  easier: 'Weniger Gewicht oder ein engerer Griff.' });
+
+x({ id: 'x-cablerow', name: 'Rudern sitzend am Kabel', gear: 'Kabelzug oder Maschine', reg: 'ruecken oberarme', eq: 'kz|ma', lvl: 1, pat: 'row',
+  sets: 3, reps: '10–12', rest: 75, weight: true,
+  cues: ['Aufrecht sitzen, die Ellbogen eng am Körper nach hinten ziehen.', 'Am Ende die Schulterblätter zusammendrücken.'],
+  watch: ['Setze dich aufrecht, die Füsse stehen auf der Platte, die Knie sind leicht gebeugt.', 'Greife den Griff mit gestreckten Armen, der Rücken bleibt gerade.', 'Ziehe zuerst die Schulterblätter zusammen, dann die Ellbogen eng am Körper nach hinten, bis der Griff am Bauch ist.', 'Halte oben 1 Sekunde.', 'Lass den Griff langsam nach vorn gleiten, ohne dass der Rücken rund wird.'],
+  mistakes: ['Mit dem Oberkörper vor- und zurückschaukeln.', 'Die Schultern sind hochgezogen.', 'Der Rücken wird beim Strecken der Arme rund.', 'Der Griff wird zu hoch zur Brust gezogen.'],
+  feel: 'Mittlerer Rücken zwischen den Schulterblättern, hintere Schulter und Bizeps.' });
+
+x({ id: 'x-bbrow', name: 'Vorgebeugtes Rudern', gear: 'Langhantel', reg: 'ruecken oberarme', eq: 'lh', lvl: 3, pat: 'row',
+  sets: 3, reps: '6–10', rest: 90, weight: true,
+  cues: ['Der Rücken bleibt gerade, der Oberkörper etwa 45 Grad vorgebeugt.', 'Die Stange zum Bauchnabel ziehen, die Ellbogen eng.'],
+  watch: ['Füsse hüftbreit, die Knie leicht gebeugt, die Hüfte nach hinten schieben, der Oberkörper beugt sich auf etwa 45 Grad vor.', 'Die Stange hängt mit gestreckten Armen unter den Schultern, der Rücken bleibt gerade.', 'Ziehe die Stange zum Bauchnabel, die Ellbogen gehen eng am Körper nach hinten.', 'Oben die Schulterblätter zusammendrücken.', 'Senke die Stange langsam, ohne den Oberkörper aufzurichten.'],
+  mistakes: ['Der Rücken wird rund.', 'Der Oberkörper richtet sich beim Ziehen auf (Schwung).', 'Die Stange wird zu hoch zur Brust gezogen.', 'Der Kopf wird in den Nacken gelegt.'],
+  feel: 'Mittlerer und oberer Rücken, dazu hintere Schulter und Bizeps. Der untere Rücken arbeitet haltend mit.',
+  easier: 'Mit Kurzhanteln, am Kabel oder als TRX-Rudern üben.' });
+
+x({ id: 'x-dbrow', name: 'Einarmiges Kurzhantelrudern', gear: 'Kurzhantel, Hand und Knie auf der Bank', reg: 'ruecken oberarme', eq: 'kh bank|box', lvl: 1, pat: 'row',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Arm', rest: 60, weight: true,
+  cues: ['Eine Hand und ein Knie auf der Bank, der Rücken bleibt gerade.', 'Die Hantel zur Hüfte ziehen, nicht zur Schulter.'],
+  watch: ['Stütze eine Hand und das gleiche Knie auf die Bank, der andere Fuss steht am Boden.', 'Der Rücken ist gerade und etwa waagerecht, der Blick geht zum Boden.', 'Die Hantel hängt mit gestrecktem Arm unter der Schulter.', 'Ziehe die Hantel in einem leichten Bogen zur Hüfte, der Ellbogen geht nah am Körper nach hinten.', 'Oben kurz halten, langsam ablassen, dann den Arm wechseln.'],
+  mistakes: ['Der Oberkörper dreht auf.', 'Mit Schwung aus dem Rücken ziehen.', 'Die Hantel wird zur Schulter hochgezogen.', 'Der Rücken wird rund.'],
+  feel: 'Breiter Rücken auf der Seite des Arms, dazu die Schulterblattmuskeln und der Bizeps.' });
+
+x({ id: 'x-deadlift', name: 'Kreuzheben', gear: 'Langhantel', reg: 'ruecken gesaess oberschenkel', eq: 'lh', lvl: 3, pat: 'hinge',
+  sets: 3, reps: '5–8', rest: 150, weight: true,
+  cues: ['Stange nah am Körper, Rücken gerade, mit den Beinen wegdrücken.', 'Oben die Hüfte nach vorn schieben, nicht ins Hohlkreuz.'],
+  watch: ['Die Stange liegt über der Fussmitte, die Füsse stehen hüftbreit.', 'Beuge Hüfte und Knie und greife die Stange knapp ausserhalb der Beine, die Arme sind gestreckt.', 'Brust raus, Rücken gerade, baue Spannung auf („die Stange anziehen“).', 'Drücke dich mit den Beinen vom Boden weg, die Stange bleibt nah an Schienbeinen und Oberschenkeln.', 'Oben aufrecht stehen und das Gesäss anspannen. Dann kontrolliert absenken.'],
+  mistakes: ['Der Rücken wird rund.', 'Die Stange schwingt vom Körper weg.', 'Die Hüfte schiesst zuerst hoch, und der Rücken muss alles heben.', 'Oben ins Hohlkreuz überstrecken.'],
+  feel: 'Rückseite der Oberschenkel, Gesäss und der ganze Rücken. Wähle ein Gewicht, bei dem die Technik sauber bleibt.',
+  easier: 'Mit Kurzhanteln oder einer erhöhten Stange beginnen, oder zuerst das Rumänische Kreuzheben üben.' });
+
+x({ id: 'x-superman', name: 'Superman', gear: 'Körpergewicht, auf der Matte', reg: 'ruecken gesaess', eq: '', lvl: 1, pat: 'extend',
+  sets: 3, reps: '10–12', rest: 30,
+  cues: ['Arme und Beine gleichzeitig leicht anheben.', 'Der Kopf bleibt in Verlängerung der Wirbelsäule, der Blick geht zum Boden.'],
+  watch: ['Lege dich auf den Bauch, die Arme nach vorn gestreckt, die Beine gestreckt.', 'Der Blick geht zum Boden, der Nacken bleibt lang.', 'Hebe Arme, Brust und Beine gleichzeitig ein Stück an, nur so weit, wie es angenehm ist.', 'Spanne Gesäss und unteren Rücken an und halte 1 bis 2 Sekunden.', 'Senke dich langsam wieder ab.'],
+  mistakes: ['Der Kopf wird in den Nacken gelegt.', 'Zu hoch, der untere Rücken wird gestaucht.', 'Mit Schwung hochschnellen.', 'Luft anhalten.'],
+  feel: 'Rückenstrecker entlang der Wirbelsäule, dazu Gesäss und hintere Schulter.',
+  easier: 'Abwechselnd nur Arme oder nur Beine anheben.' });
+
+x({ id: 'x-birddog', name: 'Vogel-Hund (Bird Dog)', gear: 'Körpergewicht, auf der Matte', reg: 'ruecken bauch', eq: '', lvl: 1, pat: 'core',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Seite', rest: 30,
+  cues: ['Gegenüberliegender Arm und gestrecktes Bein, der Rücken bleibt ruhig.', 'Das Becken bleibt waagerecht, kein Wackeln.'],
+  watch: ['Auf Hände und Knie: Hände unter den Schultern, Knie unter der Hüfte, der Rücken ist gerade.', 'Strecke einen Arm nach vorn und das gegenüberliegende Bein nach hinten, bis beide waagerecht sind.', 'Der Bauch ist leicht angespannt, das Becken bleibt gerade.', 'Halte 1 bis 2 Sekunden, ohne dich zu verdrehen.', 'Komm kontrolliert zurück und wechsle die Seite.'],
+  mistakes: ['Hohlkreuz, das Bein geht zu hoch.', 'Das Becken kippt zur Seite.', 'Der Rumpf dreht sich.', 'Mit Schwung statt kontrolliert.'],
+  feel: 'Rückenstrecker, Gesäss und die tiefen Bauchmuskeln, die den Rumpf stabil halten.',
+  easier: 'Nur den Arm oder nur das Bein bewegen.',
+  harder: 'Vor dem Strecken Ellbogen und Knie unter dem Bauch zusammenführen.' });
+
+x({ id: 'x-catcow', name: 'Katze und Kuh', gear: 'Körpergewicht, auf der Matte', reg: 'ruecken', eq: '', lvl: 1, pat: 'mob',
+  sets: 2, reps: '8–12', rest: 20,
+  cues: ['Beim Ausatmen den Rücken rund machen, beim Einatmen den Bauch senken.', 'Langsam und ohne Schmerz bewegen.'],
+  watch: ['Auf Hände und Knie: Hände unter den Schultern, Knie unter der Hüfte.', 'Katze: Ausatmen, den Rücken rund machen, das Kinn Richtung Brust, den Bauch einziehen.', 'Kuh: Einatmen, den Bauch sinken lassen, die Brust nach vorn heben, der Blick geht nach vorn oben.', 'Bewege die Wirbelsäule Wirbel für Wirbel, nicht ruckartig.', 'Gehe nur so weit, wie es sich angenehm anfühlt.'],
+  mistakes: ['Zu schnell und ruckartig.', 'Die Arme beugen sich.', 'Der Nacken wird überstreckt.', 'Schmerzen werden ignoriert.'],
+  feel: 'Eine sanfte Mobilisation entlang der ganzen Wirbelsäule. Gut zum Aufwärmen oder bei einem steifen Rücken.' });
+
+x({ id: 'x-bandrow', name: 'Rudern mit Band', gear: 'Widerstandsband', reg: 'ruecken oberarme', eq: 'band', lvl: 1, pat: 'row',
+  sets: 3, reps: '12–15', rest: 45,
+  cues: ['Aufrecht sitzen, die Ellbogen eng zum Körper ziehen.', 'Am Ende die Schulterblätter zusammendrücken.'],
+  watch: ['Setze dich mit gestreckten (oder leicht gebeugten) Beinen auf den Boden und lege das Band um die Füsse.', 'Halte die Enden mit gestreckten Armen, der Rücken ist gerade und aufrecht.', 'Ziehe die Ellbogen eng am Körper nach hinten, bis die Hände am Bauch sind.', 'Drücke am Ende die Schulterblätter zusammen und halte 1 Sekunde.', 'Lass das Band langsam wieder nach vorn gleiten.'],
+  mistakes: ['Der Oberkörper lehnt weit nach hinten.', 'Die Schultern werden hochgezogen.', 'Der Rücken wird rund.', 'Das Band schnellt zurück.'],
+  feel: 'Mittlerer Rücken, hintere Schulter und Bizeps.',
+  harder: 'Ein stärkeres Band oder am Ende 2 Sekunden halten.' });
+
+x({ id: 'x-pullapart', name: 'Band auseinanderziehen', gear: 'Widerstandsband', reg: 'ruecken schultern', eq: 'band', lvl: 1, pat: 'pullapart',
+  sets: 3, reps: '12–20', rest: 30,
+  cues: ['Die Arme bleiben gestreckt, das Band wird auseinandergezogen.', 'Schulterblätter zusammen, die Schultern bleiben unten.'],
+  watch: ['Halte das Band mit beiden Händen etwa schulterbreit vor der Brust, die Arme sind gestreckt.', 'Ziehe das Band auseinander, bis die Arme seitlich waagerecht sind.', 'Drücke dabei die Schulterblätter zusammen.', 'Die Schultern bleiben unten, der Rücken gerade.', 'Lass das Band kontrolliert wieder zusammenkommen.'],
+  mistakes: ['Die Schultern wandern zu den Ohren.', 'Hohlkreuz.', 'Das Band schnappt zurück.', 'Die Arme beugen sich stark.'],
+  feel: 'Hintere Schulter und oberer Rücken.',
+  harder: 'Ein stärkeres Band oder die Arme diagonal nach oben (Y-Form) ziehen.' });
+
 /* ==== new exercises below ==== */
 
 })();
