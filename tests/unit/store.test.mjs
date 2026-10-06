@@ -5,7 +5,6 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const Store = require('../../store.js');
-const { PLAN } = require('../../plan.js');
 const OLD = readFileSync(new URL('../fixtures/altformat.json', import.meta.url), 'utf8');
 
 function memStorage(initial = {}) {
@@ -24,24 +23,38 @@ test('Altformat: Import migriert in das neue Schema', () => {
   assert.equal(r.from, 1);
   const s = r.state;
   assert.equal(s.schema, Store.SCHEMA);
-  assert.equal(s.day, 'B');
-  assert.deepEqual(s.sets.B, { 'b-rdl': 3, 'b-row': 1 });
-  assert.deepEqual(s.sets.A, {});
+  assert.equal(s.cur, 'B');
+  assert.deepEqual(s.sets, { B: { 'b-rdl': 3, 'b-row': 1 } });
   assert.equal(s.stamp.B, '2026-05-12');
-  assert.equal(s.plankSecs, 60);
+  assert.equal(s.stamp.A, undefined, 'leere Daten bleiben weg');
+  assert.deepEqual(s.holdSecs, { 'a-plank': 60 });
   assert.equal(s.goalP, 100);
   assert.equal(s.weightKg, 65);
+  assert.deepEqual(s.trainings, []);
   assert.deepEqual(s.weights, { 'a-box': '40', 'b-rdl': '50', 'b-curl': '8' });
   // log: ["A"] wird zu { day, sets, weights, note }
   assert.deepEqual(s.log['2026-05-05'], [{ day: 'A', sets: {}, weights: {}, note: '' }]);
   assert.deepEqual(s.log['2026-05-09'].map((e) => e.day), ['A', 'B']);
-  assert.deepEqual(Store.counts(s), { trainings: 5, foods: 4 });
-  // food und recent bleiben erhalten
+  assert.deepEqual(Store.counts(s), { trainings: 5, foods: 4, plans: 0 });
   assert.equal(s.food['2026-05-12'].length, 3);
   assert.equal(s.recent.length, 2);
   assert.equal(s.recent[0].name, 'Magerquark');
   // Nach der Migration ist alles gültig: noch einmal migrieren ändert nichts
   assert.deepEqual(Store.migrate(JSON.parse(JSON.stringify(s))), s);
+});
+
+test('Schema 2 (die Version davor) wird übernommen: Tage A/B, Plank-Zeit, Kalender', () => {
+  const v2 = { schema: 2, day: 'A', sets: { A: { 'a-box': 2 }, B: {} }, stamp: { A: '2026-10-05', B: '' }, logged: { A: '2026-10-05', B: '' }, weights: { 'a-hip': '60' }, plankSecs: 45,
+    log: { '2026-10-05': [{ day: 'A', sets: { 'a-box': 3 }, weights: { 'a-hip': '60' }, note: 'gut' }] }, food: {}, recent: [], goalP: null, weightKg: null };
+  const s = Store.migrate(v2);
+  assert.equal(s.cur, 'A');
+  assert.deepEqual(s.sets.A, { 'a-box': 2 });
+  assert.equal(s.stamp.A, '2026-10-05');
+  assert.equal(s.logged.A, '2026-10-05');
+  assert.deepEqual(s.holdSecs, { 'a-plank': 45 });
+  assert.deepEqual(s.log['2026-10-05'][0], { day: 'A', sets: { 'a-box': 3 }, weights: { 'a-hip': '60' }, note: 'gut' });
+  assert.equal(Store.entryTitle(s, s.log['2026-10-05'][0]), 'Tag A');
+  assert.deepEqual(Store.entrySummary(s, s.log['2026-10-05'][0]), { done: 3, total: 15, hasDetails: true });
 });
 
 test('Altformat: Tagesbilanz stimmt nach dem Import', () => {
@@ -58,6 +71,31 @@ test('Essensrechnung: 250 g Magerquark mit 67 kcal / 12 g Protein pro 100 g = 16
   assert.equal(Store.fmt(t.kcal, 'kcal'), '168');
   assert.equal(Store.fmt(t.p, 'g'), '30');
   assert.deepEqual(Store.partsOf(t), ['168 kcal', '30 g Protein']);
+});
+
+test('Essensrechnung pro 100 ml: 250 ml Milch mit 64 kcal / 3,4 g Protein pro 100 ml = 160 kcal und 8,5 g Protein', () => {
+  const e = { id: 'm', name: 'Milch', g: 250, mode: 'ml', v: { kcal: 64, p: 3.4 } };
+  const t = Store.entryTotals(e);
+  assert.equal(Store.fmt(t.kcal, 'kcal'), '160');
+  assert.equal(Store.fmt(t.p, 'g'), '8,5');
+  assert.equal(Store.unitOf('ml'), 'ml');
+  assert.equal(Store.unitOf('100'), 'g');
+  assert.equal(Store.unitOf('por'), 'g');
+  // ohne Menge wird nichts eingerechnet, wie bei Gramm
+  assert.deepEqual(Store.entryTotals({ ...e, g: null }), {});
+  // das Formular merkt sich den Modus, das Speichern ebenso
+  const d = Store.draftFromEntry(e);
+  assert.equal(d.mode, 'ml');
+  assert.deepEqual(Store.entryFromDraft(d), { name: 'Milch', g: 250, mode: 'ml', v: { kcal: 64, p: 3.4 } });
+  assert.equal(Store.newDraft('ml').mode, 'ml');
+  assert.equal(Store.newDraft('quatsch').mode, '100');
+  // übersteht Sicherung und Wiederherstellen
+  const s = Store.newState();
+  Store.addFood(s, '2026-10-05', e);
+  const back = Store.parseBackup(Store.toText(s)).state;
+  assert.equal(back.food['2026-10-05'][0].mode, 'ml');
+  assert.equal(back.recent[0].mode, 'ml');
+  assert.equal(Store.migrate({ food: { '2026-10-05': [{ name: 'x', mode: 'zz', v: {} }] } }).food['2026-10-05'][0].mode, '100');
 });
 
 test('Essensrechnung: ganze Menge, fehlende Menge und Rundung', () => {
@@ -80,24 +118,23 @@ test('Essensrechnung: ganze Menge, fehlende Menge und Rundung', () => {
 
 test('migrate: Müll rein, gültiger Zustand raus, nie eine Exception', () => {
   for (const bad of [null, undefined, 5, 'x', [], [1, 2], true, () => 1]) {
-    const s = Store.migrate(bad);
-    assert.deepEqual(s, Store.newState());
+    assert.deepEqual(Store.migrate(bad), Store.newState());
   }
   const s = Store.migrate({
-    day: 'C', sets: { A: { 'a-box': -4, 'a-push': 'x', 'a-tri': 2.9, '../x': 3, 'a-hip': Infinity }, B: 'no' },
+    day: 'C', sets: { A: { 'a-box': -4, 'a-push': 'x', 'a-tri': 2.9, '../x': 3, 'a-hip': Infinity }, B: 'no', '__proto__': { x: 1 }, '!': {} },
     stamp: { A: '2026-02-31', B: '2026-05-01' }, logged: 7, weights: { 'a-box': 40, 'b-rdl': '  55,5  ', x: '', '!': '1' }, plankSecs: 50,
     log: { '2026-02-31': ['A'], 'nope': ['A'], '2026-05-01': ['A', 'A', 'B', 'C', 5, null, { day: 'A', sets: { 'a-box': 2 } }], '2026-05-02': 'A' },
     food: { '2026-05-01': [{ name: 5, g: -1, mode: 'x', v: { kcal: -3, p: 'x', f: 4 } }, 'x', null], 'bad': [{}] },
-    recent: [{ name: '' }, { name: 'ok', id: 3 }], goalP: -1, weightKg: 'abc'
+    recent: [{ name: '' }, { name: 'ok', id: 3 }], goalP: -1, weightKg: 'abc',
+    prefs: { equip: ['kh', 'kh', 'gibtsnicht', 5], preset: 'zz', level: 9, minutes: -4 }, last: ['A', 'u-gibts-nicht', 7, 'A']
   });
-  assert.equal(s.day, 'A');
-  assert.deepEqual(s.sets.A, { 'a-tri': 2 });
-  assert.deepEqual(s.sets.B, {});
-  assert.equal(s.stamp.A, '');
+  assert.equal(s.cur, 'A');
+  assert.deepEqual(s.sets, { A: { 'a-tri': 2 } });
+  assert.equal(s.stamp.A, undefined);
   assert.equal(s.stamp.B, '2026-05-01');
-  assert.deepEqual(s.logged, { A: '', B: '' });
+  assert.deepEqual(s.logged, {});
   assert.deepEqual(s.weights, { 'a-box': '40', 'b-rdl': '55,5' });
-  assert.equal(s.plankSecs, 45);
+  assert.deepEqual(s.holdSecs, {});
   assert.deepEqual(Object.keys(s.log), ['2026-05-01']);
   assert.deepEqual(s.log['2026-05-01'].map((e) => e.day), ['A', 'B']);
   assert.deepEqual(Object.keys(s.food), ['2026-05-01']);
@@ -106,6 +143,8 @@ test('migrate: Müll rein, gültiger Zustand raus, nie eine Exception', () => {
   assert.deepEqual(s.recent.map((e) => e.name), ['ok']);
   assert.equal(s.goalP, null);
   assert.equal(s.weightKg, null);
+  assert.deepEqual(s.prefs, { equip: ['kh'], preset: '', level: 3, minutes: 5 });
+  assert.deepEqual(s.last, ['A']);
 });
 
 test('migrate: gleiche oder fehlende Eintrags-IDs werden eindeutig', () => {
@@ -117,19 +156,28 @@ test('migrate: gleiche oder fehlende Eintrags-IDs werden eindeutig', () => {
 });
 
 test('migrate: __proto__ und andere gefährliche Schlüssel richten nichts an', () => {
-  const evil = JSON.parse('{"__proto__":{"polluted":1},"sets":{"A":{"__proto__":3,"a-box":1}},"weights":{"__proto__":"5"},"log":{"__proto__":["A"]},"food":{"__proto__":[{}]}}');
+  const evil = JSON.parse('{"__proto__":{"polluted":1},"sets":{"A":{"__proto__":3,"a-box":1},"__proto__":{"a-box":2},"constructor":{"a-box":3}},"weights":{"__proto__":"5"},"log":{"__proto__":["A"]},"food":{"__proto__":[{}]},"holdSecs":{"__proto__":30},"trainings":[{"id":"__proto__","name":"x","items":[{"ex":"__proto__"},{"ex":"constructor"},{"ex":"a-box"}]}]}');
   const s = Store.migrate(evil);
   assert.equal({}.polluted, undefined);
   assert.equal(Object.prototype.polluted, undefined);
   assert.deepEqual(s.sets.A, { 'a-box': 1 });
+  assert.equal(Object.getPrototypeOf(s.sets), Object.prototype);
+  assert.deepEqual(Object.keys(s.sets).sort(), ['A', 'constructor']);
+  assert.equal(Store.training(s, 'constructor'), null);
   assert.deepEqual(s.weights, {});
   assert.deepEqual(s.log, {});
   assert.deepEqual(s.food, {});
+  assert.deepEqual(s.holdSecs, {});
+  assert.equal(s.trainings.length, 1);
+  assert.deepEqual(s.trainings[0].items, [{ ex: 'a-box' }]);
+  assert.notEqual(s.trainings[0].id, '__proto__');
 });
 
 test('Roundtrip: toText -> parseBackup liefert denselben Zustand', () => {
   const s = Store.parseBackup(OLD).state;
-  s.log['2026-06-02'] = [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: 'läuft gut „fast“' }];
+  const t = Store.addTraining(s, 'Beine zuhause', [{ ex: 'x-squat', sets: 2, reps: '12–15' }, { ex: 'a-plank', hold: 30 }], ['beine']);
+  s.log['2026-06-02'] = [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: 'läuft gut „fast“' }, Store.blankEntry(s, t.id)];
+  s.prefs.equip = ['kh', 'band']; s.prefs.preset = ''; s.prefs.level = 2;
   for (const indent of [0, 2]) {
     const r = Store.parseBackup(Store.toText(s, indent));
     assert.equal(r.ok, true);
@@ -148,32 +196,99 @@ test('parseBackup: verzeiht BOM, Code-Zaun und Titelzeile, lehnt Unbrauchbares a
   for (const t of ['', '   ', 'hallo', '{', '{"a":1}', '[1,2]', '{"foo":"bar"}', '{}', null, undefined, 42]) {
     assert.equal(Store.parseBackup(t).ok, false, String(t));
   }
+  assert.equal(Store.parseBackup('{"trainings":[]}').ok, true, 'eine Sicherung nur mit eigenen Trainings');
 });
 
-test('snapshot: nur erledigte Sätze, Gewicht nur bei Übungen mit Gewichtsfeld', () => {
+test('Eigene Trainings: anlegen, bereinigen, auflösen, kopieren, löschen und zurückholen', () => {
+  const s = Store.newState();
+  const t = Store.addTraining(s, '  Beine   zuhause  ', [{ ex: 'x-squat', sets: 2, reps: '12–15', rest: 45 }, { ex: 'x-squat' }, { ex: 'gibts-nicht' }, { ex: 'a-plank', hold: 30, sets: 3 }], ['beine', 'quatsch', 'beine']);
+  assert.match(t.id, /^u/);
+  assert.equal(t.name, 'Beine zuhause');
+  assert.deepEqual(t.items, [{ ex: 'x-squat', sets: 2, reps: '12–15', rest: 45 }, { ex: 'a-plank', sets: 3, hold: 30 }]);
+  assert.deepEqual(t.groups, ['beine']);
+  const r = Store.training(s, t.id);
+  assert.equal(r.builtin, false);
+  assert.equal(r.items[0].name, 'Kniebeuge');
+  assert.equal(r.items[0].sets, 2);
+  assert.equal(r.items[0].big, '12–15');
+  assert.equal(r.items[0].rest, 45);
+  assert.equal(r.items[1].timer, true);
+  assert.equal(r.items[1].hold, 30);
+  // Namen: leer wird ersetzt, zu lang wird gekürzt
+  assert.equal(Store.addTraining(s, '   ', [{ ex: 'x-squat' }]).name, 'Mein Training');
+  assert.equal(Store.addTraining(s, 'x'.repeat(200), [{ ex: 'x-squat' }]).name.length, Store.NAME_MAX);
+  // Kopie eines Vorschlags
+  const c = Store.copyTraining(s, 'A');
+  assert.equal(c.name, 'Tag A (Kopie)');
+  assert.deepEqual(c.items.map((i) => i.ex), ['a-box', 'a-hip', 'a-push', 'a-tri', 'a-plank']);
+  assert.equal(c.items[1].note, undefined, 'Hinweistexte der App werden nicht kopiert');
+  assert.equal(Store.allTrainings(s).own[0].id, c.id, 'neueste zuerst');
+  // Löschen mit Haken, Rückgängig stellt alles wieder her
+  Store.setsOf(s, t.id)['x-squat'] = 2; s.stamp[t.id] = '2026-10-05'; Store.touch(s, t.id);
+  const rm = Store.removeTraining(s, t.id);
+  assert.equal(Store.training(s, t.id), null);
+  assert.equal(s.sets[t.id], undefined);
+  assert.equal(s.cur, 'A');
+  assert.ok(!s.last.includes(t.id));
+  assert.equal(Store.restoreTraining(s, rm), true);
+  assert.deepEqual(s.sets[t.id], { 'x-squat': 2 });
+  assert.equal(Store.restoreTraining(s, rm), false, 'nicht doppelt');
+  assert.equal(Store.removeTraining(s, 'gibts-nicht'), null);
+});
+
+test('Zuletzt benutzt: die Liste bleibt kurz und ohne Doppelte', () => {
+  const s = Store.newState();
+  for (const id of ['A', 'B', 'A', 'p-x', 'B', 'A', 'B', 'A']) Store.touch(s, id);
+  assert.equal(s.cur, 'A');
+  assert.deepEqual(s.last, ['A', 'B', 'p-x']);
+});
+
+test('snapshot: nur erledigte Sätze, Gewicht nur bei Übungen mit Gewichtsfeld, mit Titel und Zielsätzen', () => {
   const s = Store.newState();
   s.sets.A = { 'a-box': 3, 'a-hip': 5, 'a-push': 2, 'a-plank': 0 };
   s.weights = { 'a-box': ' 60 ', 'a-push': '9', 'a-hip': '', 'b-curl': '8' };
   const e = Store.snapshot(s, 'A');
-  assert.deepEqual(e, { day: 'A', sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 2 }, weights: { 'a-box': '60' }, note: '' });
-  assert.deepEqual(Store.entrySummary(e), { done: 8, total: 15, hasDetails: true });
-  assert.deepEqual(Store.entrySummary(Store.blankEntry('B')), { done: 0, total: 15, hasDetails: false });
+  assert.deepEqual(e, { day: 'A', title: 'Tag A', targets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 }, sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 2 }, weights: { 'a-box': '60' }, note: '' });
+  assert.deepEqual(Store.entrySummary(s, e), { done: 8, total: 15, hasDetails: true });
+  assert.deepEqual(Store.entrySummary(s, Store.blankEntry(s, 'B')), { done: 0, total: 15, hasDetails: false });
+});
+
+test('Der Kalender ändert sich nicht, wenn das Training später umbenannt oder gelöscht wird', () => {
+  const s = Store.newState();
+  const t = Store.addTraining(s, 'Rücken kurz', [{ ex: 'b-row', sets: 2 }, { ex: 'b-curl', sets: 3 }]);
+  Store.setsOf(s, t.id)['b-row'] = 2; Store.setsOf(s, t.id)['b-curl'] = 1;
+  assert.deepEqual(Store.logSession(s, '2026-10-05', t.id, '2026-10-05'), { ok: true });
+  const e = s.log['2026-10-05'][0];
+  assert.equal(e.title, 'Rücken kurz');
+  t.name = 'Anders'; t.items = [{ ex: 'b-rdl' }];
+  Store.removeTraining(s, t.id);
+  assert.equal(Store.entryTitle(s, e), 'Rücken kurz');
+  assert.deepEqual(Store.entryItems(s, e).map((x) => [x.id, x.sets]), [['b-row', 2], ['b-curl', 3]]);
+  assert.deepEqual(Store.entrySummary(s, e), { done: 3, total: 5, hasDetails: true });
+  assert.equal(Store.tagOf(s, e), 'R');
+  assert.equal(Store.tagOf(s, { day: 'A', sets: {}, weights: {}, note: '' }), 'A');
+  assert.equal(Store.tagOf(s, { day: 'u1', title: '!!!', sets: {}, weights: {}, note: '' }), '•');
+  // Eintrag eines gelöschten Trainings ohne Momentaufnahme: nimmt die Übungen aus den Sätzen
+  const legacy = { day: 'ugone', sets: { 'b-row': 4 }, weights: {}, note: '' };
+  assert.equal(Store.entryTitle(s, legacy), 'Training');
+  assert.deepEqual(Store.entryItems(s, legacy).map((x) => x.id), ['b-row']);
 });
 
 test('Kalender: Eintragen, Duplikate, Zukunft, Verschieben, Löschen und Rückgängig ohne Datenverlust', () => {
   const s = Store.newState();
   const today = '2026-10-05';
-  const a = Store.snapshot({ ...s, sets: { A: { 'a-box': 3 }, B: {} }, weights: {} }, 'A');
+  s.sets.A = { 'a-box': 3 };
+  const a = Store.snapshot(s, 'A');
   assert.deepEqual(Store.addLog(s, '2026-10-01', a, today), { ok: true });
-  assert.deepEqual(Store.addLog(s, '2026-10-01', Store.blankEntry('A'), today), { ok: false, reason: 'exists' });
+  assert.deepEqual(Store.addLog(s, '2026-10-01', Store.blankEntry(s, 'A'), today), { ok: false, reason: 'exists' });
   assert.deepEqual(s.log['2026-10-01'][0].sets, { 'a-box': 3 }, 'vorhandener Eintrag bleibt unverändert');
-  assert.deepEqual(Store.addLog(s, '2026-10-06', Store.blankEntry('B'), today), { ok: false, reason: 'future' });
-  assert.deepEqual(Store.addLog(s, '2026-13-01', Store.blankEntry('B'), today), { ok: false, reason: 'invalid' });
-  assert.deepEqual(Store.addLog(s, '2026-10-01', Store.blankEntry('B'), today), { ok: true });
+  assert.deepEqual(Store.addLog(s, '2026-10-06', Store.blankEntry(s, 'B'), today), { ok: false, reason: 'future' });
+  assert.deepEqual(Store.addLog(s, '2026-13-01', Store.blankEntry(s, 'B'), today), { ok: false, reason: 'invalid' });
+  assert.deepEqual(Store.addLog(s, '2026-10-01', Store.blankEntry(s, 'B'), today), { ok: true });
   assert.deepEqual(s.log['2026-10-01'].map((e) => e.day), ['A', 'B']);
 
-  // Verschieben: Ziel mit gleichem Typ wird abgelehnt, nichts geht verloren
-  Store.addLog(s, '2026-10-03', Store.blankEntry('A'), today);
+  // Verschieben: Ziel mit gleichem Training wird abgelehnt, nichts geht verloren
+  Store.addLog(s, '2026-10-03', Store.blankEntry(s, 'A'), today);
   assert.deepEqual(Store.moveLog(s, '2026-10-01', 'A', '2026-10-03', today), { ok: false, reason: 'exists' });
   assert.deepEqual(s.log['2026-10-01'][0].sets, { 'a-box': 3 });
   assert.deepEqual(Store.moveLog(s, '2026-10-01', 'A', '2026-10-09', today), { ok: false, reason: 'future' });
@@ -198,8 +313,9 @@ test('Kalender: Eintragen, Duplikate, Zukunft, Verschieben, Löschen und Rückg�
 });
 
 test('Eintrag bearbeiten: Sätze begrenzt, Gewicht und Notiz bereinigt', () => {
-  const ex = PLAN.A.exercises.find((x) => x.id === 'a-box');
-  const e = Store.blankEntry('A');
+  const s = Store.newState();
+  const ex = Store.training(s, 'A').items.find((x) => x.id === 'a-box');
+  const e = Store.blankEntry(s, 'A');
   assert.equal(Store.setEntrySets(e, ex, 2), 2);
   assert.equal(Store.setEntrySets(e, ex, 99), ex.sets);
   assert.equal(Store.setEntrySets(e, ex, -4), 0);
@@ -244,12 +360,13 @@ test('Essen: Formularfelder <-> Eintrag, Kopie, Merkliste, Löschen/Rückgängig
   assert.equal(Store.removeFood(s, '2026-05-01', 'gibtsnicht'), null);
 });
 
-test('refreshDays: neuer Tag startet die Haken von vorn', () => {
+test('refreshDays: neuer Tag startet die Haken von vorn, auch bei eigenen Trainings', () => {
   const s = Store.newState();
   s.sets.A = { 'a-box': 2 }; s.stamp.A = '2026-10-04'; s.logged.A = '2026-10-04';
   s.sets.B = { 'b-row': 1 }; s.stamp.B = '2026-10-05';
-  assert.deepEqual(Store.refreshDays(s, '2026-10-05'), ['A']);
-  assert.deepEqual(s.sets, { A: {}, B: { 'b-row': 1 } });
+  s.sets.u1 = { 'x-squat': 1 }; s.stamp.u1 = '2026-10-03';
+  assert.deepEqual(Store.refreshDays(s, '2026-10-05').sort(), ['A', 'u1']);
+  assert.deepEqual(s.sets, { A: {}, B: { 'b-row': 1 }, u1: {} });
   assert.equal(s.logged.A, '');
   assert.deepEqual(Store.refreshDays(s, '2026-10-05'), []);
 });
@@ -270,6 +387,12 @@ test('Speicher: neu, ok, migriert (mit Sicherung), beschädigt, nicht verfügbar
   assert.equal(JSON.parse(st.getItem(Store.KEY)).schema, Store.SCHEMA);
   assert.equal(Store.counts(r.state).trainings, 5);
   assert.equal(Store.load(st).status, 'ok');
+
+  // Schema 2 ebenso
+  const v2 = JSON.stringify({ schema: 2, day: 'A', sets: { A: {}, B: {} }, stamp: { A: '', B: '' }, logged: { A: '', B: '' }, weights: {}, plankSecs: 45, log: {}, food: {}, recent: [], goalP: null, weightKg: null });
+  st = memStorage({ [Store.KEY]: v2 });
+  assert.equal(Store.load(st).status, 'migrated');
+  assert.equal(st.getItem(Store.KEY + '.schema2'), v2);
 
   // beschädigter Inhalt wird gesichert statt stillschweigend überschrieben
   for (const bad of ['{kaputt', '5', '[]', 'null']) {
@@ -305,7 +428,8 @@ test('Training eintragen: freier Platz, nackter Eintrag bekommt Details, Eintrag
   s.weights = { 'a-box': '60' };
   // freier Platz
   assert.deepEqual(Store.logSession(s, '2026-10-05', 'A', today), { ok: true });
-  assert.deepEqual(s.log['2026-10-05'][0], { day: 'A', sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: '' });
+  assert.equal(s.log['2026-10-05'][0].title, 'Tag A');
+  assert.deepEqual({ ...s.log['2026-10-05'][0], targets: 0 }, { day: 'A', title: 'Tag A', targets: 0, sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: '' });
   // Eintrag mit Details wird nicht überschrieben
   s.sets.A = { 'a-box': 1 };
   assert.deepEqual(Store.logSession(s, '2026-10-05', 'A', today), { ok: false, reason: 'exists' });
@@ -313,7 +437,7 @@ test('Training eintragen: freier Platz, nackter Eintrag bekommt Details, Eintrag
   // nackter Eintrag (alt oder von Hand) bekommt die Details, die Notiz bleibt
   s.log['2026-10-04'] = [{ day: 'A', sets: {}, weights: {}, note: 'von Hand' }];
   assert.deepEqual(Store.logSession(s, '2026-10-04', 'A', today), { ok: true, filled: true });
-  assert.deepEqual(s.log['2026-10-04'][0], { day: 'A', sets: { 'a-box': 1 }, weights: { 'a-box': '60' }, note: 'von Hand' });
+  assert.deepEqual({ ...s.log['2026-10-04'][0], targets: 0 }, { day: 'A', title: 'Tag A', targets: 0, sets: { 'a-box': 1 }, weights: { 'a-box': '60' }, note: 'von Hand' });
   // ungültig / Zukunft
   assert.equal(Store.logSession(s, '2026-10-06', 'A', today).reason, 'future');
   assert.equal(Store.logSession(s, 'x', 'A', today).reason, 'invalid');

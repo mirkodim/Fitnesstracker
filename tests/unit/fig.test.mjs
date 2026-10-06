@@ -4,8 +4,11 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const FIG = require('../../fig.js');
+require('../../anims.js');
 const REF = require('../../reference/fig.js');
-const { PLAN } = require('../../plan.js');
+const { LIB } = require('../../lib.js');
+const IDS = Object.keys(FIG.ANIM);
+const NEW_IDS = IDS.filter((id) => id.startsWith('x-'));      // the ten of the first version are kept exactly as they were (see the comparison with the reference)
 
 const LB = 46, LT = 36, LS = 36, LU = 26, LF = 24, HR = 9, G = 174;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -25,15 +28,17 @@ function frames(id, n = 40) {
   return out;
 }
 
-test('Jede Übung des Plans hat eine Animation mit Falsch-Schritt oder Grundbewegung', () => {
-  for (const d of ['A', 'B']) for (const ex of PLAN[d].exercises) {
+test('Jede Übung der Bibliothek hat genau eine Animation, mit Schritten, Beschriftung und hervorgehobenem Muskel', () => {
+  for (const ex of LIB) {
     const A = FIG.ANIM[ex.id];
     assert.ok(A, 'Animation für ' + ex.id);
     assert.ok(A.steps.length >= 2 && A.reps >= 1, ex.id);
     assert.ok(A.hl.length >= 1, ex.id + ' hebt einen Muskel hervor');
+    assert.ok(Number.isInteger(A.thumb || 0) && (A.thumb || 0) < A.steps.length, ex.id + ' Vorschaubild');
     A.steps.forEach((s) => assert.ok(s.label && s.ms > 0 && s.hold >= 0, ex.id));
+    A.steps.filter((s) => s.bad).forEach((s) => assert.match(s.label, /^Falsch:/, ex.id));
   }
-  assert.deepEqual(Object.keys(FIG.ANIM).sort(), [...PLAN.A.exercises, ...PLAN.B.exercises].map((e) => e.id).sort(), 'keine übrige Animation');
+  assert.deepEqual(IDS.sort(), LIB.map((e) => e.id).sort(), 'keine übrige Animation');
 });
 
 /* a-push and b-row cut across with a bent knee halfway, although the text says "Körper bleibt eine Linie": the good moves now follow the arc. */
@@ -48,7 +53,7 @@ test('Alle anderen Animationen sind unverändert (Bild für Bild identisch zur R
     assert.equal(n.steps.length, r.steps.length, id);
     r.steps.forEach((rs, i) => {
       const ns = n.steps[i];
-      assert.deepEqual({ ms: ns.ms, hold: ns.hold, label: ns.label, bad: ns.bad }, { ms: rs.ms, hold: rs.hold, label: rs.label, bad: rs.bad }, id + ' Schritt ' + (i + 1));
+      assert.deepEqual({ ms: ns.ms, hold: ns.hold, label: ns.label, bad: ns.bad }, { ms: rs.ms, hold: rs.hold, label: rs.label.replace(/ß/g, 'ss'), bad: rs.bad }, id + ' Schritt ' + (i + 1));
       const prev = r.steps[(i + r.steps.length - 1) % r.steps.length], nprev = n.steps[(i + n.steps.length - 1) % n.steps.length];
       // corrected animations: the key poses and the deliberately wrong moves stay identical, only the good in-between frames change
       const onlyKeys = STRAIGHTENED.has(id) && !rs.bad && !prev.bad;
@@ -93,12 +98,12 @@ for (const id of ['a-tri', 'a-hip']) {
     }
   });
 
-  test(id + ': Figur steht bzw. liegt auf dem Boden, Füße rutschen nicht', () => {
+  test(id + ': Figur steht bzw. liegt auf dem Boden, Füsse rutschen nicht', () => {
     const fr = frames(id);
     const ank = fr[0].j.ankle;
     for (const f of fr) {
       assert.deepEqual(f.j.ankle, ank, id + ' Knöchel bleibt stehen');
-      assert.ok(Math.abs(f.j.ankle[1] - G) < 1e-9 && Math.abs(f.j.toe[1] - G) < 1e-9, id + ' Fuß flach auf dem Boden');
+      assert.ok(Math.abs(f.j.ankle[1] - G) < 1e-9 && Math.abs(f.j.toe[1] - G) < 1e-9, id + ' Fuss flach auf dem Boden');
       for (const k of ['hip', 'knee', 'sh', 'elbow', 'wrist', 'ankle', 'toe']) assert.ok(f.j[k][1] <= G + 1e-9, id + ' ' + k + ' nicht im Boden');
     }
   });
@@ -213,4 +218,98 @@ test('a-hip: Schultern bleiben auf der Bank, oben Tischposition, unten Hüfte kn
   // falsch: Hüfte zu hoch, Hohlkreuz (Rücken wölbt sich nach oben)
   assert.ok(bad.hip[1] < top.hip[1] - 6, 'Falsch: Hüfte höher als in der richtigen Position');
   assert.ok(FIG.ANIM['a-hip'].steps[3].pose.round < 0, 'Falsch: Hohlkreuz');
+});
+
+
+/* ---------- every animation, every frame ---------- */
+const HELD = { plate: 1, bell: 1, ball: 1, pad: 1 };
+const heldR = (p) => p.r || (p.t === 'bell' ? 8 : (p.t === 'pad' ? (p.len || 30) / 2 : 10));
+
+function allFrames(id, n = 24) {
+  const A = FIG.ANIM[id], out = [];
+  A.steps.forEach((to, i) => {
+    const from = A.steps[(i + A.steps.length - 1) % A.steps.length];
+    for (let k = 0; k <= n; k++) {
+      const q = FIG.mix(from.pose, to.pose, k / n);
+      out.push({ step: i, bad: !!(to.bad || from.bad), q, j: A.view === 'f' ? FIG.solveF(q) : FIG.solve(q) });
+    }
+  });
+  return out;
+}
+
+test('Alle Animationen: nichts ist NaN, die Segmentlängen bleiben in jedem Bild gleich', () => {
+  for (const id of NEW_IDS) {
+    const A = FIG.ANIM[id];
+    for (const f of allFrames(id)) {
+      const j = f.j;
+      for (const k of Object.keys(j)) if (Array.isArray(j[k])) assert.ok(j[k].every(Number.isFinite), id + ' ' + k);
+      if (A.view === 'f') {
+        assert.ok(Math.abs(dist(j.P, j.C) - LB) < 1e-6, id + ' Rumpf');
+        for (const [a, b, l] of [['hipL', 'knL', LT], ['knL', 'anL', LS], ['hipR', 'knR', LT], ['knR', 'anR', LS], ['shL', 'elL', LU], ['elL', 'wrL', LF], ['shR', 'elR', LU], ['elR', 'wrR', LF]]) {
+          assert.ok(Math.abs(dist(j[a], j[b]) - l) < 1e-6, id + ' ' + a + '-' + b);
+        }
+      } else {
+        const where = id + ' Schritt ' + (f.step + 1);
+        assert.ok(Math.abs(dist(j.hip, j.knee) - LT) < 1e-6 && Math.abs(dist(j.knee, j.ankle) - LS) < 1e-6, where + ' Bein');
+        assert.ok(Math.abs(dist(j.hip, j.sh) - LB) < 1e-6, where + ' Rumpf');
+        assert.ok(Math.abs(dist(j.sh, j.elbow) - LU) < 0.02 && Math.abs(dist(j.elbow, j.wrist) - LF) < 0.02, where + ' Arm: Hand liegt ausser Reichweite (' + dist(j.sh, j.wrist).toFixed(1) + ')');
+        if (j.ankle2) assert.ok(Math.abs(dist(j.hip, j.knee2) - LT) < 1e-6 && Math.abs(dist(j.knee2, j.ankle2) - LS) < 1e-6, where + ' zweites Bein: Fuss ausser Reichweite (' + dist(j.hip, j.ankle2).toFixed(1) + ')');
+        if (j.wrist2) assert.ok(Math.abs(dist(j.sh, j.elbow2) - LU) < 0.02 && Math.abs(dist(j.elbow2, j.wrist2) - LF) < 0.02, where + ' zweiter Arm');
+      }
+    }
+  }
+});
+
+test('Alle Animationen: nichts liegt unter dem Boden, die Standfüsse bleiben stehen', () => {
+  for (const id of NEW_IDS) {
+    const A = FIG.ANIM[id];
+    for (const f of allFrames(id)) {
+      const j = f.j, where = id + ' Schritt ' + (f.step + 1);
+      for (const k of Object.keys(j)) {
+        if (!Array.isArray(j[k]) || j[k].length !== 2 || k === 'head') continue;
+        assert.ok(j[k][1] <= G + (/^toe/.test(k) ? 3 : 1.01), where + ': ' + k + ' unter dem Boden (' + j[k][1].toFixed(1) + ')');
+      }
+      assert.ok(j.head[1] + HR <= 178 + 1.5, where + ': Kopf unter dem Boden');
+      for (const p of A.props) if (HELD[p.t] && p.at && p.t !== 'pad') {
+        const c = [j[p.at][0] + (p.dx || 0), j[p.at][1] + (p.dy || 0)];
+        assert.ok(c[1] + heldR(p) <= 178 - 1 + 1e-6, where + ': ' + p.t + ' berührt den Boden');
+      }
+    }
+  }
+});
+
+test('Alle Animationen: alles liegt im Bild (320 x 190) und ist zentriert', () => {
+  for (const id of NEW_IDS) {
+    const A = FIG.ANIM[id], z = A.zoom || 1;
+    let lo = 1e9, hi = -1e9, top = 1e9;
+    const take = (x, y, r) => { lo = Math.min(lo, A.ox + z * (x - r)); hi = Math.max(hi, A.ox + z * (x + r)); top = Math.min(top, 178 + z * (y - r - 178)); };
+    for (const f of allFrames(id, 14)) {
+      for (const k of Object.keys(f.j)) if (Array.isArray(f.j[k]) && f.j[k].length === 2 && k !== 'head') take(f.j[k][0], f.j[k][1], 3.5);
+      take(f.j.head[0], f.j.head[1], HR + 1.75);
+      for (const p of A.props) if (HELD[p.t] && p.at) { const c = [f.j[p.at][0] + (p.dx || 0), f.j[p.at][1] + (p.dy || 0)]; take(c[0], c[1], heldR(p) + 1.5); if (p.t === 'bell') take(c[0], c[1] - 2 * heldR(p), 2); }
+    }
+    for (const p of A.props) {
+      if (p.t === 'box') { take(p.x, p.y, 0); take(p.x + p.w, p.y + p.h, 0); }
+      if (p.t === 'anchor') { take(p.x - 12, p.y, 3); take(p.x + 12, p.y, 3); }
+      if (p.t === 'bar') { take(p.x, p.y, 3); take(p.x + p.w, p.y, 3); }
+      if (p.t === 'rail') { take(p.x1, p.y1, 2); take(p.x2, p.y2, 2); }
+      if (p.t === 'poly') p.pts.forEach((a) => take(a[0], a[1], 0));
+      if (p.t === 'pulley') take(p.x, p.y, 6);
+      if (p.t === 'arrow') { take(p.x1, p.y1, 3); take(p.x2, p.y2, 3); }
+    }
+    assert.ok(lo >= 3 && hi <= 317, id + ' horizontal im Bild: ' + lo.toFixed(1) + '..' + hi.toFixed(1));
+    assert.ok(top >= 1.5, id + ' oben im Bild: ' + top.toFixed(1));
+    assert.ok(Math.abs((lo + hi) / 2 - 160) <= 8, id + ' zentriert: ' + ((lo + hi) / 2).toFixed(1));
+  }
+});
+
+test('Vorschaubilder: gültiges SVG mit Zahlen, für jede Übung', () => {
+  for (const id of NEW_IDS) {
+    const svg = FIG.thumb(id);
+    assert.match(svg, /^<svg class="th" viewBox="[-\d. ]+"/, id);
+    assert.doesNotMatch(svg, /NaN|undefined|Infinity/, id);
+  }
+  for (const g of ['beine', 'gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) {
+    assert.doesNotMatch(FIG.icon(g), /NaN|undefined/, g);
+  }
 });

@@ -1,5 +1,7 @@
 /* Trainings-Strichliste: screens, events, timers and the installable-app parts (service worker, update bar).
-   Rules and data handling live in store.js, the plan in plan.js, the stick figures in fig.js. */
+   Rules and data handling live in store.js, the exercises in lib.js, the ready-made trainings in trainings.js, the stick figures in fig.js and anims.js.
+   The start flow ("Was möchtest du heute trainieren?", assistant, "Meine Trainings") is in ui-flow.js, the exercise library in ui-lib.js.
+   Both get the shared pieces of this file through the object A and add their screens and button handlers (A.acts). */
 (function () {
   'use strict';
 
@@ -9,12 +11,15 @@
   var CHEV_L = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var CHEV_R = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var CHEV_D = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5.5 9.5L12 16l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var EYE = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
   var TRASH = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7M10.5 11v5.5M13.5 11v5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var ICONS = {
     train: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    lib: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4.5 4.5h6.5v15H4.5zM13 4.5h6.5v6.5H13zM13 13h6.5v6.5H13z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     cal: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     food: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8.5c0-1.5 1.5-1.5 1.5-3.5M14 8.5c0-1.5 1.5-1.5 1.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
   };
+  var TABS = [['train', 'Training'], ['lib', 'Übungen'], ['cal', 'Kalender'], ['food', 'Essen']];
 
   var MON = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   var WDL = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
@@ -35,9 +40,9 @@
   var now0 = new Date();
   /* runtime state, never stored */
   var R = {
-    tab: 'train', rest: null, plank: null, fresh: null, confirm: false, last: null, pick: { A: null, B: null },
-    demoOpen: false, calForm: false, cal: { y: now0.getFullYear(), m: now0.getMonth() }, calSel: todayKey(),
-    calOpen: null, calUndo: null,
+    tab: 'train', flow: 'home', pv: null, detail: null, sel: [], lib: { g: null, q: '', mine: false, eq: false },
+    rest: null, plank: null, fresh: null, confirm: false, last: null, pick: {}, demoOpen: false, calForm: false,
+    cal: { y: now0.getFullYear(), m: now0.getMonth() }, calSel: todayKey(), calOpen: null, calUndo: null, calAdd: false,
     foodDate: todayKey(), draft: Store.newDraft('100'), foodMsg: '', foodGoto: null, undo: null, edit: null, copyOpen: false, editY: 0,
     goalOpen: false, bkOpen: false, bkMsg: '', restore: null,
     upd: null, offlineReady: false, saveFailed: false, loadStatus: loaded.status
@@ -54,27 +59,32 @@
   }
 
   /* ---------- training helpers ---------- */
-  function exs(d) { return PLAN[d].exercises; }
-  function doneSets(d, id) { return S.sets[d][id] || 0; }
-  function isDone(d, ex) { return doneSets(d, ex.id) >= ex.sets; }
-  function totals(d) {
-    var done = 0, total = 0, exDone = 0, list = exs(d);
-    list.forEach(function (ex) {
-      var n = Math.min(doneSets(d, ex.id), ex.sets);
+  function curTraining() {
+    var t = Store.training(S, S.cur);
+    if (!t) { S.cur = 'A'; t = Store.training(S, 'A'); }
+    return t;
+  }
+  function doneSets(id, exId) { var m = S.sets[id]; return (m && Store.own(m, exId)) ? m[exId] : 0; }
+  function isDone(t, ex) { return doneSets(t.id, ex.id) >= ex.sets; }
+  function totals(t) {
+    var done = 0, total = 0, exDone = 0;
+    t.items.forEach(function (ex) {
+      var n = Math.min(doneSets(t.id, ex.id), ex.sets);
       done += n; total += ex.sets;
       if (n >= ex.sets) exDone++;
     });
-    return { done: done, total: total, exDone: exDone, exTotal: list.length };
+    return { done: done, total: total, exDone: exDone, exTotal: t.items.length };
   }
-  function currentEx(d) {
-    var list = exs(d), p = R.pick[d], i;
-    if (p) { for (i = 0; i < list.length; i++) { if (list[i].id === p && !isDone(d, list[i])) return list[i]; } }
-    for (i = 0; i < list.length; i++) { if (!isDone(d, list[i])) return list[i]; }
+  function currentEx(t) {
+    var list = t.items, p = R.pick[t.id], i;
+    if (p) { for (i = 0; i < list.length; i++) { if (list[i].id === p && !isDone(t, list[i])) return list[i]; } }
+    for (i = 0; i < list.length; i++) { if (!isDone(t, list[i])) return list[i]; }
     return null;
   }
-  function findEx(d, id) { var l = exs(d); for (var i = 0; i < l.length; i++) { if (l[i].id === id) return l[i]; } return null; }
-  function rxText(ex) { return ex.sets + ' × ' + (ex.timer ? S.plankSecs + ' s' : ex.big); }
-  function unitText(ex) { return ex.timer ? 'halten' : ex.unit; }
+  function findEx(t, id) { for (var i = 0; i < t.items.length; i++) { if (t.items[i].id === id) return t.items[i]; } return null; }
+  function holdOf(ex) { var v = Store.own(S.holdSecs, ex.id) ? S.holdSecs[ex.id] : 0; return ex.holds.indexOf(v) >= 0 ? v : ex.hold; }
+  function rxText(ex) { return ex.sets + ' × ' + (ex.timer ? holdOf(ex) + ' s' : ex.big); }
+  function unitText(ex) { return ex.timer ? (ex.sides > 1 ? 'pro Seite halten' : 'halten') : ex.unit; }
   function clock(sec) { return Math.floor(sec / 60) + ':' + pad(sec % 60); }
   function toTop() { try { window.scrollTo(0, 0); } catch (e) { /* ignore */ } }
   function scrollToId(id) {
@@ -82,15 +92,22 @@
     if (!el) return;
     try { window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.pageYOffset - (hd ? hd.offsetHeight : 0) - 12)); } catch (e) { /* ignore */ }
   }
+  /* A session is "running" when something is ticked off today but not everything. The app opens straight into it. */
+  function resumeCandidate() {
+    var t = Store.training(S, S.cur);
+    if (!t) return null;
+    var tt = totals(t);
+    return (S.stamp[t.id] === todayKey() && tt.done > 0 && tt.done < tt.total) ? t : null;
+  }
 
   /* ---------- nutrition helpers ---------- */
   function activeDraft() { return R.edit ? R.edit.draft : R.draft; }
   function previewText() {
-    var e = Store.entryFromDraft(activeDraft());
+    var e = Store.entryFromDraft(activeDraft()), u = Store.unitOf(e.mode);
     if (!Object.keys(e.v).length) return (e.name || e.g != null) ? '' : 'Alle Felder sind freiwillig. Es wird eingetragen, was du ausfüllst.';
     if (e.mode === 'por') return 'Gesamt: ' + Store.partsOf(Store.entryTotals(e)).join(' · ');
-    if (e.g == null) return 'Ohne Menge werden die Werte nur pro 100 g gespeichert und nicht in die Tagesbilanz gerechnet.';
-    return 'Bei ' + fmt(e.g, 'g') + ' g: ' + Store.partsOf(Store.entryTotals(e)).join(' · ');
+    if (e.g == null) return 'Ohne Menge werden die Werte nur pro 100 ' + u + ' gespeichert und nicht in die Tagesbilanz gerechnet.';
+    return 'Bei ' + fmt(e.g, 'g') + ' ' + u + ': ' + Store.partsOf(Store.entryTotals(e)).join(' · ');
   }
 
   /* ---------- feedback ---------- */
@@ -147,19 +164,20 @@
     var e = Anim.els();
     if (!e.g) return;
     var id = e.g.getAttribute('data-ex');
+    if (!FIG.ANIM[id]) return;
     Anim.idx = 0; Anim.label = '';
     Anim.paint(id, FIG.ANIM[id].steps[0].pose, false, 'Tippe auf das Bild, um die Bewegung abzuspielen.', 'Abspielen');
   };
   Anim.play = function (id) {
     Anim.stop();
-    var A = FIG.ANIM[id], steps = A.steps, n = steps.length, segs = [], total = 0, r, i;
+    var A0 = FIG.ANIM[id], steps = A0.steps, n = steps.length, segs = [], total = 0, r, i;
     if (reduceMotion) {
       Anim.idx = (Anim.idx + 1) % n;
       var s0 = steps[Anim.idx];
       Anim.paint(id, s0.pose, !!s0.bad, s0.label, 'Weiter');
       return;
     }
-    for (r = 0; r < (A.reps || 3); r++) {
+    for (r = 0; r < (A0.reps || 3); r++) {
       for (i = 1; i <= n; i++) {
         var from = steps[(i - 1) % n], to = steps[i % n];
         segs.push({ from: from.pose, to: to.pose, ms: to.ms, hold: to.hold, label: to.label, bad: !!to.bad, t0: total });
@@ -185,24 +203,92 @@
     Anim.raf = requestAnimationFrame(frame);
   };
 
-  /* ---------- actions ---------- */
+  /* ---------- navigation: every step forward is one entry in the browser history, so the phone's back button steps back ---------- */
+  var navStack = [], pendingPops = 0;
+  function snap() { return { tab: R.tab, flow: R.flow, pv: R.pv, detail: R.detail ? { id: R.detail.id } : null, lib: JSON.parse(JSON.stringify(R.lib)), sel: R.sel.slice() }; }
+  function applySnap(s) { R.tab = s.tab; R.flow = s.flow; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.sel = s.sel; }
+  function resetTransient() {
+    R.plank = null; R.confirm = false; R.undo = null; R.calUndo = null; R.edit = null; R.copyOpen = false; R.foodGoto = null; R.restore = null;
+    R.calForm = false; R.calAdd = false; R.demoOpen = false;
+  }
+  function go(patch) {
+    navStack.push(snap());
+    if (navStack.length > 60) navStack.shift();
+    try { history.pushState({ d: navStack.length }, ''); } catch (e) { /* ignore */ }
+    if (patch.flow !== 'existing') R.trUndo = null;
+    var k;
+    for (k in patch) R[k] = patch[k];
+    resetTransient(); render(); toTop();
+  }
+  /* A new start: nothing to go back to except the home screen (after saving a training, after starting one). */
+  function resetTo(patch) {
+    navStack = [];
+    try { history.replaceState({ d: 0 }, ''); } catch (e) { /* ignore */ }
+    var k;
+    for (k in patch) R[k] = patch[k];
+    R.trUndo = null;
+    resetTransient(); render(); toTop();
+  }
+  /* n steps back at once (e.g. from the detail page over the picker to the editor) */
+  function back(n) {
+    n = Math.min(n || 1, navStack.length);
+    if (n > 0) {
+      pendingPops = n;
+      try { history.go(-n); return; } catch (e) { /* fall through */ }
+      pendingPops = 0;
+      var s = null;
+      while (n-- > 0) s = navStack.pop();
+      applySnap(s); resetTransient(); render(); toTop();
+      return;
+    }
+    R.tab = 'train'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop();
+  }
+  window.addEventListener('popstate', function () {
+    if (navStack.length) {
+      var n = pendingPops || 1, s = null;
+      pendingPops = 0;
+      while (n-- > 0 && navStack.length) s = navStack.pop();
+      applySnap(s); resetTransient(); render(); toTop();
+    } else if (R.tab !== 'train' || R.flow !== 'home' || R.detail) { pendingPops = 0; R.tab = 'train'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop(); }
+  });
+  try { history.replaceState({ d: 0 }, ''); } catch (e) { /* ignore */ }
+
+  function goTab(tab, key) {
+    var patch = { tab: tab, detail: null };
+    if (tab === 'train' && R.tab === 'train' && R.flow !== 'run') patch.flow = 'home';
+    if (tab === 'lib' && R.tab === 'lib') patch.lib = { g: null, q: '', mine: R.lib.mine, eq: false };
+    if (tab === 'food' && key && parseKey(key)) patch.foodDate = key;
+    if (tab === 'cal' && key && parseKey(key)) { var d = parseKey(key); patch.calSel = key; patch.cal = { y: d.getFullYear(), m: d.getMonth() }; patch.calOpen = null; }
+    go(patch);
+  }
+  /* Opens a training: it becomes the current one and the run view shows it. */
+  function startTraining(id, fresh) {
+    if (!Store.training(S, id)) return;
+    Store.touch(S, id);
+    R.rest = null; R.last = null;
+    save();
+    if (fresh) resetTo({ tab: 'train', flow: 'run', detail: null }); else go({ tab: 'train', flow: 'run', detail: null });
+  }
+
+  /* ---------- actions: training run ---------- */
   function startRest(ex, afterExercise) {
     R.rest = { endAt: Date.now() + ex.rest * 1000, total: ex.rest, finished: false, afterExercise: afterExercise };
   }
 
   function setCount(ex, n) {
-    var d = S.day, before = doneSets(d, ex.id);
+    var t = curTraining(), d = t.id, before = doneSets(d, ex.id);
     n = Math.max(0, Math.min(ex.sets, n));
-    S.sets[d][ex.id] = n;
+    Store.setsOf(S, d)[ex.id] = n;
     S.stamp[d] = todayKey();
+    Store.touch(S, d);
     if (n > before) {
       R.fresh = ex.id + ':' + (n - 1);
       R.last = ex.id;
       buzz(25);
       var exDone = n >= ex.sets;
       if (exDone) R.pick[d] = null;
-      var t = totals(d);
-      if (t.done >= t.total) { R.rest = null; buzz([120, 80, 120, 80, 220]); toTop(); }
+      var tt = totals(t);
+      if (tt.done >= tt.total) { R.rest = null; buzz([120, 80, 120, 80, 220]); toTop(); }
       else { startRest(ex, exDone); if (exDone) toTop(); }
     } else {
       R.rest = null;
@@ -211,34 +297,41 @@
     render();
   }
 
+  /* The hold timer (plank and other holds): a short run-up to get into position, then the hold. An exercise "on each side" runs both sides after each other. */
   function startPlank(ex) {
-    var now = Date.now();
-    R.plank = { ex: ex, secs: S.plankSecs, holdAt: now + READY * 1000, endAt: now + (READY + S.plankSecs) * 1000, phase: 'ready' };
+    var now = Date.now(), secs = holdOf(ex), sides = ex.sides || 1, phases = [], t = now, s;
+    for (s = 0; s < sides; s++) {
+      phases.push({ k: 'ready', label: s === 0 ? 'Position einnehmen' : 'Seite wechseln', end: (t += READY * 1000) });
+      phases.push({ k: 'hold', label: sides > 1 ? (s === 0 ? 'Halten, erste Seite' : 'Halten, zweite Seite') : 'Halten', end: (t += secs * 1000) });
+    }
+    R.plank = { ex: ex, secs: secs, phases: phases, idx: 0, start: now, endAt: t };
     render();
   }
 
   function plankState() {
-    var p = R.plank, now = Date.now();
-    if (now < p.holdAt) return { phase: 'ready', left: Math.ceil((p.holdAt - now) / 1000), frac: 1 };
-    return { phase: 'hold', left: Math.max(0, Math.ceil((p.endAt - now) / 1000)), frac: Math.max(0, (p.endAt - now) / 1000 / p.secs) };
+    var p = R.plank, now = Date.now(), i = 0;
+    while (i < p.phases.length - 1 && now >= p.phases[i].end) i++;
+    var ph = p.phases[i], begin = i ? p.phases[i - 1].end : p.start;
+    return { idx: i, phase: ph.k, label: ph.label, left: Math.max(0, Math.ceil((ph.end - now) / 1000)),
+      frac: ph.k === 'ready' ? 1 : Math.max(0, (ph.end - now) / (ph.end - begin)) };
   }
 
-  function resetDay(d) {
-    S.sets[d] = {}; S.stamp[d] = ''; S.logged[d] = ''; R.pick[d] = null; R.rest = null; R.plank = null; R.confirm = false; R.last = null; R.calForm = false;
+  function resetDay(id) {
+    S.sets[id] = {}; S.stamp[id] = ''; S.logged[id] = ''; R.pick[id] = null; R.rest = null; R.plank = null; R.confirm = false; R.last = null; R.calForm = false;
     save(); render(); toTop();
   }
 
-  /* Write today's session into the calendar: a snapshot of the sets and weights, not just the letter. */
+  /* Write today's session into the calendar: a snapshot of the sets and weights, not just the name. */
   function calSave() {
-    var inp = document.getElementById('cal-date'), v = inp ? inp.value : '', d = parseKey(v);
-    var res = d ? Store.logSession(S, v, S.day, todayKey()) : { ok: false, reason: 'invalid' };
+    var inp = document.getElementById('cal-date'), v = inp ? inp.value : '', d = parseKey(v), t = curTraining();
+    var res = d ? Store.logSession(S, v, t.id, todayKey()) : { ok: false, reason: 'invalid' };
     if (!res.ok) {
       setMsg('cal-msg', res.reason === 'exists'
-        ? 'Am ' + longDate(v) + ' ist ' + PLAN[S.day].label + ' schon mit Sätzen eingetragen. Wähle einen anderen Tag oder ändere den Eintrag im Kalender.'
+        ? 'Am ' + longDate(v) + ' ist ' + t.name + ' schon mit Sätzen eingetragen. Wähle einen anderen Tag oder ändere den Eintrag im Kalender.'
         : 'Bitte ein Datum bis heute wählen.');
       return;
     }
-    S.logged[S.day] = v;
+    S.logged[t.id] = v;
     R.calForm = false; R.calSel = v; R.cal = { y: d.getFullYear(), m: d.getMonth() }; R.calOpen = null; R.calUndo = null;
     save(); render();
   }
@@ -251,7 +344,7 @@
     var to = inp.value, res = Store.moveLog(S, R.calSel, e.day, to, todayKey());
     if (!res.ok) {
       setMsg('e-msg', res.reason === 'exists'
-        ? 'Am ' + longDate(to) + ' ist ' + PLAN[e.day].label + ' schon eingetragen. Wähle einen anderen Tag.'
+        ? 'Am ' + longDate(to) + ' ist ' + Store.entryTitle(S, e) + ' schon eingetragen. Wähle einen anderen Tag.'
         : 'Bitte ein Datum bis heute wählen.');
       return;
     }
@@ -325,7 +418,9 @@
   }
 
   function countsText(c) {
-    return (c.trainings === 1 ? '1 Training' : c.trainings + ' Trainings') + ' und ' + (c.foods === 1 ? '1 Essenseintrag' : c.foods + ' Essenseinträge');
+    var s = (c.trainings === 1 ? '1 Training' : c.trainings + ' Trainings') + ' und ' + (c.foods === 1 ? '1 Essenseintrag' : c.foods + ' Essenseinträge');
+    if (c.plans) s += ' und ' + (c.plans === 1 ? '1 eigenes Training' : c.plans + ' eigene Trainings');
+    return s;
   }
   /* A backup replaces everything. If there is something to lose, it is shown first and has to be confirmed. */
   function tryRestore(text) {
@@ -343,7 +438,8 @@
     if (storageOK) Store.backupBefore(localStorage, S, 'before-restore');
     S = state;
     refreshDays();
-    R.pick = { A: null, B: null }; R.rest = null; R.plank = null; R.last = null; R.restore = null; R.edit = null; R.calOpen = null; R.calUndo = null; R.undo = null;
+    R.pick = {}; R.rest = null; R.plank = null; R.last = null; R.restore = null; R.edit = null; R.calOpen = null; R.calUndo = null; R.undo = null;
+    R.flow = resumeCandidate() ? 'run' : 'home';
     save();
     R.bkMsg = 'Wiederhergestellt: ' + countsText(Store.counts(S)) + '.';
     render();
@@ -358,23 +454,35 @@
 
   function setMsg(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
 
-  /* ---------- views: training ---------- */
+  /* ---------- shared pieces for the screens ---------- */
+  function thumbHTML(exId) { return '<span class="thumb">' + (FIG.ANIM[exId] ? FIG.thumb(exId) : '') + '</span>'; }
+
+  /* The animation and the hints of an exercise (used on the exercise card and on the detail page). */
+  function demoBodyHTML(e, extra) {
+    var h = '<button type="button" class="stage" data-act="anim-play" data-ex="' + e.id + '" aria-label="Bewegung abspielen"><svg viewBox="0 0 320 190" role="img" aria-label="Strichfigur zeigt die Bewegung"><g id="fig-g" data-ex="' + e.id + '"></g></svg><span class="badge" id="fig-badge">Abspielen</span></button>' +
+      '<p class="cap" id="fig-cap"></p>' +
+      '<p class="legend"><i></i><span>Farbig: hier arbeitet der Muskel. Orange: so nicht.</span></p>' + (extra || '') +
+      '<h4>Darauf achten</h4><ul>' + e.watch.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' +
+      '<h4>Häufige Fehler</h4><ul class="bad">' + e.mistakes.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' +
+      '<h4>Hier spürst du es</h4><p class="feel">' + e.feel + '</p>';
+    if (e.easier) h += '<h4>Zu schwer? So wird es leichter</h4><p class="feel">' + e.easier + '</p>';
+    if (e.harder) h += '<h4>Zu leicht? So wird es schwerer</h4><p class="feel">' + e.harder + '</p>';
+    return h;
+  }
+
+  /* ---------- views: training run ---------- */
   function navHTML() {
-    var items = [['train', 'Training'], ['cal', 'Kalender'], ['food', 'Essen']];
-    return '<nav class="nav" aria-label="Bereiche"><div class="nav-in">' + items.map(function (it) {
-      return '<button type="button" data-act="tab" data-tab="' + it[0] + '"' + (R.tab === it[0] ? ' aria-current="page"' : '') + '>' + ICONS[it[0]] + '<span>' + it[1] + '</span></button>';
+    return '<nav class="nav" aria-label="Bereiche"><div class="nav-in">' + TABS.map(function (it) {
+      return '<button type="button" data-act="tab" data-tab="' + it[0] + '"' + (R.tab === it[0] && !R.detail ? ' aria-current="page"' : '') + '>' + ICONS[it[0]] + '<span>' + it[1] + '</span></button>';
     }).join('') + '</div></nav>';
   }
 
-  function headerHTML(t) {
-    var days = ['A', 'B'].map(function (k) {
-      var tt = totals(k), done = tt.done >= tt.total;
-      return '<button class="day" type="button" data-act="day" data-day="' + k + '" aria-pressed="' + (k === S.day) + '">' +
-        '<b>' + PLAN[k].label + '</b><span>' + PLAN[k].focus + (done ? ' · erledigt' : '') + '</span></button>';
-    }).join('');
-    var pct = Math.round(t.done / t.total * 100);
-    return '<header class="top"><div class="days">' + days + '</div>' +
-      '<div class="prog"><span>' + t.done + ' von ' + t.total + ' Sätzen</span><span>' + t.exDone + ' von ' + t.exTotal + ' Übungen</span></div>' +
+  function headerHTML(t, tt) {
+    var pct = tt.total ? Math.round(tt.done / tt.total * 100) : 0, done = tt.done >= tt.total;
+    return '<header class="top"><div class="mnav">' +
+      '<button class="icon" type="button" data-act="flow-home" aria-label="Zurück zur Auswahl">' + CHEV_L + '</button>' +
+      '<div class="mt-wrap"><h2 class="mt">' + esc(t.name) + '</h2><div class="sub">' + esc(t.sub || (t.items.length + ' Übungen')) + (done ? ' · erledigt' : '') + '</div></div><span></span></div>' +
+      '<div class="prog"><span>' + tt.done + ' von ' + tt.total + ' Sätzen</span><span>' + tt.exDone + ' von ' + tt.exTotal + ' Übungen</span></div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div></header>';
   }
 
@@ -391,29 +499,21 @@
   function plankRunHTML() {
     var ps = plankState(), off = Math.round(553 * (1 - ps.frac));
     return '<div class="ring"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prg" id="plank-ring" cx="100" cy="100" r="88" style="stroke-dashoffset:' + off + '"/></svg>' +
-      '<div class="ring-in"><div class="clock" id="plank-time">' + ps.left + '</div><div class="eyebrow" id="plank-label">' + (ps.phase === 'ready' ? 'Position einnehmen' : 'Halten') + '</div></div></div>' +
+      '<div class="ring-in"><div class="clock" id="plank-time">' + ps.left + '</div><div class="eyebrow" id="plank-label">' + esc(ps.label) + '</div></div></div>' +
       '<button class="btn ghost" type="button" data-act="plank-cancel">Abbrechen</button>';
   }
 
   function demoHTML(ex) {
-    var tips = TIPS[ex.id];
-    var html = '<div class="demo"><button class="btn ghost sm" type="button" data-act="demo-toggle" aria-expanded="' + R.demoOpen + '">' + (R.demoOpen ? 'Hinweise schließen' : 'So geht die Übung') + '</button>';
-    if (R.demoOpen && tips) {
-      html += '<div class="demo-body">' +
-        '<button type="button" class="stage" data-act="anim-play" data-ex="' + ex.id + '" aria-label="Bewegung abspielen"><svg viewBox="0 0 320 190" role="img" aria-label="Strichfigur zeigt die Bewegung"><g id="fig-g" data-ex="' + ex.id + '"></g></svg><span class="badge" id="fig-badge">Abspielen</span></button>' +
-        '<p class="cap" id="fig-cap"></p>' +
-        '<p class="legend"><i></i><span>Farbig: hier arbeitet der Muskel. Orange: so nicht.</span></p>' +
-        '<h4>Darauf achten</h4><ul>' + tips.watch.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' +
-        '<h4>Häufige Fehler</h4><ul class="bad">' + tips.mistakes.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' +
-        '<h4>Hier spürst du es</h4><p class="feel">' + tips.feel + '</p></div>';
-    }
+    var e = Store.own(window.EX, ex.id) ? window.EX[ex.id] : null;
+    var html = '<div class="demo"><button class="btn ghost sm" type="button" data-act="demo-toggle" aria-expanded="' + R.demoOpen + '">' + (R.demoOpen ? 'Hinweise schliessen' : 'So geht die Übung') + '</button>';
+    if (R.demoOpen && e) html += '<div class="demo-body">' + demoBodyHTML(e) + '</div>';
     return html + '</div>';
   }
 
-  function focusHTML(d, ex, t) {
-    var done = doneSets(d, ex.id), idx = t.exDone + 1;
-    var html = '<section class="card"><div><p class="eyebrow">Jetzt dran · Übung ' + Math.min(idx, t.exTotal) + ' von ' + t.exTotal + '</p>' +
-      '<h2 class="name">' + ex.name + '</h2>' + (ex.gear ? '<div class="gear">' + ex.gear + '</div>' : '') + '</div>' +
+  function focusHTML(t, ex, tt) {
+    var done = doneSets(t.id, ex.id), idx = tt.exDone + 1;
+    var html = '<section class="card"><div><p class="eyebrow">Jetzt dran · Übung ' + Math.min(idx, tt.exTotal) + ' von ' + tt.exTotal + '</p>' +
+      '<h2 class="name">' + esc(ex.name) + '</h2>' + (ex.gear ? '<div class="gear">' + esc(ex.gear) + '</div>' : '') + '</div>' +
       '<p class="rx"><b>' + rxText(ex) + '</b><span>' + unitText(ex) + '</span></p>';
 
     if (R.plank && R.plank.ex.id === ex.id) {
@@ -421,9 +521,9 @@
     } else {
       html += tallyHTML(ex, done);
       if (ex.timer) {
-        html += '<div class="chips" role="group" aria-label="Haltezeit">' +
-          [45, 60].map(function (s) { return '<button class="chip" type="button" data-act="plank-secs" data-secs="' + s + '" aria-pressed="' + (S.plankSecs === s) + '">' + s + ' s</button>'; }).join('') + '</div>';
-        html += '<button class="btn" type="button" data-act="plank-start">Plank starten</button>';
+        html += '<div class="chips" role="group" aria-label="Haltezeit" style="--n:' + ex.holds.length + '">' +
+          ex.holds.map(function (s) { return '<button class="chip" type="button" data-act="plank-secs" data-secs="' + s + '" aria-pressed="' + (holdOf(ex) === s) + '">' + s + ' s</button>'; }).join('') + '</div>';
+        html += '<button class="btn" type="button" data-act="plank-start">' + esc(ex.name) + ' starten</button>';
       } else {
         html += '<button class="btn" type="button" data-act="done">Satz ' + (done + 1) + ' geschafft</button>';
       }
@@ -431,7 +531,7 @@
       html += '<ul class="cues">' + ex.cues.map(function (c) { return '<li>' + c + '</li>'; }).join('') + '</ul>';
       if (ex.weight) {
         html += '<div class="field"><label for="w-' + ex.id + '">Gewicht (kg)</label>' +
-          '<input id="w-' + ex.id + '" data-weight="' + ex.id + '" type="text" inputmode="decimal" autocomplete="off" placeholder="–" value="' + esc(S.weights[ex.id] || '') + '"></div>';
+          '<input id="w-' + ex.id + '" data-weight="' + ex.id + '" type="text" inputmode="decimal" autocomplete="off" placeholder="–" value="' + esc(Store.own(S.weights, ex.id) ? S.weights[ex.id] : '') + '"></div>';
       }
       if (ex.knee) html += '<div class="note">' + KNEE_NOTE + '</div>';
       if (ex.note) html += '<div class="note">' + ex.note + '</div>';
@@ -439,55 +539,56 @@
     return html + '</section>';
   }
 
-  function restHTML(d) {
-    var r = R.rest, cur = currentEx(d), now = Date.now();
+  function restHTML(t) {
+    var r = R.rest, cur = currentEx(t), now = Date.now();
     var left = Math.max(0, Math.ceil((r.endAt - now) / 1000));
     var title = left === 0 ? 'Pause vorbei' : (r.afterExercise ? 'Übung geschafft · Pause' : 'Pause');
     var top, sub;
     if (r.afterExercise) { top = cur.name; sub = rxText(cur) + ' ' + unitText(cur); }
-    else { top = 'Satz ' + (doneSets(d, cur.id) + 1) + ' von ' + cur.sets; sub = cur.name; }
+    else { top = 'Satz ' + (doneSets(t.id, cur.id) + 1) + ' von ' + cur.sets; sub = cur.name; }
     var pct = Math.max(0, Math.min(100, left / r.total * 100));
     return '<section class="card rest"><p class="eyebrow" id="rest-title">' + title + '</p>' +
       '<p class="clock" id="rest-clock">' + clock(left) + '</p>' +
       '<div class="bar warm"><i id="rest-bar" style="width:' + pct + '%"></i></div>' +
-      '<div class="next"><p class="eyebrow">Als Nächstes</p><b>' + top + '</b><span>' + sub + '</span></div>' +
+      '<div class="next"><p class="eyebrow">Als Nächstes</p><b>' + esc(top) + '</b><span>' + esc(sub) + '</span></div>' +
       '<button class="btn" type="button" data-act="skip">Weiter</button>' +
       '<div class="two"><button class="btn ghost sm" type="button" data-act="plus">+ 30 s</button>' +
       (R.last ? '<button class="btn ghost sm" type="button" data-act="undo">Rückgängig</button>' : '<span></span>') + '</div>' +
       demoHTML(cur) + '</section>';
   }
 
-  function logBlockHTML(d) {
-    var t = todayKey(), at = Store.loggedDate(S, d);
+  function logBlockHTML(t) {
+    var d = todayKey(), at = Store.loggedDate(S, t.id);
     if (R.calForm) {
       return '<div class="calform"><label for="cal-date">An welchem Tag hast du trainiert?</label>' +
-        '<input id="cal-date" type="date" value="' + t + '" max="' + t + '">' +
+        '<input id="cal-date" type="date" value="' + d + '" max="' + d + '">' +
         '<div class="two"><button class="btn sm" type="button" data-act="cal-save">Eintragen</button><button class="btn ghost sm" type="button" data-act="cal-cancel">Abbrechen</button></div>' +
         '<p class="msg" id="cal-msg"></p></div>';
     }
     if (at) {
-      return '<div class="note"><b>Eingetragen:</b> ' + PLAN[d].label + ' am ' + longDate(at) + '.</div>' +
+      return '<div class="note"><b>Eingetragen:</b> ' + esc(t.name) + ' am ' + longDate(at) + '.</div>' +
         '<button class="btn" type="button" data-act="tab" data-tab="cal" data-key="' + at + '">Kalender ansehen</button>';
     }
     return '<button class="btn" type="button" data-act="cal-open">Training in Kalender eintragen</button>';
   }
 
-  function finishHTML(d, t) {
-    var other = d === 'A' ? 'B' : 'A', ot = totals(other), otherOpen = ot.done < ot.total;
-    return '<section class="card"><div><p class="eyebrow">' + PLAN[d].label + ' · ' + PLAN[d].focus + '</p><h2 class="name">Fertig für heute</h2></div>' +
-      '<p class="rx"><b>' + t.done + ' von ' + t.total + '</b><span>Sätzen erledigt</span></p>' +
-      logBlockHTML(d) +
-      '<div class="note"><b>Knie-Check:</b> Ist das Knie morgen geschwollen oder steif, beim nächsten Mal bei den Beinübungen weniger Sätze oder Gewicht.</div>' +
-      (otherOpen ? '<button class="btn ghost" type="button" data-act="day" data-day="' + other + '">' + PLAN[other].label + ' ansehen</button>' : '') +
+  function finishHTML(t, tt) {
+    return '<section class="card"><div><p class="eyebrow">' + esc(t.name) + (t.sub ? ' · ' + esc(t.sub) : '') + '</p><h2 class="name">Fertig für heute</h2></div>' +
+      '<p class="rx"><b>' + tt.done + ' von ' + tt.total + '</b><span>Sätzen erledigt</span></p>' +
+      logBlockHTML(t) +
+      (t.kneeCheck
+        ? '<div class="note"><b>Knie-Check:</b> Ist das Knie morgen geschwollen oder steif, beim nächsten Mal bei den Beinübungen weniger Sätze oder Gewicht.</div>'
+        : '<div class="note"><b>Gut gemacht.</b> Trinke etwas, iss eine Kleinigkeit und gönne dir Erholung.</div>') +
+      '<button class="btn ghost" type="button" data-act="flow-home">Anderes Training wählen</button>' +
       '<button class="btn ghost" type="button" data-act="restart">Neu starten</button></section>';
   }
 
-  function listHTML(d, cur) {
-    var rows = exs(d).map(function (ex) {
-      var n = doneSets(d, ex.id), done = n >= ex.sets, isCur = cur && cur.id === ex.id, pips = '';
+  function listHTML(t, cur) {
+    var rows = t.items.map(function (ex) {
+      var n = doneSets(t.id, ex.id), done = n >= ex.sets, isCur = cur && cur.id === ex.id, pips = '';
       for (var i = 0; i < ex.sets; i++) pips += '<i class="pip' + (i < n ? ' on' : '') + '"></i>';
       var inner = '<span class="check">' + (done ? CHECK : '') + '</span>' +
-        '<span class="rn"><b>' + ex.name + '</b><small>' + rxText(ex) + ' ' + unitText(ex) + '</small></span>' +
+        '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + rxText(ex) + ' ' + unitText(ex) + '</small></span>' +
         '<span class="pips" aria-hidden="true">' + pips + '</span>';
       if (done) return '<div class="row done">' + inner + '</div>';
       return '<button type="button" class="row' + (isCur ? ' current' : '') + '" data-act="pick" data-id="' + ex.id + '"' + (isCur ? ' aria-current="true"' : '') + '>' + inner + '</button>';
@@ -495,14 +596,22 @@
     return '<section aria-labelledby="plan-h"><h3 class="eyebrow" id="plan-h">Heute im Plan</h3><div class="list">' + rows + '</div></section>';
   }
 
+  function runView() {
+    var t = curTraining(), tt = totals(t), cur = currentEx(t), body;
+    if (tt.done >= tt.total) body = finishHTML(t, tt);
+    else if (R.rest) body = restHTML(t);
+    else body = focusHTML(t, cur, tt);
+    return { head: headerHTML(t, tt), main: body + listHTML(t, cur) };
+  }
+
   /* ---------- views: calendar ---------- */
   function monthCounts() {
-    var pre = R.cal.y + '-' + pad(R.cal.m + 1) + '-', a = 0, b = 0;
+    var pre = R.cal.y + '-' + pad(R.cal.m + 1) + '-', n = 0, days = 0;
     Object.keys(S.log).forEach(function (k) {
       if (k.indexOf(pre) !== 0) return;
-      S.log[k].forEach(function (e) { if (e.day === 'A') a++; else if (e.day === 'B') b++; });
+      n += S.log[k].length; days++;
     });
-    return { a: a, b: b, n: a + b };
+    return { n: n, days: days };
   }
 
   function calHeaderHTML() {
@@ -511,7 +620,7 @@
       '<button class="icon" type="button" data-act="cal-prev" aria-label="Vorheriger Monat">' + CHEV_L + '</button>' +
       '<h2 class="mt">' + MON[R.cal.m] + ' ' + R.cal.y + '</h2>' +
       '<button class="icon" type="button" data-act="cal-next" aria-label="Nächster Monat">' + CHEV_R + '</button></div>' +
-      '<p class="prog"><span>' + (c.n === 1 ? '1 Training' : c.n + ' Trainings') + ' in diesem Monat</span><span>Tag A: ' + c.a + ' · Tag B: ' + c.b + '</span></p></header>';
+      '<p class="prog"><span>' + (c.n === 1 ? '1 Training' : c.n + ' Trainings') + ' in diesem Monat</span><span>' + (c.days === 1 ? 'an 1 Tag' : 'an ' + c.days + ' Tagen') + '</span></p></header>';
   }
 
   function calGridHTML() {
@@ -519,27 +628,28 @@
     var out = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(function (w) { return '<span class="wd">' + w + '</span>'; }).join('');
     for (i = 0; i < lead; i++) out += '<span class="cd empty"></span>';
     for (i = 1; i <= days; i++) {
-      var key = y + '-' + pad(m + 1) + '-' + pad(i), tr = (S.log[key] || []).map(function (e) { return e.day; });
-      var tags = tr.map(function (l) { return '<i class="tg">' + l + '</i>'; }).join('');
-      out += '<button type="button" class="cd' + (key === t ? ' today' : '') + (key === R.calSel ? ' sel' : '') + '" data-act="cal-day" data-key="' + key + '" aria-pressed="' + (key === R.calSel) + '" aria-label="' + longDate(key) + (tr.length ? ', Training ' + tr.join(' und ') : '') + '">' +
+      var key = y + '-' + pad(m + 1) + '-' + pad(i), list = S.log[key] || [];
+      var tags = list.slice(0, 3).map(function (e) { return '<i class="tg">' + esc(Store.tagOf(S, e)) + '</i>'; }).join('') + (list.length > 3 ? '<i class="tg">+</i>' : '');
+      var names = list.map(function (e) { return Store.entryTitle(S, e); });
+      out += '<button type="button" class="cd' + (key === t ? ' today' : '') + (key === R.calSel ? ' sel' : '') + '" data-act="cal-day" data-key="' + key + '" aria-pressed="' + (key === R.calSel) + '" aria-label="' + esc(longDate(key) + (names.length ? ', Training: ' + names.join(' und ') : '')) + '">' +
         '<b>' + i + '</b><span class="tags">' + tags + '</span></button>';
     }
     return '<section class="card" aria-label="Monatsübersicht"><div class="cal">' + out + '</div></section>';
   }
 
   function entryBodyHTML(k, e) {
-    var sum = Store.entrySummary(e), t = todayKey();
+    var sum = Store.entrySummary(S, e), t = todayKey();
     var h = '<div class="entry-body">';
     if (!sum.hasDetails) h += '<p class="hint">Zu diesem Eintrag sind keine Sätze gespeichert. Du kannst sie hier nachtragen.</p>';
-    exs(e.day).forEach(function (ex) {
+    Store.entryItems(S, e).forEach(function (ex) {
       var n = Math.min(e.sets[ex.id] || 0, ex.sets);
-      h += '<div class="xrow"><p class="xname">' + ex.name + (ex.gear ? '<small>' + ex.gear + '</small>' : '') + '</p>' +
-        '<div class="step"><button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="-1" aria-label="' + ex.name + ': einen Satz weniger"' + (n <= 0 ? ' disabled' : '') + '>−</button>' +
+      h += '<div class="xrow"><p class="xname">' + esc(ex.name) + (ex.gear ? '<small>' + esc(ex.gear) + '</small>' : '') + '</p>' +
+        '<div class="step"><button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="-1" aria-label="' + esc(ex.name) + ': einen Satz weniger"' + (n <= 0 ? ' disabled' : '') + '>−</button>' +
         '<span class="cnt" role="status">' + n + ' <small>von ' + ex.sets + ' Sätzen</small></span>' +
-        '<button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="1" aria-label="' + ex.name + ': einen Satz mehr"' + (n >= ex.sets ? ' disabled' : '') + '>+</button></div>';
+        '<button type="button" data-act="entry-sets" data-ex="' + ex.id + '" data-d="1" aria-label="' + esc(ex.name) + ': einen Satz mehr"' + (n >= ex.sets ? ' disabled' : '') + '>+</button></div>';
       if (ex.weight) {
         h += '<div class="field"><label for="ew-' + ex.id + '">Gewicht (kg)</label>' +
-          '<input id="ew-' + ex.id + '" data-eweight="' + ex.id + '" type="text" inputmode="decimal" autocomplete="off" placeholder="–" value="' + esc(e.weights[ex.id] || '') + '"></div>';
+          '<input id="ew-' + ex.id + '" data-eweight="' + ex.id + '" type="text" inputmode="decimal" autocomplete="off" placeholder="–" value="' + esc(Store.own(e.weights, ex.id) ? e.weights[ex.id] : '') + '"></div>';
       }
       h += '</div>';
     });
@@ -554,11 +664,27 @@
   }
 
   function entryHTML(k, e) {
-    var open = R.calOpen === e.day, sum = Store.entrySummary(e), pl = PLAN[e.day];
-    var sub = pl.focus + ' · ' + (sum.hasDetails ? sum.done + ' von ' + sum.total + ' Sätzen' : 'ohne Details');
-    return '<div class="entry"><button class="entry-head" type="button" data-act="entry-toggle" data-day="' + e.day + '" aria-expanded="' + open + '">' +
-      '<span class="tg big">' + e.day + '</span><span class="grow"><b>' + pl.label + '</b><small>' + sub + '</small></span><span class="chev">' + CHEV_D + '</span></button>' +
+    var open = R.calOpen === e.day, sum = Store.entrySummary(S, e), sub = Store.entrySub(S, e);
+    var line = (sub ? sub + ' · ' : '') + (sum.hasDetails ? sum.done + ' von ' + sum.total + ' Sätzen' : 'ohne Details');
+    return '<div class="entry"><button class="entry-head" type="button" data-act="entry-toggle" data-day="' + esc(e.day) + '" aria-expanded="' + open + '">' +
+      '<span class="tg big">' + esc(Store.tagOf(S, e)) + '</span><span class="grow"><b>' + esc(Store.entryTitle(S, e)) + '</b><small>' + esc(line) + '</small></span><span class="chev">' + CHEV_D + '</span></button>' +
       (open ? entryBodyHTML(k, e) : '') + '</div>';
+  }
+
+  /* Trainings that can be added by hand to a day: the last ones used as quick buttons, all others in a list. */
+  function calAddHTML(k, tr) {
+    var have = tr.map(function (e) { return e.day; }), quick = [], all = Store.allTrainings(S);
+    S.last.forEach(function (id) { if (have.indexOf(id) < 0 && quick.length < 2 && Store.training(S, id)) quick.push(Store.training(S, id)); });
+    var h = '<div class="two">' + quick.map(function (t) { return '<button class="btn ghost sm" type="button" data-act="cal-add" data-day="' + esc(t.id) + '">' + esc(t.name) + ' eintragen</button>'; }).join('') +
+      '<button class="btn ghost sm" type="button" data-act="cal-add-open" aria-expanded="' + R.calAdd + '">' + (quick.length ? 'Anderes Training …' : 'Training eintragen') + '</button></div>';
+    if (R.calAdd) {
+      var opt = function (t) { return have.indexOf(t.id) < 0 ? '<option value="' + esc(t.id) + '">' + esc(t.name) + '</option>' : ''; };
+      h += '<div class="calform"><label for="cal-pick">Welches Training?</label><select id="cal-pick">' +
+        (all.own.length ? '<optgroup label="Meine Trainings">' + all.own.map(opt).join('') + '</optgroup>' : '') +
+        '<optgroup label="Vorschläge der App">' + all.ready.map(opt).join('') + '</optgroup></select>' +
+        '<div class="two"><button class="btn sm" type="button" data-act="cal-add-go">Eintragen</button><button class="btn ghost sm" type="button" data-act="cal-add-open">Abbrechen</button></div></div>';
+    }
+    return h;
   }
 
   function calDetailHTML() {
@@ -569,13 +695,7 @@
     } else if (!(R.calUndo && R.calUndo.key === k)) {
       h += '<p class="empty">' + (future ? 'Dieser Tag liegt in der Zukunft.' : 'An diesem Tag ist kein Training eingetragen.') + '</p>';
     }
-    if (!future) {
-      var have = tr.map(function (e) { return e.day; });
-      var missing = ['A', 'B'].filter(function (l) { return have.indexOf(l) < 0; });
-      if (missing.length) {
-        h += '<div class="two">' + missing.map(function (l) { return '<button class="btn ghost sm" type="button" data-act="cal-add" data-day="' + l + '">' + PLAN[l].label + ' eintragen</button>'; }).join('') + '</div>';
-      }
-    }
+    if (!future) h += calAddHTML(k, tr);
     var T = Store.dayTotals(S, k);
     if (T.n) {
       var parts = [];
@@ -641,13 +761,13 @@
       h += '</div>';
     }
     var tiles = '';
-    NUTR.forEach(function (n) {
+    window.NUTR.forEach(function (n) {
       if (n.k === 'p' || !T.has[n.k]) return;
       tiles += '<div class="tile"><b>' + fmt(T.sum[n.k], n.u) + '<i>' + n.u + '</i></b><span>' + n.l + '</span></div>';
     });
     if (tiles) h += '<div class="tiles">' + tiles + '</div>';
     if (T.skipped) h += '<p class="hint">' + (T.skipped === 1 ? '1 Eintrag hat keine Menge und ist nicht eingerechnet.' : T.skipped + ' Einträge haben keine Menge und sind nicht eingerechnet.') + '</p>';
-    h += '<button class="link" type="button" data-act="goal-toggle">' + (R.goalOpen ? 'Protein-Ziel schließen' : (S.goalP ? 'Protein-Ziel ändern' : 'Protein-Ziel festlegen')) + '</button>';
+    h += '<button class="link" type="button" data-act="goal-toggle">' + (R.goalOpen ? 'Protein-Ziel schliessen' : (S.goalP ? 'Protein-Ziel ändern' : 'Protein-Ziel festlegen')) + '</button>';
     if (R.goalOpen) h += goalHTML();
     return h + '</section>';
   }
@@ -657,7 +777,7 @@
   }
 
   function formHTML() {
-    var ed = R.edit, d = activeDraft();
+    var ed = R.edit, d = activeDraft(), unit = Store.unitOf(d.mode);
     var h = '<section class="card" id="food-form" aria-labelledby="fh"><h3 class="eyebrow" id="fh">' + (ed ? 'Eintrag bearbeiten' : 'Essen eintragen') + '</h3>';
     if (!ed && S.recent.length) {
       h += '<div class="chiprow" role="group" aria-label="Zuletzt gegessen">' + S.recent.map(function (e, i) {
@@ -665,13 +785,14 @@
       }).join('') + '</div>';
     }
     h += '<div class="fcol"><label for="f-name">Was hast du gegessen?</label><input id="f-name" data-draft="name" type="text" autocomplete="off" placeholder="z. B. Magerquark" value="' + esc(d.name) + '"></div>' +
-      '<div class="fcol"><label for="f-g">Menge in Gramm</label><input id="f-g" data-draft="g" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 250" value="' + esc(d.g) + '"></div>' +
-      '<div class="fcol"><span class="eyebrow">Die Nährwerte gelten für</span><div class="seg" role="group" aria-label="Bezugsgröße der Nährwerte">' +
+      '<div class="fcol"><label for="f-g">' + (unit === 'ml' ? 'Menge in Millilitern' : 'Menge in Gramm') + '</label><input id="f-g" data-draft="g" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 250" value="' + esc(d.g) + '"></div>' +
+      '<div class="fcol"><span class="eyebrow">Die Nährwerte gelten für</span><div class="seg three" role="group" aria-label="Bezugsgrösse der Nährwerte">' +
       '<button class="chip" type="button" data-act="food-mode" data-mode="100" aria-pressed="' + (d.mode === '100') + '">pro 100 g</button>' +
+      '<button class="chip" type="button" data-act="food-mode" data-mode="ml" aria-pressed="' + (d.mode === 'ml') + '">pro 100 ml</button>' +
       '<button class="chip" type="button" data-act="food-mode" data-mode="por" aria-pressed="' + (d.mode === 'por') + '">ganze Menge</button></div></div>' +
-      '<div class="grid2">' + NUTR.slice(0, 4).map(function (n) { return fieldHTML(n, d); }).join('') + '</div>' +
+      '<div class="grid2">' + window.NUTR.slice(0, 4).map(function (n) { return fieldHTML(n, d); }).join('') + '</div>' +
       '<button class="link" type="button" data-act="food-more">' + (d.more ? 'Weniger Werte' : 'Mehr Werte (Zucker, Ballaststoffe)') + '</button>';
-    if (d.more) h += '<div class="grid2">' + NUTR.slice(4).map(function (n) { return fieldHTML(n, d); }).join('') + '</div>';
+    if (d.more) h += '<div class="grid2">' + window.NUTR.slice(4).map(function (n) { return fieldHTML(n, d); }).join('') + '</div>';
     h += '<p class="preview" id="food-preview">' + esc(previewText()) + '</p>';
     if (ed) {
       var t = todayKey();
@@ -693,17 +814,17 @@
   }
 
   function foodEntryHTML(e) {
-    var tot = Store.entryTotals(e), chips = '', src;
-    NUTR.forEach(function (n) {
+    var tot = Store.entryTotals(e), chips = '', src, u = Store.unitOf(e.mode);
+    window.NUTR.forEach(function (n) {
       if (tot[n.k] != null) chips += '<span class="nchip"><b>' + fmt(tot[n.k], n.u) + '</b> ' + (n.u === 'kcal' ? 'kcal' : 'g ' + n.l) + '</span>';
     });
     var entered = Store.partsOf(e.v);
     if (!entered.length) src = 'Ohne Nährwerte eingetragen.';
     else if (e.mode === 'por') src = 'Eingegeben für die ganze Menge.';
-    else src = 'Eingegeben pro 100 g: ' + entered.join(' · ') + (e.g == null ? '. Menge fehlt, deshalb nicht eingerechnet.' : '.');
+    else src = 'Eingegeben pro 100 ' + u + ': ' + entered.join(' · ') + (e.g == null ? '. Menge fehlt, deshalb nicht eingerechnet.' : '.');
     var editing = R.edit && R.edit.id === e.id;
     return '<div class="fe' + (editing ? ' editing' : '') + '"><button class="fe-main" type="button" data-act="food-edit" data-id="' + esc(e.id) + '" aria-label="' + esc((e.name || 'Eintrag') + ' bearbeiten') + '">' +
-      '<span class="fe-top"><span class="fe-name"><b>' + (e.name ? esc(e.name) : 'Ohne Namen') + '</b>' + (e.g != null ? '<small>' + fmt(e.g, 'g') + ' g</small>' : '') + '</span></span>' +
+      '<span class="fe-top"><span class="fe-name"><b>' + (e.name ? esc(e.name) : 'Ohne Namen') + '</b>' + (e.g != null ? '<small>' + fmt(e.g, 'g') + ' ' + u + '</small>' : '') + '</span></span>' +
       (chips ? '<span class="nchips">' + chips + '</span>' : '') + '<span class="fe-src">' + src + '</span></button>' +
       '<button class="fe-del" type="button" data-act="food-del" data-id="' + esc(e.id) + '" aria-label="Eintrag löschen">' + TRASH + '</button></div>';
   }
@@ -723,14 +844,15 @@
       ? 'Deine Daten bleiben nur auf diesem Handy gespeichert. Das Training beginnt jeden Tag neu.'
       : '<span class="warn">Gerade kann nichts gespeichert werden.</span> Die Daten bleiben nur, solange die App offen ist. Sichere sie mit „Daten kopieren“ oder „Als Datei sichern“.') + '</p>';
     if (R.loadStatus === 'corrupt') h += '<p>Die gespeicherten Daten waren nicht lesbar und wurden beiseitegelegt. Die App hat neu begonnen.</p>';
-    if (R.tab === 'train') {
+    if (R.tab === 'train' && R.flow === 'run') {
+      var name = curTraining().name;
       h += R.confirm
-        ? '<div class="confirm"><span>Alle Haken von ' + PLAN[S.day].label + ' löschen?</span><div class="two">' +
+        ? '<div class="confirm"><span>Alle Haken von ' + esc(name) + ' löschen?</span><div class="two">' +
           '<button class="btn sm" type="button" data-act="reset-yes">Löschen</button>' +
           '<button class="btn ghost sm" type="button" data-act="reset-no">Abbrechen</button></div></div>'
-        : '<button class="link" type="button" data-act="reset-ask">' + PLAN[S.day].label + ' zurücksetzen</button>';
+        : '<button class="link" type="button" data-act="reset-ask">' + esc(name) + ' zurücksetzen</button>';
     }
-    h += '<button class="link" type="button" data-act="bk-toggle" aria-expanded="' + R.bkOpen + '">' + (R.bkOpen ? 'Sicherung schließen' : 'Daten sichern oder wiederherstellen') + '</button>';
+    h += '<button class="link" type="button" data-act="bk-toggle" aria-expanded="' + R.bkOpen + '">' + (R.bkOpen ? 'Sicherung schliessen' : 'Daten sichern oder wiederherstellen') + '</button>';
     if (R.bkOpen) {
       h += '<div class="bk"><p>Sichere deine Daten zum Beispiel in einer Notiz oder als Datei. Mit „Wiederherstellen“ holst du sie zurück. Das ersetzt die aktuellen Daten.</p>' +
         '<p>Daten aus der alten Version funktionieren auch: dort „Daten kopieren“, hier einfügen und „Wiederherstellen“.</p>' +
@@ -751,48 +873,50 @@
     return h + '</footer>';
   }
 
+  /* ---------- the shared object for ui-flow.js and ui-lib.js ---------- */
+  var A = {
+    S: function () { return S; }, R: R, save: save, render: render, esc: esc, go: go, resetTo: resetTo, back: back, goTab: goTab, startTraining: startTraining,
+    toTop: toTop, scrollToId: scrollToId, setMsg: setMsg, longDate: longDate, todayKey: todayKey, thumbHTML: thumbHTML, demoBodyHTML: demoBodyHTML,
+    curTraining: curTraining, totals: totals, rxText: rxText, unitText: unitText, resumeCandidate: resumeCandidate,
+    icons: { CHECK: CHECK, CHEV_L: CHEV_L, CHEV_R: CHEV_R, CHEV_D: CHEV_D, TRASH: TRASH, EYE: EYE },
+    acts: {}, inputs: {}, views: {}
+  };
+  FlowUI(A);
+  LibUI(A);
+
+  R.flow = resumeCandidate() ? 'run' : 'home';
+
   var app = document.getElementById('app');
 
   function render() {
     Anim.stop();
-    var head, main;
-    if (R.tab === 'cal') {
-      head = calHeaderHTML(); main = calGridHTML() + calDetailHTML();
-    } else if (R.tab === 'food') {
+    var head, main, v, foot = true;
+    if (R.detail) { v = A.views.detail(); head = v.head; main = v.main; foot = false; }
+    else if (R.tab === 'cal') { head = calHeaderHTML(); main = calGridHTML() + calDetailHTML(); }
+    else if (R.tab === 'food') {
       var k = R.foodDate, T = Store.dayTotals(S, k);
       head = foodHeaderHTML(); main = summaryHTML(T) + formHTML() + foodListHTML(k);
-    } else {
-      var d = S.day, t = totals(d), cur = currentEx(d), body;
-      if (t.done >= t.total) body = finishHTML(d, t);
-      else if (R.rest) body = restHTML(d);
-      else body = focusHTML(d, cur, t);
-      head = headerHTML(t); main = body + listHTML(d, cur);
-    }
-    app.innerHTML = '<h1 class="sr">Trainings-Strichliste</h1>' + head + '<main>' + main + '</main>' + footHTML() + navHTML();
+    } else if (R.tab === 'lib') { v = A.views.lib(); head = v.head; main = v.main; foot = v.foot !== false; }
+    else if (R.flow === 'run') { v = runView(); head = v.head; main = v.main; }
+    else { v = A.views.flow(); head = v.head; main = v.main; foot = v.foot !== false; }
+    app.innerHTML = '<h1 class="sr">Trainings-Strichliste</h1>' + head + '<main>' + main + '</main>' + (foot ? footHTML() : '') + navHTML();
     R.fresh = null;
     Anim.mount();
     syncUpdateBar();
   }
 
   /* ---------- events ---------- */
-  function goTab(tab, key) {
-    R.tab = tab; R.plank = null; R.confirm = false; R.undo = null; R.calUndo = null; R.edit = null; R.copyOpen = false; R.foodGoto = null; R.restore = null;
-    if (tab === 'food' && key && parseKey(key)) R.foodDate = key;
-    if (tab === 'cal' && key && parseKey(key)) { var d = parseKey(key); R.calSel = key; R.cal = { y: d.getFullYear(), m: d.getMonth() }; R.calOpen = null; }
-    render(); toTop();
-  }
-
   app.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('[data-act]') : null;
     if (!b || !app.contains(b)) return;
     unlockAudio(); wake();
-    var a = b.getAttribute('data-act'), d = S.day, cur = currentEx(d), n, k;
+    var a = b.getAttribute('data-act');
+    if (A.acts[a]) { A.acts[a](b, e); return; }
+    var t = curTraining(), d = t.id, cur = currentEx(t), n, k;
 
     if (a === 'tab') { goTab(b.getAttribute('data-tab'), b.getAttribute('data-key')); }
-    else if (a === 'day') {
-      S.day = b.getAttribute('data-day'); R.rest = null; R.plank = null; R.confirm = false; R.last = null; R.calForm = false;
-      save(); render(); toTop();
-    } else if (a === 'set' && cur) {
+    else if (a === 'flow-home') { R.rest = null; R.plank = null; go({ tab: 'train', flow: 'home', detail: null }); }
+    else if (a === 'set' && cur) {
       var i = parseInt(b.getAttribute('data-i'), 10); n = doneSets(d, cur.id);
       setCount(cur, i < n ? i : n + 1);
     } else if (a === 'done' && cur) {
@@ -802,7 +926,8 @@
     } else if (a === 'plank-cancel') {
       R.plank = null; render();
     } else if (a === 'plank-secs') {
-      S.plankSecs = parseInt(b.getAttribute('data-secs'), 10) === 60 ? 60 : 45; save(); render();
+      var secs = parseInt(b.getAttribute('data-secs'), 10);
+      if (cur && cur.holds.indexOf(secs) >= 0) { S.holdSecs[cur.id] = secs; save(); render(); }
     } else if (a === 'skip') {
       R.rest = null; render(); toTop();
     } else if (a === 'plus' && R.rest) {
@@ -811,7 +936,7 @@
       R.rest.total = Math.max(R.rest.total, Math.ceil((R.rest.endAt - now) / 1000));
       R.rest.finished = false; render();
     } else if (a === 'undo' && R.last) {
-      var ex = findEx(d, R.last);
+      var ex = findEx(t, R.last);
       if (ex) { R.pick[d] = ex.id; setCount(ex, doneSets(d, ex.id) - 1); }
       R.last = null; toTop();
     } else if (a === 'pick') {
@@ -837,16 +962,23 @@
       var dm = new Date(R.cal.y, R.cal.m + (a === 'cal-next' ? 1 : -1), 1);
       R.cal = { y: dm.getFullYear(), m: dm.getMonth() }; R.calUndo = null; render();
     } else if (a === 'cal-day') {
-      R.calSel = b.getAttribute('data-key'); R.calOpen = null; R.calUndo = null; render();
+      R.calSel = b.getAttribute('data-key'); R.calOpen = null; R.calUndo = null; R.calAdd = false; render();
     } else if (a === 'cal-add') {
       var l = b.getAttribute('data-day');
-      if (Store.addLog(S, R.calSel, Store.blankEntry(l), todayKey()).ok) { R.calOpen = l; R.calUndo = null; save(); }
-      render();
+      if (Store.addLog(S, R.calSel, Store.blankEntry(S, l), todayKey()).ok) { R.calOpen = l; R.calUndo = null; save(); }
+      R.calAdd = false; render();
+    } else if (a === 'cal-add-open') {
+      R.calAdd = !R.calAdd; render();
+    } else if (a === 'cal-add-go') {
+      var sel = document.getElementById('cal-pick'), pid = sel ? sel.value : '';
+      if (pid && Store.training(S, pid) && Store.addLog(S, R.calSel, Store.blankEntry(S, pid), todayKey()).ok) { R.calOpen = pid; R.calUndo = null; save(); }
+      R.calAdd = false; render();
     } else if (a === 'entry-toggle') {
       var dl = b.getAttribute('data-day');
       R.calOpen = R.calOpen === dl ? null : dl; render();
     } else if (a === 'entry-sets') {
-      var en = openEntry(), xe = en ? findEx(en.day, b.getAttribute('data-ex')) : null;
+      var en = openEntry(), items = en ? Store.entryItems(S, en) : [], xe = null, ii;
+      for (ii = 0; ii < items.length; ii++) if (items[ii].id === b.getAttribute('data-ex')) xe = items[ii];
       if (en && xe) {
         Store.setEntrySets(en, xe, (en.sets[xe.id] || 0) + parseInt(b.getAttribute('data-d'), 10));
         save(); render();
@@ -866,7 +998,7 @@
     } else if (a === 'food-next') {
       if (R.foodDate < todayKey()) { R.foodDate = addDays(R.foodDate, 1); R.undo = null; R.foodMsg = ''; R.foodGoto = null; R.edit = null; R.copyOpen = false; render(); }
     } else if (a === 'food-mode') {
-      activeDraft().mode = b.getAttribute('data-mode') === 'por' ? 'por' : '100'; render();
+      activeDraft().mode = Store.modeOf(b.getAttribute('data-mode')); render();
     } else if (a === 'food-more') {
       activeDraft().more = !activeDraft().more; render();
     } else if (a === 'food-add') {
@@ -935,6 +1067,10 @@
   app.addEventListener('input', function (e) {
     var t = e.target;
     if (!t || !t.getAttribute) return;
+    var key;
+    for (key in A.inputs) {
+      if (t.hasAttribute('data-' + key)) { A.inputs[key](t, e); return; }
+    }
     var w = t.getAttribute('data-weight'), dn = t.getAttribute('data-draft'), dv = t.getAttribute('data-draft-v'), gl = t.getAttribute('data-goal');
     var ew = t.getAttribute('data-eweight'), enote = t.getAttribute('data-enote');
     if (w) { S.weights[w] = t.value; save(); }
@@ -969,20 +1105,22 @@
       e.preventDefault();
       if (R.edit) saveFoodEdit(); else addFood();
     }
+    if (e.key === 'Enter' && t && t.hasAttribute && t.hasAttribute('data-tname') && A.acts['name-save']) { e.preventDefault(); A.acts['name-save'](t, e); }
   });
 
   /* ---------- timers ---------- */
+  var inRun = function () { return R.tab === 'train' && R.flow === 'run' && !R.detail; };
   setInterval(function () {
     var now = Date.now(), el;
     if (R.plank) {
       var p = R.plank;
       if (now >= p.endAt) {
         var ex = p.ex; R.plank = null; beep(2); buzz([200, 100, 200]);
-        setCount(ex, doneSets(S.day, ex.id) + 1);
+        setCount(ex, doneSets(S.cur, ex.id) + 1);
         return;
       }
       var ps = plankState();
-      if (ps.phase !== p.phase) { p.phase = ps.phase; beep(1); buzz(120); render(); }
+      if (ps.idx !== p.idx) { p.idx = ps.idx; beep(1); buzz(120); render(); }
       else {
         el = document.getElementById('plank-time'); if (el) el.textContent = ps.left;
         el = document.getElementById('plank-ring'); if (el) el.style.strokeDashoffset = Math.round(553 * (1 - ps.frac));
@@ -994,7 +1132,7 @@
       el = document.getElementById('rest-bar'); if (el) el.style.width = Math.max(0, Math.min(100, left / r.total * 100)) + '%';
       if (left === 0 && !r.finished) {
         r.finished = true; beep(1); buzz([150, 80, 150]);
-        if (R.tab === 'train' && !Anim.playing) render();
+        if (inRun() && !Anim.playing) render();
       }
     }
   }, 250);
@@ -1043,8 +1181,8 @@
     } catch (e) { /* ignore */ }
     if (!('serviceWorker' in navigator)) return;
     if (updBar) {
-      var go = document.getElementById('upd-go');
-      if (go) go.addEventListener('click', applyUpdate);
+      var go2 = document.getElementById('upd-go');
+      if (go2) go2.addEventListener('click', applyUpdate);
     }
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (wantReload) { wantReload = false; location.reload(); }

@@ -119,7 +119,7 @@ async function checkDisk(dir) {
 
   let total = 0;
   for (const f of files) total += (await stat(path.join(dir, f))).size;
-  check(total < 1_000_000, 'Gesamtgröße ' + Math.round(total / 1024) + ' KB (unter 1 MB)');
+  check(total < 1_000_000, 'Gesamtgrösse ' + Math.round(total / 1024) + ' KB (unter 1 MB)');
 }
 
 /* ---------- live ---------- */

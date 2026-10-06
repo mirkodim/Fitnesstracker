@@ -1,0 +1,530 @@
+/* The exercise animations. Every exercise of the library (lib.js) has one under the same id.
+   An animation is a short loop of key poses (steps) that the app blends; a step with bad: true is shown in orange as "how not to".
+   The poses are described with the helpers of fig.js (see the comment there). The first ten were drawn with the first version of the app and are kept as they were. */
+(function (FIG) {
+  var G = FIG.G, D2R = FIG.D2R, norm = FIG.norm, normF = FIG.normF, lineHip = FIG.lineHip, tiltHip = FIG.tiltHip, leanOf = FIG.leanOf,
+    bendBody = FIG.bendBody, floorBody = FIG.floorBody, body = FIG.body, add = FIG.add, ik = FIG.ik;
+
+  /* Box-Kniebeugen */
+  (function () {
+    var A = [150, G];
+    var top = norm({ hip: [150, G - 70], th: 4, ankle: A, wr: [-8, 0], es: -1 });
+    var bot = norm({ hip: [117, G - 38], th: 38, ankle: A, wr: [-8, 0], es: -1 });
+    add('a-box', { reps: 3, hl: ['thigh'],
+      props: [{ t: 'box', x: 90, y: 143, w: 42, h: 35 }, { t: 'plate', at: 'wrist', dx: -1, dy: 4, r: 8 }],
+      steps: [
+        { pose: top, ms: 1200, hold: 600, label: 'Kräftig aufstehen, Hüfte und Knie strecken' },
+        { pose: bot, ms: 1800, hold: 700, label: 'Hüfte nach hinten, kontrolliert auf die Box setzen' }
+      ] });
+  })();
+
+  /* Liegestütze */
+  (function () {
+    var hand = [190, G - 2], A = [190 - Math.sqrt(118 * 118 - 40 * 40), G - 12];
+    var shUp = [190, 122], shDn = floorBody(A, 150);
+    var up = norm({ ankle: A, lean: leanOf(shUp, A), fa: 70, wrist: hand });     // same poses as before, but the body pivots about the feet,
+    var dn = norm({ ankle: A, lean: leanOf(shDn, A), fa: 70, wrist: hand });     // so it stays one straight line on the way down and up
+    var sag = norm(body(shUp, A, { fa: 70, wrist: hand, delta: 20 }));
+    add('a-push', { reps: 2, hl: ['torso', 'upper', 'fore'], props: [],
+      steps: [
+        { pose: up, ms: 900, hold: 500, label: 'Kräftig hochdrücken, Körper bleibt eine Linie' },
+        { pose: dn, ms: 1500, hold: 400, label: 'Brust Richtung Boden, Ellbogen schräg nach hinten' },
+        { pose: up, ms: 900, hold: 300, label: 'Kräftig hochdrücken, Körper bleibt eine Linie' },
+        { pose: sag, ms: 800, hold: 1100, bad: true, label: 'Falsch: Becken hängt durch (Hohlkreuz)' }
+      ] });
+  })();
+
+  /* TRX-Trizepsstrecken: the body pivots about the feet, the hands stay where the straps hold them.
+     Start: straight arms in front of the head. Down: only the elbows bend, the head sinks between the hands. Then press back up. */
+  (function () {
+    var A = [100, G], AN = [120, 12], a0 = 44, a1 = 62;
+    var S0 = [A[0] + 118 * Math.sin(a0 * D2R), A[1] - 118 * Math.cos(a0 * D2R)];
+    var W = [S0[0] + 50 * Math.cos(-5 * D2R), S0[1] - 50 * Math.sin(-5 * D2R)];
+    var up = norm({ ankle: A, lean: a0, wrist: W, ha: 18 });
+    var dn = norm({ ankle: A, lean: a1, wrist: W, ha: 18 });
+    var d = [4, 7], b = bendBody(A, [S0[0] + d[0], S0[1] + d[1]], 1);      // hips drop, shoulders and hands go a little with them
+    var sag = norm({ ankle: A, lean: b.lean, torso: b.torso, wrist: [W[0] + d[0], W[1] + d[1]], ha: 18 });
+    add('a-tri', { reps: 2, hl: ['upper'], sweep: true,
+      props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: AN, at: 'wrist' }],
+      steps: [
+        { pose: up, ms: 1000, hold: 500, label: 'Kräftig hochdrücken, bis die Arme gestreckt sind' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Nur die Ellbogen beugen, der Kopf sinkt zwischen die Hände' },
+        { pose: up, ms: 1000, hold: 300, label: 'Kräftig hochdrücken, bis die Arme gestreckt sind' },
+        { pose: sag, ms: 800, hold: 1100, bad: true, label: 'Falsch: Hüfte hängt durch' }
+      ] });
+  })();
+
+  /* Hip Thrust: upper back on the bench (shoulder stays put), the hips go up and down, the feet stay put, the bar rests on the hips.
+     The figure is flat and low, so it is drawn larger (zoom). */
+  (function () {
+    var S = [105, 138], A = [187, G], WT = [3.74, 5];   // bar just above the hip crease, arms straight
+    var top = norm({ sh: S, th: -90, ankle: A, wt: WT, ha: -62, es: -1 });
+    var bot = norm({ sh: S, th: -55, ankle: A, wt: WT, ha: -62, es: -1 });
+    var bad = norm({ sh: S, th: -102, ankle: A, wt: WT, ha: -62, round: -7, es: -1 });
+    add('a-hip', { reps: 2, hl: ['thigh'], sweep: true, zoom: 1.8,
+      props: [{ t: 'box', x: 78, y: 141, w: 36, h: 7 }, { t: 'box', x: 91, y: 148, w: 10, h: 29 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 11 }],
+      steps: [
+        { pose: top, ms: 1200, hold: 900, label: 'Hüfte hochdrücken, oben das Gesäss fest anspannen' },
+        { pose: bot, ms: 1800, hold: 500, label: 'Kontrolliert ablassen, die Hüfte bleibt knapp über dem Boden' },
+        { pose: top, ms: 1200, hold: 300, label: 'Hüfte hochdrücken, oben das Gesäss fest anspannen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, Hüfte zu hoch, Rippen offen' }
+      ] });
+  })();
+
+  /* Plank */
+  (function () {
+    var wrist = [200, G], sh = [176, 148], A = [sh[0] - Math.sqrt(118 * 118 - 14 * 14), G - 12];
+    var good = norm(body(sh, A, { fa: 70, wrist: wrist }));
+    var sag = norm(body(sh, A, { fa: 70, wrist: wrist, delta: 17 }));
+    var pike = norm(body(sh, A, { fa: 70, wrist: wrist, delta: -17 }));
+    add('a-plank', { reps: 2, hl: ['torso'], props: [],
+      steps: [
+        { pose: good, ms: 800, hold: 1800, label: 'Richtig: gerade Linie von Kopf bis Ferse' },
+        { pose: sag, ms: 800, hold: 1200, bad: true, label: 'Falsch: Becken hängt durch' },
+        { pose: pike, ms: 800, hold: 1200, bad: true, label: 'Falsch: Po zu hoch' }
+      ] });
+  })();
+
+  /* Rumänisches Kreuzheben */
+  (function () {
+    var A = [150, G];
+    var top = norm({ hip: [149, G - 70], th: 2, ankle: A, wr: [10, 47] });
+    var bot = norm({ hip: [116, G - 61], th: 65, ankle: A, wr: [-6, 49] });
+    var bad = norm({ hip: [116, G - 61], th: 65, ankle: A, wr: [14, 47], round: 15, ha: 92 });
+    add('b-rdl', { reps: 2, hl: ['thigh'],
+      props: [{ t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 11 }],
+      steps: [
+        { pose: top, ms: 1300, hold: 500, label: 'Hüfte nach vorn schieben, Po anspannen, aufrichten' },
+        { pose: bot, ms: 1700, hold: 600, label: 'Hüfte nach hinten schieben, Rücken gerade, Stange am Bein' },
+        { pose: top, ms: 1300, hold: 300, label: 'Hüfte nach vorn schieben, Po anspannen, aufrichten' },
+        { pose: bad, ms: 1200, hold: 1200, bad: true, label: 'Falsch: runder Rücken, Stange zu weit weg' }
+      ] });
+  })();
+
+  /* TRX-Rudern */
+  (function () {
+    var A = [200, G], AN = [262, 22];
+    function lean(a) { return [A[0] - 118 * Math.sin(a * D2R), A[1] - 118 * Math.cos(a * D2R)]; }
+    var shS = lean(36), shE = lean(14);
+    var start = norm({ ankle: A, lean: -36, wrist: [shS[0] + 45, shS[1] - 19], ha: -6 });   // same poses as before, body pivots about the feet
+    var end = norm({ ankle: A, lean: -14, wrist: [shE[0] + 11, shE[1] + 10], ha: -4 });
+    add('b-row', { reps: 3, hl: ['torso', 'upper'],
+      props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: AN, at: 'wrist' }],
+      steps: [
+        { pose: start, ms: 1500, hold: 500, label: 'Langsam ablassen, Arme strecken, Körper bleibt gerade' },
+        { pose: end, ms: 1200, hold: 600, label: 'Brust zu den Händen ziehen, Schulterblätter zusammen' }
+      ] });
+  })();
+
+  /* TRX-Ausfallschritte rückwärts */
+  (function () {
+    var top = norm({ hip: [150, G - 71], th: 3, ankle: [150, G], ankle2: [146, G], wrist: [182, 79] });
+    var bot = norm({ hip: [122, G - 38], th: 8, ankle: [152, G], ankle2: [80, 164], fa2: 65, wrist: [170, 67] });
+    add('b-lunge', { reps: 3, hl: ['thigh'],
+      props: [{ t: 'anchor', x: 250, y: 9 }, { t: 'strap', anchor: [250, 12], at: 'wrist' }],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Mit der vorderen Ferse hochdrücken, Füsse zusammen' },
+        { pose: bot, ms: 1500, hold: 600, label: 'Grosser Schritt nach hinten, Knie sinkt Richtung Boden' }
+      ] });
+  })();
+
+  /* Bizeps-Curls */
+  (function () {
+    var A = [150, G];
+    var dn = norm({ hip: [150, G - 71], th: 3, ankle: A, wr: [10, 47] });
+    var upP = norm({ hip: [150, G - 71], th: 3, ankle: A, wr: [14, 5] });
+    var cheat = norm({ hip: [153, G - 71], th: -16, ankle: A, wr: [24, -4], ha: -4 });
+    add('b-curl', { reps: 3, hl: ['upper'],
+      props: [{ t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 6 }],
+      steps: [
+        { pose: dn, ms: 1700, hold: 400, label: 'Langsam ablassen, Arme fast ganz strecken' },
+        { pose: upP, ms: 1100, hold: 500, label: 'Hantel hochrollen, Ellbogen bleiben am Körper' },
+        { pose: dn, ms: 1700, hold: 300, label: 'Langsam ablassen, Arme fast ganz strecken' },
+        { pose: cheat, ms: 700, hold: 1200, bad: true, label: 'Falsch: Schwung aus dem Rücken, Oberkörper lehnt zurück' }
+      ] });
+  })();
+
+  /* TRX-Crunches */
+  (function () {
+    var wrist = [198, G - 2], sh = [198, 122];
+    var A0 = [sh[0] - Math.sqrt(118 * 118 - 20 * 20), 142];
+    var start = norm({ sh: sh, hip: lineHip(sh, A0), ankle: A0, fa: 78, wrist: wrist });
+    var hipT = [sh[0] - 46 * Math.cos(25 * D2R), sh[1] - 46 * Math.sin(25 * D2R)];
+    var tuck = norm({ sh: sh, hip: hipT, ankle: [132, 138], fa: 62, wrist: wrist });
+    add('b-crunch', { reps: 3, hl: ['torso', 'thigh'],
+      props: [{ t: 'anchor', x: 100, y: 12 }, { t: 'strap', anchor: [100, 15], at: 'ankle', dx: 0, dy: 0 }],
+      steps: [
+        { pose: start, ms: 1500, hold: 500, label: 'Langsam zurück, Körper bleibt in der Linie' },
+        { pose: tuck, ms: 1200, hold: 600, label: 'Knie zur Brust ziehen, Rücken rund machen' }
+      ] });
+  })();
+
+  /* ===== Beine: Oberschenkel und Unterschenkel ===== */
+
+  /* Kniebeuge, Körpergewicht: the arms reach forward for balance */
+  (function () {
+    var A = [150, G], arms = [48, -2];
+    var top = norm({ hip: [150, G - 70], th: 3, ankle: A, wr: arms });
+    var bot = norm({ hip: [128, G - 38], th: 32, ankle: A, wr: arms });
+    var bad = norm({ hip: [118, G - 42], th: 62, ankle: [153.5, G - 7], fa: 30, wr: arms });
+    add('x-squat', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Kräftig aufstehen, oben das Gesäss anspannen' },
+        { pose: bot, ms: 1700, hold: 600, label: 'Hüfte nach hinten und unten, Brust offen, Fersen am Boden' },
+        { pose: top, ms: 1100, hold: 300, label: 'Kräftig aufstehen, oben das Gesäss anspannen' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Fersen heben ab, Oberkörper klappt nach vorn' }
+      ] });
+  })();
+
+  /* Goblet-Kniebeuge: the weight is held at the chest, so the torso stays more upright */
+  (function () {
+    var A = [150, G], hands = [13, 14];
+    var top = norm({ hip: [150, G - 70], th: 3, ankle: A, wr: hands });
+    var bot = norm({ hip: [132, G - 36], th: 22, ankle: A, wr: hands });
+    var bad = norm({ hip: [118, G - 42], th: 58, ankle: [153.5, G - 7], fa: 30, wr: hands });
+    add('x-goblet', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [{ t: 'plate', at: 'wrist', dx: 3, dy: 1, r: 6 }],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Kräftig aufstehen, das Gewicht bleibt an der Brust' },
+        { pose: bot, ms: 1700, hold: 700, label: 'Tief in die Hocke, der Oberkörper bleibt aufrecht' },
+        { pose: top, ms: 1100, hold: 300, label: 'Kräftig aufstehen, das Gewicht bleibt an der Brust' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Oberkörper kippt nach vorn, Fersen heben ab' }
+      ] });
+  })();
+
+  /* Langhantel-Kniebeuge: the bar rests on the upper back (seen from the side only its end plate shows) */
+  (function () {
+    var A = [150, G], bar = [-8, 0];
+    var top = norm({ hip: [150, G - 70], th: 4, ankle: A, wr: bar, es: -1 });
+    var bot = norm({ hip: [118, G - 36], th: 38, ankle: A, wr: bar, es: -1 });
+    var bad = norm({ hip: [112, G - 40], th: 64, ankle: [153.5, G - 7], fa: 30, wr: bar, es: -1 });
+    add('x-backsquat', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [{ t: 'plate', at: 'wrist', dx: -1, dy: 4, r: 8 }],
+      steps: [
+        { pose: top, ms: 1300, hold: 500, label: 'Kräftig aufstehen, Hüfte und Knie strecken' },
+        { pose: bot, ms: 1900, hold: 700, label: 'Hüfte nach hinten, Knie beugen, Rücken bleibt gerade' },
+        { pose: top, ms: 1300, hold: 300, label: 'Kräftig aufstehen, Hüfte und Knie strecken' },
+        { pose: bad, ms: 1000, hold: 1100, bad: true, label: 'Falsch: Oberkörper klappt nach vorn, Fersen heben ab' }
+      ] });
+  })();
+
+  /* Ausfallschritt rückwärts (same moves as the TRX version, without the straps) */
+  (function () {
+    var arms = [6, 48];
+    var top = norm({ hip: [150, G - 71], th: 3, ankle: [150, G], ankle2: [146, G], wr: arms });
+    var bot = norm({ hip: [122, G - 38], th: 8, ankle: [152, G], ankle2: [80, 161.5], fa2: 65, wr: arms });
+    var bad = norm({ hip: [126, G - 38], th: 42, ankle: [152, G], ankle2: [80, 161.5], fa2: 65, wr: arms });
+    add('x-lunge', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [{ t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 5 }],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Mit der vorderen Ferse hochdrücken, Füsse zusammen' },
+        { pose: bot, ms: 1500, hold: 600, label: 'Grosser Schritt nach hinten, das Knie sinkt Richtung Boden' },
+        { pose: top, ms: 1100, hold: 300, label: 'Mit der vorderen Ferse hochdrücken, Füsse zusammen' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Oberkörper kippt nach vorn' }
+      ] });
+  })();
+
+  /* Step-ups: the leg on the box does the work */
+  (function () {
+    var arms = [4, 48], box = { t: 'box', x: 178, y: 143, w: 44, h: 35 };
+    var low = norm({ hip: [172, 108], th: 4, ankle: [190, 143], ankle2: [160, G], wr: arms });
+    var top = norm({ hip: [196, 73], th: 3, ankle: [192, 143], ankle2: [202, 143], wr: arms });
+    var bad = norm({ hip: [170, 112], th: 40, ankle: [190, 143], ankle2: [160, G], wr: arms });
+    add('x-stepup', { reps: 3, hl: ['thigh', 'glute'], thumb: 0, props: [box, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 5 }],
+      steps: [
+        { pose: low, ms: 1200, hold: 500, label: 'Start: ganzer Fuss auf der Kiste, Oberkörper aufrecht' },
+        { pose: top, ms: 1400, hold: 600, label: 'Mit dem Bein auf der Kiste hochsteigen, oben aufrecht stehen' },
+        { pose: low, ms: 1400, hold: 300, label: 'Kontrolliert wieder absteigen' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Oberkörper fällt nach vorn' }
+      ] });
+  })();
+
+  /* Wandsitzen: back on the wall, thighs level, knees over the ankles */
+  (function () {
+    var A = [148, G], wall = { t: 'box', x: 90, y: 30, w: 16, h: 148 };
+    var up = norm({ hip: [110, G - 58], th: 0, ankle: A, wr: [4, 46] });
+    var sit = norm({ hip: [110, G - 36], th: 0, ankle: A, wr: [24, 42] });
+    var bad = norm({ hip: [110, G - 36], th: 0, ankle: [126, G], wr: [24, 42] });
+    add('x-wallsit', { reps: 2, hl: ['thigh'], thumb: 1, props: [wall],
+      steps: [
+        { pose: up, ms: 1200, hold: 400, label: 'Mit dem Rücken an der Wand, die Füsse weit vorn' },
+        { pose: sit, ms: 1600, hold: 2200, label: 'Nach unten rutschen, bis die Oberschenkel waagerecht sind, und halten' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Füsse zu nah an der Wand, die Knie schieben nach vorn' }
+      ] });
+  })();
+
+  /* Wadenheben stehend: up on the toes, the toe stays where it is while the heel rises */
+  (function () {
+    var arms = [4, 48];
+    var lo = norm({ hip: [150, G - 70], th: 2, ankle: [150, G], wr: arms });
+    var hi = norm({ hip: [153, G - 80], th: 2, ankle: [154.1, G - 10], fa: 45.6, wr: arms });
+    var bad = norm({ hip: [160, G - 68], th: 6, ankle: [154.1, G - 10], fa: 45.6, wr: arms });
+    add('x-calf', { reps: 3, hl: ['shin'], thumb: 1, props: [{ t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 5 }],
+      steps: [
+        { pose: lo, ms: 1500, hold: 400, label: 'Langsam ablassen, die Fersen sinken bis zum Boden' },
+        { pose: hi, ms: 1100, hold: 700, label: 'Fersen hoch auf die Zehen, oben 1 Sekunde halten' },
+        { pose: lo, ms: 1500, hold: 300, label: 'Langsam ablassen, die Fersen sinken bis zum Boden' },
+        { pose: bad, ms: 800, hold: 1100, bad: true, label: 'Falsch: die Knie beugen sich, die Wade arbeitet kaum' }
+      ] });
+  })();
+
+  /* Wadenheben sitzend: weight on the knees */
+  (function () {
+    var seat = { t: 'box', x: 112, y: 138, w: 52, h: 40 }, hands = [26, 40];
+    var lo = norm({ hip: [140, 134], th: 0, ankle: [178, G], wr: hands });
+    var hi = norm({ hip: [140, 134], th: 0, ankle: [182.2, G - 10], fa: 45.6, wr: hands });
+    add('x-calfseat', { reps: 3, hl: ['shin'], thumb: 1, props: [seat, { t: 'plate', at: 'wrist', dx: 0, dy: -3, r: 7 }],
+      steps: [
+        { pose: lo, ms: 1500, hold: 400, label: 'Langsam ablassen, die Fersen sinken fast bis zum Boden' },
+        { pose: hi, ms: 1100, hold: 700, label: 'Fersen so hoch wie möglich, oben 1 Sekunde halten' }
+      ] });
+  })();
+
+  /* Einbeiniges Wadenheben: one hand on the wall, the other leg lifted behind */
+  (function () {
+    var wall = { t: 'box', x: 208, y: 20, w: 12, h: 158 }, hand = [46, -8];
+    var lo = norm({ hip: [150, G - 70], th: 3, ankle: [150, G], ankle2: [128, G - 46], fa2: 30, wr: hand });
+    var hi = norm({ hip: [153, G - 80], th: 3, ankle: [154.1, G - 10], fa: 45.6, ankle2: [131, G - 56], fa2: 30, wr: hand });
+    add('x-calf1', { reps: 3, hl: ['shin'], thumb: 1, props: [wall],
+      steps: [
+        { pose: lo, ms: 1600, hold: 400, label: 'Langsam ablassen, die Hand an der Wand hilft nur beim Gleichgewicht' },
+        { pose: hi, ms: 1200, hold: 700, label: 'Auf einem Bein hoch auf die Zehen, oben halten' }
+      ] });
+  })();
+
+  /* Zehenheber: heels stay down, the toes pull up */
+  (function () {
+    var wall = { t: 'box', x: 92, y: 30, w: 16, h: 148 }, arms = [2, 48];
+    var dn = norm({ hip: [122, G - 66], th: -12, ankle: [146, G], fa: 0, wr: arms });
+    var up = norm({ hip: [122, G - 66], th: -12, ankle: [146, G], fa: -38, wr: arms });
+    add('x-toeraise', { reps: 3, hl: ['shin'], thumb: 1, props: [wall],
+      steps: [
+        { pose: dn, ms: 1200, hold: 400, label: 'Langsam ablassen, die Fersen bleiben am Boden' },
+        { pose: up, ms: 900, hold: 700, label: 'Die Zehen zur Decke ziehen, oben 1 Sekunde halten' }
+      ] });
+  })();
+
+  /* Sumo-Kniebeuge (front view): wide stance, the knees follow the toes outwards, the weight hangs between the legs */
+  (function () {
+    var arms = [-12, -12], bell = { t: 'bell', at: 'wrL', dx: 6.6, dy: 15, r: 8 };
+    var top = normF({ arms: arms, legs: [18, 18] });
+    var bot = normF({ arms: arms, legs: [78, -19.5] });
+    var bad = normF({ arms: arms, legs: [-12, 55] });
+    add('x-sumo', { view: 'f', reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [bell],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Kräftig aufstehen, oben das Gesäss anspannen' },
+        { pose: bot, ms: 1700, hold: 600, label: 'Tief absenken, die Knie schieben nach aussen in Richtung der Zehen' },
+        { pose: top, ms: 1100, hold: 300, label: 'Kräftig aufstehen, oben das Gesäss anspannen' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Die Knie fallen nach innen' }
+      ] });
+  })();
+
+  /* Bulgarische Kniebeuge: the back foot rests on a bench behind */
+  (function () {
+    var arms = [4, 48], bench = { t: 'box', x: 68, y: 146, w: 34, h: 32 };
+    var F0 = [160, G], R0 = [92, 142];
+    var top = norm({ hip: [152, 104], th: 4, ankle: F0, ankle2: R0, fa2: 170, wr: arms });
+    var bot = norm({ hip: [136, 128], th: 12, ankle: F0, ankle2: R0, fa2: 170, wr: arms });
+    var bad = norm({ hip: [136, 128], th: 12, ankle: [138, G], ankle2: R0, fa2: 170, wr: arms });
+    add('x-bulgarian', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [bench, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 5 }],
+      steps: [
+        { pose: top, ms: 1200, hold: 500, label: 'Mit dem vorderen Fuss hochdrücken, aufrecht stehen' },
+        { pose: bot, ms: 1700, hold: 600, label: 'Gerade nach unten sinken, das vordere Knie bleibt über dem Fuss' },
+        { pose: top, ms: 1200, hold: 300, label: 'Mit dem vorderen Fuss hochdrücken, aufrecht stehen' },
+        { pose: bad, ms: 900, hold: 1100, bad: true, label: 'Falsch: Der vordere Fuss steht zu nah, das Knie schiebt nach vorn' }
+      ] });
+  })();
+
+  /* Beinpresse: reclined on the seat, the foot plate slides away along the rails */
+  (function () {
+    var H = [118, 144], dir = [Math.cos(38 * D2R), -Math.sin(38 * D2R)];
+    function foot(d) { return [H[0] + d * dir[0], H[1] + d * dir[1]]; }
+    var hands = [42, 16];
+    var pad = { t: 'pad', at: 'ankle', dx: 5, dy: -4, ang: 128, len: 44 };
+    var low = norm({ hip: H, th: -55, ankle: foot(50), fa: -128, wrist: [122, 134], ha: -55 });
+    var high = norm({ hip: H, th: -55, ankle: foot(69), fa: -128, wrist: [122, 134], ha: -55 });
+    var bad = norm({ hip: [118, 138], th: -35, ankle: foot(46), fa: -128, wrist: [122, 134], ha: -40, round: 9 });
+    add('x-legpress', { reps: 3, hl: ['thigh', 'glute'], thumb: 0, sweep: true,
+      props: [{ t: 'box', x: 96, y: 149, w: 46, h: 29 }, { t: 'rail', x1: 121, y1: 151, x2: 66, y2: 111 }, { t: 'rail', x1: 136, y1: 150, x2: 206, y2: 90 }, pad],
+      steps: [
+        { pose: low, ms: 1300, hold: 400, label: 'Kontrolliert ablassen, die Knie beugen sich etwa im rechten Winkel' },
+        { pose: high, ms: 1100, hold: 500, label: 'Mit dem ganzen Fuss wegdrücken, die Knie nicht ganz durchdrücken' },
+        { pose: low, ms: 1300, hold: 300, label: 'Kontrolliert ablassen, die Knie beugen sich etwa im rechten Winkel' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Das Gesäss hebt ab, der untere Rücken rundet sich' }
+      ] });
+  })();
+
+  /* Beinstrecker: the thigh rests on the seat, the lower leg swings up */
+  (function () {
+    var hip = [110, 138], hands = [124, 134];
+    var seat = [{ t: 'box', x: 88, y: 142, w: 50, h: 36 }, { t: 'rail', x1: 98, y1: 140, x2: 96, y2: 66 }];
+    var pad = { t: 'plate', at: 'ankle', dx: 1, dy: -7, r: 5 };
+    var dn = norm({ hip: hip, th: -6, ankle: [146, 172], wrist: hands, ha: -6 });
+    var up = norm({ hip: hip, th: -6, ankle: [180, 134], wrist: hands, ha: -6 });
+    add('x-legext', { reps: 3, hl: ['thigh'], thumb: 1, sweep: true, props: seat.concat([pad]),
+      steps: [
+        { pose: dn, ms: 1700, hold: 400, label: 'Langsam ablassen, etwa 3 Sekunden' },
+        { pose: up, ms: 1100, hold: 700, label: 'Das Bein strecken, oben 1 Sekunde halten' }
+      ] });
+  })();
+
+  /* Beinbeuger liegend: face down on the bench, the heels go to the buttocks */
+  (function () {
+    var hip = [92, 140.5], sh = [138, 140.5];
+    var props = [{ t: 'box', x: 52, y: 144, w: 100, h: 34 }, { t: 'plate', at: 'ankle', dx: 3, dy: -4, r: 6 }];
+    var out = norm({ hip: hip, th: 90, ankle: [22, 141], wrist: [180, 146], ha: 75 });
+    var curl = norm({ hip: hip, th: 90, ankle: [60, 106], wrist: [180, 146], ha: 75 });
+    var bad = norm({ hip: [92, 130], th: 86, ankle: [60, 98], wrist: [180, 146], ha: 75, round: -9 });
+    add('x-legcurl', { reps: 3, hl: ['thigh'], thumb: 1, sweep: true, props: props,
+      steps: [
+        { pose: out, ms: 1700, hold: 400, label: 'Langsam strecken, die Hüfte bleibt flach auf der Bank' },
+        { pose: curl, ms: 1100, hold: 700, label: 'Die Fersen zum Gesäss ziehen, oben 1 Sekunde halten' },
+        { pose: out, ms: 1700, hold: 300, label: 'Langsam strecken, die Hüfte bleibt flach auf der Bank' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Hüfte hebt ab, Hohlkreuz' }
+      ] });
+  })();
+
+  /* Einbeiniges Kreuzheben: back and free leg form one line, the weight hangs down */
+  (function () {
+    var A = [150, G], arm = [2, 48];
+    var top = norm({ hip: [150, G - 71], th: 3, ankle: A, ankle2: [146, G], wr: [8, 46] });
+    var bot = norm({ hip: [136, G - 68], th: 80, ankle: A, ankle2: [67, 94], fa2: 85, wr: arm });
+    var bad = norm({ hip: [136, G - 68], th: 80, ankle: A, ankle2: [67, 94], fa2: 85, wr: arm, round: 14, ha: 92 });
+    add('x-slrdl', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true, props: [{ t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 5 }],
+      steps: [
+        { pose: top, ms: 1200, hold: 500, label: 'Aufrichten, die Hüfte nach vorn schieben, das Bein zurückholen' },
+        { pose: bot, ms: 1700, hold: 700, label: 'Hüfte nach hinten, Rücken und freies Bein bilden eine Linie' },
+        { pose: top, ms: 1200, hold: 300, label: 'Aufrichten, die Hüfte nach vorn schieben, das Bein zurückholen' },
+        { pose: bad, ms: 1100, hold: 1200, bad: true, label: 'Falsch: Der Rücken wird rund' }
+      ] });
+  })();
+
+  /* Seitliche Ausfallschritte (front view): one leg steps out, the other stays straight, hands together at the chest */
+  (function () {
+    var hands = [10, -65], plate = { t: 'plate', at: 'wrL', dx: 0, dy: 0, r: 6 };
+    var together = normF({ px: 140, arms: hands, legs: [0, 0] });
+    var lunge = normF({ px: 189, lean: 4, arms: hands, legL: [42.9, 42.9], legR: [62, -4] });
+    add('x-latlunge', { view: 'f', reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [plate],
+      steps: [
+        { pose: together, ms: 1100, hold: 500, label: 'Vom Schrittbein abdrücken, die Füsse zusammenstellen' },
+        { pose: lunge, ms: 1500, hold: 700, label: 'Grosser Schritt zur Seite, die Hüfte nach hinten, ein Bein bleibt gestreckt' }
+      ] });
+  })();
+
+  /* Kettlebell-Swing: the hips drive the bell, the arms only guide it */
+  (function () {
+    var A = [150, G], bell = { t: 'bell', at: 'wrist', dx: 0, dy: 15, r: 8 };
+    var back = norm({ hip: [128, G - 64], th: 62, ankle: A, wrist: [142, G - 48], ha: 40 });
+    var mid = norm({ hip: [140, G - 66], th: 34, ankle: A, wrist: [205.7, 97] });
+    var top = norm({ hip: [152, G - 70], th: 2, ankle: A, wrist: [201.6, 56] });
+    var bad = norm({ hip: [158, G - 68], th: -14, ankle: A, wrist: [192, 60] });
+    add('x-swing', { reps: 4, hl: ['glute', 'thigh'], thumb: 0, sweep: true, props: [bell],
+      steps: [
+        { pose: back, ms: 800, hold: 150, label: 'Hüfte nach hinten, die Kugel schwingt zwischen den Beinen durch' },
+        { pose: mid, ms: 400, hold: 0, label: 'Die Hüfte kräftig nach vorn schieben' },
+        { pose: top, ms: 400, hold: 250, label: 'Oben aufrecht, die Arme führen die Kugel nur bis Brusthöhe' },
+        { pose: bad, ms: 500, hold: 1100, bad: true, label: 'Falsch: Oben ins Hohlkreuz gelehnt' },
+        { pose: mid, ms: 600, hold: 0, label: 'Die Kugel fällt, die Hüfte geht wieder nach hinten' }
+      ] });
+  })();
+
+  /* TRX-Kniebeuge: straps hold the hands, the legs do the work */
+  (function () {
+    var A = [150, G], AN = [250, 10];
+    var top = norm({ hip: [148, G - 70], th: -4, ankle: A, wrist: [186, 84] });
+    var bot = norm({ hip: [122, G - 38], th: 10, ankle: A, wrist: [176, 86] });
+    add('x-trxsquat', { reps: 3, hl: ['thigh', 'glute'], thumb: 1,
+      props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: [AN[0], AN[1] + 2], at: 'wrist' }],
+      steps: [
+        { pose: top, ms: 1100, hold: 500, label: 'Mit den Beinen hochdrücken, die Gurte bleiben gespannt' },
+        { pose: bot, ms: 1600, hold: 600, label: 'Hüfte nach hinten und unten, die Arme helfen nur beim Gleichgewicht' }
+      ] });
+  })();
+
+  /* ===== Gesäss ===== */
+
+  /* Gesässbrücke: shoulders stay on the floor, the hips rise until shoulder, hip and knee form one line */
+  (function () {
+    var S0 = [100, 173], A = [174, G], hand = [150, 173];
+    var down = norm({ sh: S0, th: -90, ankle: A, wrist: hand, ha: -62 });
+    var up = norm({ sh: S0, th: -115.2, ankle: A, wrist: hand, ha: -62 });
+    var bad = norm({ sh: S0, th: -128, ankle: A, wrist: hand, ha: -62, round: -8 });
+    add('x-bridge', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true, props: [],
+      steps: [
+        { pose: down, ms: 1500, hold: 400, label: 'Langsam ablassen, die Schultern bleiben am Boden' },
+        { pose: up, ms: 1100, hold: 900, label: 'Hüfte hochdrücken, oben das Gesäss fest anspannen' },
+        { pose: down, ms: 1500, hold: 300, label: 'Langsam ablassen, die Schultern bleiben am Boden' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, die Hüfte ist zu hoch' }
+      ] });
+  })();
+
+  /* Einbeinige Gesässbrücke: the free leg stays up, the supporting foot pushes */
+  (function () {
+    var S0 = [100, 173], A = [174, G], hand = [150, 173], free = [199, 128];
+    var down = norm({ sh: S0, th: -90, ankle: A, ankle2: free, fa2: -60, wrist: hand, ha: -62 });
+    var up = norm({ sh: S0, th: -115.2, ankle: A, ankle2: free, fa2: -60, wrist: hand, ha: -62 });
+    add('x-bridge1', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true, props: [],
+      steps: [
+        { pose: down, ms: 1500, hold: 400, label: 'Langsam ablassen, das freie Bein bleibt oben' },
+        { pose: up, ms: 1200, hold: 900, label: 'Mit dem Standbein hochdrücken, oben das Gesäss anspannen' }
+      ] });
+  })();
+
+  /* Donkey Kicks: on all fours, the bent leg presses back and up */
+  (function () {
+    var H = [110, 137], sh = [154.6, 125.9], hand = [154.6, 173];
+    var tab = norm({ hip: H, sh: sh, ankle: [74, 173.5], ankle2: [74, 173.5], fa: 0, fa2: 0, wrist: hand, ha: 62 });
+    var kick = norm({ hip: H, sh: sh, ankle: [74, 104], fa: 180, ankle2: [74, 173.5], fa2: 0, wrist: hand, ha: 62 });
+    var bad = norm({ hip: [110, 133], sh: [154.6, 122], ankle: [70, 92], fa: 180, ankle2: [74, 173.5], fa2: 0, wrist: [154.6, 171], ha: 62, round: -9 });
+    add('x-donkey', { reps: 3, hl: ['glute', 'thigh'], thumb: 1, sweep: true, props: [],
+      steps: [
+        { pose: tab, ms: 1300, hold: 300, label: 'Zurück in den Vierfüsslerstand, der Rücken bleibt flach' },
+        { pose: kick, ms: 1000, hold: 700, label: 'Das Bein nach hinten oben drücken, die Fusssohle zeigt zur Decke' },
+        { pose: tab, ms: 1300, hold: 300, label: 'Zurück in den Vierfüsslerstand, der Rücken bleibt flach' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, das Bein schwingt zu hoch' }
+      ] });
+  })();
+
+  /* Kabel-Kickback: bent forward at the machine, the leg with the cuff goes back */
+  (function () {
+    var PU = [218, 166], hold = [206, 90];
+    var rest = norm({ hip: [142, G - 70], th: 35, ankle: [138, G - 4], ankle2: [150, G], wrist: hold });
+    var kick = norm({ hip: [142, G - 70], th: 35, ankle: [78, G - 70], ankle2: [150, G], wrist: hold });
+    var bad = norm({ hip: [146, G - 70], th: 12, ankle: [76, G - 84], ankle2: [150, G], wrist: [200, 66], round: -8 });
+    add('x-kickback', { reps: 3, hl: ['glute'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 212, y: 30, w: 12, h: 148 }, { t: 'pulley', x: PU[0], y: PU[1] }, { t: 'strap', anchor: PU, at: 'ankle' }],
+      steps: [
+        { pose: rest, ms: 1300, hold: 300, label: 'Langsam zurückführen, das Gewicht nicht absetzen' },
+        { pose: kick, ms: 1000, hold: 700, label: 'Das Bein nach hinten drücken, oben das Gesäss anspannen' },
+        { pose: rest, ms: 1300, hold: 300, label: 'Langsam zurückführen, das Gewicht nicht absetzen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, das Bein wird mit Schwung hochgerissen' }
+      ] });
+  })();
+
+  /* Seitliches Beinheben (front view, lying on the side): the top leg lifts */
+  (function () {
+    var arms = [10, 10];
+    var low = normF({ rot: 90, arms: arms, legs: [0, 0] });
+    var up = normF({ rot: 90, arms: arms, legL: [38, 38], legR: [0, 0] });
+    var bad = normF({ rot: 106, arms: arms, legL: [62, 62], legR: [0, 0] });
+    add('x-sidelegraise', { view: 'f', reps: 3, hl: ['glute', 'thigh'], thumb: 1, props: [],
+      steps: [
+        { pose: low, ms: 1400, hold: 300, label: 'Langsam ablassen, der Körper bleibt in einer Linie' },
+        { pose: up, ms: 1100, hold: 700, label: 'Das obere Bein gestreckt anheben, die Zehen zeigen nach vorn' },
+        { pose: low, ms: 1400, hold: 300, label: 'Langsam ablassen, der Körper bleibt in einer Linie' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Das Bein ist zu hoch, der Rumpf kippt nach hinten' }
+      ] });
+  })();
+
+  /* Monster Walk (front view): a band around the ankles stays tight while one foot steps out */
+  (function () {
+    var stance = normF({ legs: [22, 6] });
+    var step = normF({ legL: [22, 6], legR: [38, 20] });
+    add('x-monster', { view: 'f', reps: 3, hl: ['thigh', 'glute'], thumb: 1, props: [{ t: 'link', a: 'anL', b: 'anR', band: true }],
+      steps: [
+        { pose: stance, ms: 800, hold: 300, label: 'Leicht in die Knie, das Band ist gespannt' },
+        { pose: step, ms: 900, hold: 500, label: 'Kleiner Schritt zur Seite, das Band bleibt gespannt' },
+        { pose: stance, ms: 800, hold: 300, label: 'Den anderen Fuss nachsetzen, die Knie fallen nicht nach innen' }
+      ] });
+  })();
+
+  /* ==== new animations below ==== */
+
+})(typeof module !== 'undefined' && module.exports ? require('./fig.js') : FIG);

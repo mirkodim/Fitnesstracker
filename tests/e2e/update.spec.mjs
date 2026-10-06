@@ -133,7 +133,7 @@ test('Update: während Plank und Pause bleibt die Leiste weg, danach erscheint s
   } finally { await server.close(); }
 });
 
-test('Update: nach Schließen und Wiederöffnen der App ist die neue Version von selbst aktiv', async ({ browser, diag }) => {
+test('Update: nach Schliessen und Wiederöffnen der App ist die neue Version von selbst aktiv', async ({ browser, diag }) => {
   const server = await startServer({ root: v1, base: '/Fitnesstracker/' });
   const ctx = await browser.newContext();
   try {
@@ -142,7 +142,7 @@ test('Update: nach Schließen und Wiederöffnen der App ist die neue Version von
     server.setRoot(v2);
     await swUpdate(page);
     await expect(page.locator('#upd')).toBeVisible();
-    await page.close();                                            // App schließen
+    await page.close();                                            // App schliessen
     page = await ctx.newPage();                                     // App neu öffnen
     await expect.poll(async () => {
       await page.goto(server.url);

@@ -63,7 +63,7 @@ test('Training: Fokuskarte, Hinweise für jede Übung, Pause, Plank, Fertig', as
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(vw);
       // zuklappen für die nächste Runde (Zustand bleibt sonst offen)
-      await page.getByRole('button', { name: 'Hinweise schließen' }).click();
+      await page.getByRole('button', { name: 'Hinweise schliessen' }).click();
     }
   }
   // Pause

@@ -29,7 +29,7 @@ test('startet ohne Konsolenfehler, ohne fremde Hosts, mit eigenen Schriften', as
   expect(w[1]).toBeLessThanOrEqual(w[0]);
 });
 
-test('Version steht im Fußbereich und stimmt mit dem Build überein', async ({ page, site }) => {
+test('Version steht im Fussbereich und stimmt mit dem Build überein', async ({ page, site }) => {
   await openApp(page, site);
   await expect(page.locator('.foot .ver')).toContainText('Version e2e-1');
   expect(await page.evaluate(() => APP_VERSION)).toBe('e2e-1');

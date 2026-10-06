@@ -55,7 +55,7 @@ test('Jede Übung: Hinweise lassen sich öffnen, die Figur wird gezeichnet und s
     await page.clock.runFor(700);
     await page.locator('.stage').click();
     await expect(badge(page)).toHaveText('Abspielen');
-    await page.getByRole('button', { name: 'Hinweise schließen' }).click();
+    await page.getByRole('button', { name: 'Hinweise schliessen' }).click();
   }
 });
 
@@ -66,18 +66,18 @@ test('Hip Thrust und TRX-Trizepsstrecken: Texte, Muskelmarkierung und Bildinhalt
   await expect(page.locator('.demo ul').nth(0).locator('li')).toHaveCount(6);
   await expect(page.locator('.demo ul').nth(0)).toContainText('Bank an Wand oder Rack stellen');
   await expect(page.locator('.demo ul.bad li')).toHaveCount(4);
-  await expect(page.locator('.demo .feel')).toContainText('Gesäß (Gluteus)');
+  await expect(page.locator('.demo .feel')).toContainText('Gesäss (Gluteus)');
   // Bank (zwei Teile), Hantelscheibe, Muskel am Oberschenkel markiert
   await expect(page.locator('#fig-g rect.pp')).toHaveCount(2);
   await expect(page.locator('#fig-g circle.pl')).toHaveCount(1);
   await expect(page.locator('#fig-g line.sg.hl')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Hinweise schließen' }).click();
+  await page.getByRole('button', { name: 'Hinweise schliessen' }).click();
 
   await pick(page, 'a-tri');
   await page.getByRole('button', { name: 'So geht die Übung' }).click();
   await expect(page.locator('.demo ul').nth(0).locator('li')).toHaveCount(4);
   await expect(page.locator('.demo ul').nth(0)).toContainText('TRX hoch am Rack einhängen');
-  await expect(page.locator('.demo ul').nth(0)).toContainText('Schwerer: Füße weiter nach hinten');
+  await expect(page.locator('.demo ul').nth(0)).toContainText('Schwerer: Füsse weiter nach hinten');
   await expect(page.locator('.demo ul.bad li').first()).toContainText('Hüfte hängt durch');
   // Anker und Gurt, kein Pfosten und kein Band (Standing-Pushdown ist weg), Oberarm markiert
   await expect(page.locator('#fig-g line.an')).toHaveCount(1);
