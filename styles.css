@@ -488,3 +488,26 @@ select {
 .prow { display: flex; align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .prow-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 8px 10px; text-align: left; background: none; border: 0; cursor: pointer; color: inherit; }
 .prow-i { flex: none; width: 56px; display: grid; place-items: center; background: none; border: 0; border-left: 1px solid var(--line); color: var(--muted); cursor: pointer; padding: 0; }
+
+/* ---------- version 3: Meine Trainings first, Erstellen with two parts ---------- */
+
+/* the bottom bar has a long name ("Meine Trainings"): it may use two lines */
+.nav button span { text-align: center; line-height: 1.15; padding-inline: 2px; }
+
+/* Meine Trainings: the whole row starts the training, the eye on the right opens it */
+.prow-main .gl { flex: none; font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--accent); }
+.mrow .prow-main { min-height: 76px; }
+.mrow .rn b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; font-family: var(--font-display); font-size: 25px; font-weight: 600; line-height: 1.12; }
+
+/* editor: the row opens, the wastebasket on the right takes the exercise out */
+.brow-top { display: flex; align-items: stretch; }
+.brow-top .brow-head { flex: 1; min-width: 0; width: auto; }
+
+/* exercise library start: the button for all exercises above the areas */
+#lib-tiles { display: flex; flex-direction: column; gap: 14px; }
+#lib-tiles[hidden] { display: none; }
+.eyebrow.by { margin-top: 4px; }
+
+/* food: "Bisherige Lebensmittel" */
+.book { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+.book h4.sec { margin-top: 10px; }

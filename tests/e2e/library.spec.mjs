@@ -2,14 +2,21 @@ import { test, expect, openApp, stored, tab, noSharpS } from './fixtures.mjs';
 
 const top = (page) => page.locator('header.top');
 const search = (page) => page.locator('#lib-q');
+/* the exercise library is the part "Übungen" of the tab "Erstellen" */
+async function openLibrary(page) {
+  await tab(page, 'Erstellen').click();
+  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
+  await expect(search(page)).toBeVisible();
+}
 
 test.describe('Übungen', () => {
   test('Bereiche mit Anzahl, Suche, Liste nach Gliedmassen, Übung mit Animation', async ({ page, site }) => {
     await openApp(page, site);
-    await tab(page, 'Übungen').click();
+    await openLibrary(page);
     const total = await page.evaluate(() => LIB.length);
     expect(total).toBeGreaterThanOrEqual(80);
     await expect(top(page)).toContainText(total + ' Übungen mit Animation');
+    await expect(page.getByRole('button', { name: 'Alle Übungen' })).toContainText(total + ' Übungen zum Durchblättern, nach Körperteil sortiert');
     // neun Bereiche, jede Kachel zeigt die richtige Anzahl
     const groups = await page.evaluate(() => GROUPS.map((g) => [g.id, g.label, Builder.listGroup(g.id).length]));
     expect(groups).toHaveLength(9);
@@ -68,9 +75,72 @@ test.describe('Übungen', () => {
     await expect(search(page)).toBeVisible();
   });
 
+  test('Alle Übungen: jede Übung einmal, nach Körperteil sortiert, mit Sprungleiste; die Zurück-Taste führt zurück', async ({ page, site }) => {
+    await openApp(page, site);
+    await openLibrary(page);
+    const total = await page.evaluate(() => LIB.length);
+    // der Knopf steht über den Körperteilen und beschreibt, was dahinter ist
+    const allBtn = page.getByRole('button', { name: 'Alle Übungen' });
+    const aBox = await allBtn.boundingBox(), tBox = await page.locator('.gt[data-g="beine"]').boundingBox();
+    expect(aBox.y + aBox.height).toBeLessThan(tBox.y);
+    await allBtn.click();
+    await expect(top(page).locator('h2.mt')).toHaveText('Alle Übungen');
+    await expect(top(page)).toContainText(total + ' Übungen');
+    // Abschnitte in der Reihenfolge der Körperteile, die Zahlen ergeben zusammen alle Übungen
+    const expected = await page.evaluate(() => Builder.allByGroup(null).filter((g) => g.list.length).map((g) => [GROUPS.find((x) => x.id === g.id).label, g.list.length]));
+    const heads = await page.locator('h3.sec').allInnerTexts();
+    expect(heads).toEqual(expected.map(([l, n]) => l.toUpperCase() + ' · ' + n));
+    expect(expected.reduce((n, [, c]) => n + c, 0)).toBe(total);
+    // jede Übung genau einmal
+    const names = await page.locator('[data-act="lib-open"] b').allInnerTexts();
+    expect(names).toHaveLength(total);
+    expect(new Set(names).size).toBe(total);
+    // in jedem Abschnitt stehen die leichten zuerst
+    const rank = { Einsteiger: 1, Geübt: 2, Fortgeschritten: 3 };
+    for (const sec of await page.locator('section[aria-labelledby^="all-h-"]').all()) {
+      const lv = (await sec.locator('.rn small').allInnerTexts()).map((t) => rank[t.split(' · ')[0]]);
+      expect(lv.every((v, i) => i === 0 || lv[i - 1] <= v), lv.join()).toBe(true);
+    }
+    // Sprungleiste: ein Tipp bringt den Abschnitt an den oberen Rand
+    const jump = page.getByRole('group', { name: 'Zu einem Körperteil springen' });
+    await expect(jump.getByRole('button')).toHaveCount(expected.length);
+    await jump.getByRole('button', { name: 'Bauch' }).click();
+    await expect(page.locator('#all-h-bauch')).toBeInViewport();
+    await expect.poll(async () => (await page.locator('#all-h-bauch').boundingBox()).y).toBeLessThan(260);
+    await expect(page.locator('#all-h-bauch')).toContainText('Bauch');
+    // eine Übung öffnen, zurück: wieder die Liste
+    await page.locator('section[aria-labelledby="all-h-bauch"] [data-act="lib-open"]').first().click();
+    await expect(page.getByRole('heading', { name: 'Darauf achten' })).toBeVisible();
+    await page.goBack();
+    await expect(top(page).locator('h2.mt')).toHaveText('Alle Übungen');
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await expect(search(page)).toBeVisible();
+    await expect(allBtn).toBeVisible();
+  });
+
+  test('Alle Übungen mit Ausrüstung: nur passende, jede einmal, Abschnitte ohne Treffer fehlen', async ({ page, site }) => {
+    await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });
+    await openLibrary(page);
+    await page.getByRole('button', { name: 'Alle Übungen' }).click();
+    await expect(page.locator('.row.dim').first()).toBeVisible();              // ohne Filter stehen auch die Übungen mit fehlendem Gerät da
+    const n = await page.evaluate(() => LIB.length);
+    expect(await page.locator('[data-act="lib-open"]').count()).toBe(n);
+    await page.getByRole('button', { name: 'Nur passende Übungen' }).click();
+    const free = await page.evaluate(() => LIB.filter((e) => Builder.eqOK(e, Builder.haveSet([]))).length);
+    expect(await page.locator('[data-act="lib-open"]').count()).toBe(free);
+    await expect(page.locator('.row.dim')).toHaveCount(0);
+    await expect(top(page)).toContainText(free + ' Übungen');
+    const sections = await page.locator('h3.sec').count();
+    expect(sections).toBeGreaterThanOrEqual(7);
+    await expect(page.getByRole('group', { name: 'Zu einem Körperteil springen' }).getByRole('button')).toHaveCount(sections);
+    // der Filter gilt auch nach dem Zurückgehen
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await expect(page.getByRole('button', { name: 'Nur passende Übungen' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('Ausrüstung: nur passende Übungen, "fehlt dir" bei den anderen', async ({ page, site }) => {
-    await openApp(page, site, { state: { schema: 3, prefs: { equip: [], preset: 'travel', level: 1, minutes: 30 } } });
-    await tab(page, 'Übungen').click();
+    await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });
+    await openLibrary(page);
     const free = await page.evaluate(() => GROUPS.map((g) => [g.id, Builder.listGroup(g.id, Builder.haveSet([])).length]));
     await expect(page.getByRole('button', { name: /Meine Ausrüstung \(0\)/ })).toBeVisible();
     // ohne Filter: alle Übungen, die anderen sind markiert
@@ -99,7 +169,7 @@ test.describe('Übungen', () => {
 
   test('Die Seiten der Übungen enthalten keine Platzhalter und kein scharfes S', async ({ page, site }) => {
     await openApp(page, site);
-    await tab(page, 'Übungen').click();
+    await openLibrary(page);
     const ids = await page.evaluate(() => LIB.map((e) => e.id));
     const bad = [];
     for (const id of ids.filter((_, i) => i % 3 === 0)) {                       // jede dritte reicht für den Schriftcheck, die Animation prüft anim.spec für alle

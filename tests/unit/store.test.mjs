@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const Store = require('../../store.js');
+const { EX } = require('../../lib.js');
 const OLD = readFileSync(new URL('../fixtures/altformat.json', import.meta.url), 'utf8');
 
 function memStorage(initial = {}) {
@@ -143,7 +144,7 @@ test('migrate: Müll rein, gültiger Zustand raus, nie eine Exception', () => {
   assert.deepEqual(s.recent.map((e) => e.name), ['ok']);
   assert.equal(s.goalP, null);
   assert.equal(s.weightKg, null);
-  assert.deepEqual(s.prefs, { equip: ['kh'], preset: '', level: 3, minutes: 5 });
+  assert.deepEqual(s.prefs, { equip: ['kh'] }, 'Stufe, Zeit und Ort aus älteren Versionen werden ignoriert');
   assert.deepEqual(s.last, ['A']);
 });
 
@@ -177,7 +178,7 @@ test('Roundtrip: toText -> parseBackup liefert denselben Zustand', () => {
   const s = Store.parseBackup(OLD).state;
   const t = Store.addTraining(s, 'Beine zuhause', [{ ex: 'x-squat', sets: 2, reps: '12–15' }, { ex: 'a-plank', hold: 30 }], ['beine']);
   s.log['2026-06-02'] = [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 2 }, weights: { 'a-box': '60' }, note: 'läuft gut „fast“' }, Store.blankEntry(s, t.id)];
-  s.prefs.equip = ['kh', 'band']; s.prefs.preset = ''; s.prefs.level = 2;
+  s.prefs.equip = ['kh', 'band'];
   for (const indent of [0, 2]) {
     const r = Store.parseBackup(Store.toText(s, indent));
     assert.equal(r.ok, true);
@@ -222,7 +223,10 @@ test('Eigene Trainings: anlegen, bereinigen, auflösen, kopieren, löschen und z
   assert.equal(c.name, 'Tag A (Kopie)');
   assert.deepEqual(c.items.map((i) => i.ex), ['a-box', 'a-hip', 'a-push', 'a-tri', 'a-plank']);
   assert.equal(c.items[1].note, undefined, 'Hinweistexte der App werden nicht kopiert');
-  assert.equal(Store.allTrainings(s).own[0].id, c.id, 'neueste zuerst');
+  const listed = Store.allTrainings(s);
+  assert.deepEqual(listed.own.slice(0, 2).map((x) => x.id), ['A', 'B'], 'Tag A und Tag B stehen zuerst');
+  assert.equal(listed.own[2].id, c.id, 'dann die eigenen, neueste zuerst');
+  assert.ok(listed.ready.length >= 14 && listed.ready.every((x) => /^p-/.test(x.id)), 'Vorschläge der App ohne Tag A und B');
   // Löschen mit Haken, Rückgängig stellt alles wieder her
   Store.setsOf(s, t.id)['x-squat'] = 2; s.stamp[t.id] = '2026-10-05'; Store.touch(s, t.id);
   const rm = Store.removeTraining(s, t.id);
@@ -450,4 +454,61 @@ test('Kalorien-Ziel: wird gespeichert, alte Daten ohne Ziel bleiben gültig, Uns
   assert.equal(Store.migrate({ schema: 3, goalK: -5 }).goalK, null);
   assert.equal(Store.migrate({ schema: 3, goalK: 'viel' }).goalK, null);
   assert.equal(Store.newState().goalK, null);
+});
+
+test('Wiederholungen: gültige Angaben bleiben, der Bindestrich wird zum Gedankenstrich, alles andere fällt weg', () => {
+  for (const [inp, out] of [['8–12', '8–12'], ['8-12', '8–12'], [' 10 ', '10'], [12, '12'], ['max.', 'max.'], ['6 – 8', '6–8'], ['8–8', '8'], ['1–99', '1–99']]) {
+    assert.equal(Store.cleanReps(inp), out, String(inp));
+  }
+  for (const bad of ['', '  ', 'viel', '<b>8</b>', '12–8', '0', '0–3', '100', '1–100', '8–12–15', null, undefined, {}, [], NaN, true]) {
+    assert.equal(Store.cleanReps(bad), null, JSON.stringify(bad) + ' ' + String(bad));
+  }
+  const s = Store.newState();
+  const t = Store.addTraining(s, 'x', [{ ex: 'x-squat', reps: '9–13' }, { ex: 'x-lunge', reps: '<img src=x>' }, { ex: 'x-bridge', reps: 'max.' }, { ex: 'x-pike', reps: 7 }]);
+  assert.deepEqual(t.items, [{ ex: 'x-squat', reps: '9–13' }, { ex: 'x-lunge' }, { ex: 'x-bridge', reps: 'max.' }, { ex: 'x-pike', reps: '7' }]);
+  assert.equal(Store.training(s, t.id).items[0].big, '9–13');
+  assert.equal(Store.training(s, t.id).items[1].big, EX['x-lunge'].reps, 'ohne gültige Angabe gilt die der Bibliothek');
+  // aus einer Sicherung kommen keine Tags in die Anzeige
+  const back = Store.migrate({ trainings: [{ id: 'u1', name: 'T', items: [{ ex: 'x-squat', reps: '<script>' }] }] });
+  assert.deepEqual(back.trainings[0].items, [{ ex: 'x-squat' }]);
+});
+
+test('Ort zum Trainieren: nur die Ausrüstung wird gemerkt', () => {
+  assert.deepEqual(Store.newState().prefs, { equip: null });
+  assert.deepEqual(Store.migrate({ prefs: { equip: ['band', 'band', 'zz'], level: 3, minutes: 60, preset: 'travel' } }).prefs, { equip: ['band'] });
+  assert.deepEqual(Store.migrate({ prefs: { equip: [] } }).prefs, { equip: [] }, 'leer heisst: ohne Ausrüstung');
+  assert.deepEqual(Store.migrate({ prefs: 'x' }).prefs, { equip: null });
+});
+
+test('Bisherige Lebensmittel: jedes einmal, A bis Z, der jüngste Eintrag gewinnt, mehr als die letzten acht', () => {
+  const s = Store.newState();
+  assert.deepEqual(Store.foodBook(s), []);
+  Store.addFood(s, '2026-10-01', { id: 'a', name: 'Magerquark', g: 250, mode: '100', v: { kcal: 67, p: 12 } });
+  Store.addFood(s, '2026-10-03', { id: 'b', name: ' magerquark ', g: 200, mode: '100', v: { kcal: 70, p: 12 } });
+  Store.addFood(s, '2026-10-02', { id: 'c', name: 'Äpfel', g: 150, mode: '100', v: { kcal: 52 } });
+  Store.addFood(s, '2026-10-02', { id: 'd', name: 'Zimt', g: 2, mode: 'por', v: {} });
+  Store.addFood(s, '2026-10-02', { id: 'e', name: '', g: 5, mode: '100', v: {} });
+  Store.addFood(s, '2026-10-02', { id: 'f', name: 'Orangensaft', g: 200, mode: 'ml', v: { kcal: 45 } });
+  const book = Store.foodBook(s);
+  assert.deepEqual(book.map((e) => e.name), ['Äpfel', 'magerquark', 'Orangensaft', 'Zimt'], 'A bis Z (Ä bei A), ohne Namenlose, ohne Doppelte');
+  assert.equal(book[1].g, 200, 'das Neuere vom 3. Oktober gewinnt');
+  assert.equal(book[1].v.kcal, 70);
+  assert.equal(book[2].mode, 'ml');
+  // es sind mehr als die acht "zuletzt gegessen"
+  for (let i = 0; i < 30; i++) Store.addFood(s, '2026-09-' + String(1 + (i % 28)).padStart(2, '0'), { id: 'n' + i, name: 'Essen ' + String(i).padStart(2, '0'), g: 1, mode: '100', v: {} });
+  assert.equal(s.recent.length, 8, 'zuletzt gegessen bleibt bei acht');
+  assert.equal(Store.foodBook(s).length, 34);
+  // gelöscht und nicht mehr unter "zuletzt": weg; noch unter "zuletzt": bleibt
+  Store.removeFood(s, '2026-10-02', 'c');
+  assert.ok(!Store.foodBook(s).some((e) => e.name === 'Äpfel'), 'Äpfel sind gelöscht und nicht unter den letzten acht');
+  const last = s.recent[0].name;
+  for (const k of Object.keys(s.food)) s.food[k] = s.food[k].filter((e) => e.name !== last);
+  assert.ok(Store.foodBook(s).some((e) => e.name === last), 'was unter "zuletzt gegessen" steht, ist auch in der Liste');
+  // Kopien: wer die Liste ändert, ändert den Zustand nicht
+  const b = Store.foodBook(s);
+  b[0].v.kcal = 9999; b[0].name = 'x';
+  assert.ok(!JSON.stringify(s).includes('9999'));
+  // das Formular lässt sich daraus füllen
+  const d = Store.draftFromEntry(Store.foodBook(s).find((e) => e.name === 'Orangensaft'));
+  assert.equal(d.name, 'Orangensaft'); assert.equal(d.g, '200'); assert.equal(d.mode, 'ml'); assert.equal(d.v.kcal, '45');
 });

@@ -6,7 +6,7 @@ var Store = (function (data) {
   'use strict';
 
   var EX = data.EX, TEMPLATES = data.TEMPLATES, TEMPLATE_MAP = data.TEMPLATE_MAP, NUTR = data.NUTR;
-  var GROUPS = data.GROUPS, EQUIP = data.EQUIP, PRESETS = data.PRESETS;
+  var GROUPS = data.GROUPS, EQUIP = data.EQUIP;
   var KEY = 'strichliste.v1';
   var SCHEMA = 3;
   var NOTE_MAX = 300, NAME_MAX = 60, MAX_TRAININGS = 80, MAX_ITEMS = 24;
@@ -49,7 +49,7 @@ var Store = (function (data) {
   function newState() {
     return {
       schema: SCHEMA, cur: 'A', last: [], trainings: [], sets: {}, stamp: {}, logged: {}, weights: {}, holdSecs: {},
-      prefs: { equip: null, preset: '', level: 1, minutes: 45 },
+      prefs: { equip: null },
       log: {}, food: {}, recent: [], goalP: null, goalK: null, weightKg: null
     };
   }
@@ -88,11 +88,22 @@ var Store = (function (data) {
   }
 
   /* ---------- trainings (the ones the user made) ---------- */
+  /* Repetitions are "8–12", "10" or "max."; anything else is dropped and the exercise's own value is used. A hyphen is turned into the dash. */
+  function cleanReps(v) {
+    if (typeof v === 'number' && isFinite(v)) v = String(Math.floor(v));
+    if (typeof v !== 'string') return null;
+    var t = v.trim(), m = /^(\d{1,2})(?:\s*[–-]\s*(\d{1,2}))?$/.exec(t);
+    if (t === 'max.') return t;
+    if (!m) return null;
+    var lo = +m[1], hi = m[2] != null ? +m[2] : lo;
+    if (lo < 1 || hi < lo) return null;
+    return hi === lo ? String(lo) : lo + '–' + hi;
+  }
   function cleanItem(it) {
     if (!isObj(it) || typeof it.ex !== 'string' || !own(EX, it.ex)) return null;
-    var o = { ex: it.ex }, n;
+    var o = { ex: it.ex }, n, r;
     if ((n = intIn(it.sets, 1, 10)) != null) o.sets = n;
-    if (typeof it.reps === 'string' && it.reps.trim()) o.reps = it.reps.trim().slice(0, 12);
+    if ((r = cleanReps(it.reps)) != null) o.reps = r;
     if (it.rest != null && (n = intIn(it.rest, 0, 300)) != null) o.rest = n;
     if (it.hold != null && (n = intIn(it.hold, 5, 600)) != null) o.hold = n;
     return o;
@@ -129,16 +140,13 @@ var Store = (function (data) {
     });
     return out;
   }
+  /* What the app remembers about the user's place to train: the equipment (null = never asked). Older versions also kept a level and a time; they are ignored. */
   function cleanPrefs(p) {
     var out = newState().prefs;
-    if (!isObj(p)) return out;
-    if (Array.isArray(p.equip)) {
+    if (isObj(p) && Array.isArray(p.equip)) {
       var seen = {};
       out.equip = p.equip.filter(function (id) { var ok = EQUIP.some(function (e) { return e.id === id; }) && !seen[id]; seen[id] = true; return ok; });
     }
-    if (PRESETS.some(function (x) { return x.id === p.preset; })) out.preset = p.preset;
-    var lv = intIn(p.level, 1, 3); if (lv != null) out.level = lv;
-    var mi = intIn(p.minutes, 5, 180); if (mi != null) out.minutes = mi;
     return out;
   }
 
@@ -162,10 +170,12 @@ var Store = (function (data) {
     return { id: d.id, name: d.name, sub: d.sub || '', builtin: own(TEMPLATE_MAP, d.id), origin: !!d.origin, kneeCheck: !!d.kneeCheck, groups: d.groups || [],
       defItems: d.items, items: d.items.map(exItem) };
   }
-  /* every training the user can pick: their own first (newest first), then the ready-made ones */
+  /* Every training the user can pick. own: Tag A and Tag B (the days of the first version), then the ones the user made, newest first.
+     ready: the suggestions of the app. */
   function allTrainings(state) {
-    var own1 = state.trainings.slice().reverse().map(function (t) { return training(state, t.id); });
-    return { own: own1, ready: TEMPLATES.map(function (t) { return training(state, t.id); }) };
+    var origin = TEMPLATES.filter(function (t) { return t.origin; }).map(function (t) { return training(state, t.id); });
+    var made = state.trainings.slice().reverse().map(function (t) { return training(state, t.id); });
+    return { own: origin.concat(made), ready: TEMPLATES.filter(function (t) { return !t.origin; }).map(function (t) { return training(state, t.id); }) };
   }
   function itemsOfDef(d) { return d.items.map(function (it) { var o = { ex: it.ex }; ['sets', 'reps', 'rest', 'hold'].forEach(function (k) { if (it[k] != null) o[k] = it[k]; }); return o; }); }
   function addTraining(state, name, items, groups) {
@@ -550,6 +560,16 @@ var Store = (function (data) {
     state.recent.unshift(c);
     state.recent = state.recent.slice(0, 8);
   }
+  /* Every food that was ever entered, once per name (the latest entry wins), A to Z. The foods of the "recently eaten" chips are included,
+     so a food whose entry was deleted from its day still shows up as long as it is one of them. Entries without a name cannot be picked and are left out. */
+  function foodBook(state) {
+    var byName = {};
+    function put(e) { if (e.name && e.name.trim()) byName[e.name.trim().toLowerCase()] = e; }
+    state.recent.slice().reverse().forEach(put);
+    Object.keys(state.food).sort().forEach(function (k) { state.food[k].forEach(put); });
+    return Object.keys(byName).map(function (k) { var c = copyEntry(byName[k]); c.name = byName[k].name.trim(); return c; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }) || (a.name < b.name ? -1 : 1); });
+  }
   function findFood(state, key, id) {
     var list = state.food[key] || [];
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return { entry: list[i], idx: i };
@@ -583,10 +603,10 @@ var Store = (function (data) {
     setEntrySets: setEntrySets, setEntryWeight: setEntryWeight, setEntryNote: setEntryNote, entrySummary: entrySummary, loggedDate: loggedDate,
     entryTotals: entryTotals, dayTotals: dayTotals, partsOf: partsOf, unitOf: unitOf, modeOf: modeOf,
     newDraft: newDraft, draftFromEntry: draftFromEntry, entryFromDraft: entryFromDraft, isBlankEntry: isBlankEntry, copyEntry: copyEntry,
-    rememberRecent: rememberRecent, findFood: findFood, addFood: addFood, removeFood: removeFood, restoreFood: restoreFood
+    rememberRecent: rememberRecent, foodBook: foodBook, cleanReps: cleanReps, findFood: findFood, addFood: addFood, removeFood: removeFood, restoreFood: restoreFood
   };
 })(typeof module !== 'undefined' && module.exports
   ? Object.assign({}, require('./plan.js'), require('./lib.js'), require('./trainings.js'))
-  : { EX: EX, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP, NUTR: NUTR, GROUPS: GROUPS, EQUIP: EQUIP, PRESETS: PRESETS });
+  : { EX: EX, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP, NUTR: NUTR, GROUPS: GROUPS, EQUIP: EQUIP });
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Store;

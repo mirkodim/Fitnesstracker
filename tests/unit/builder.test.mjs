@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const Builder = require('../../builder.js');
 const { LIB, EX } = require('../../lib.js');
-const { GROUPS, EQUIP, PRESETS, TIMES } = require('../../plan.js');
+const { GROUPS, EQUIP, PRESETS, REPS } = require('../../plan.js');
 const { TEMPLATES, TEMPLATE_MAP } = require('../../trainings.js');
 
 const ALL = EQUIP.map((e) => e.id);
@@ -25,22 +25,35 @@ test('Ausrüstung: "kh|lh" heisst eines von beiden, mehrere Angaben heissen alle
   assert.deepEqual(Builder.missing(EX['x-squat'], have()), []);
 });
 
-test('Zeitschätzung: mehr Sätze und mehr Übungen dauern länger, die Anzeige rundet auf fünf Minuten', () => {
-  const one = [{ ex: 'x-squat', sets: 3 }], more = [{ ex: 'x-squat', sets: 4 }], two = [{ ex: 'x-squat', sets: 3 }, { ex: 'x-lunge', sets: 3 }];
-  assert.ok(Builder.estimate(more) > Builder.estimate(one));
-  assert.ok(Builder.estimate(two) > Builder.estimate(one) * 1.5);
-  assert.equal(Builder.estimate([]), 0);
-  assert.equal(Builder.minutesText(40 * 60), 'ca. 40 Min.');
-  assert.equal(Builder.minutesText(43 * 60), 'ca. 45 Min.');
-  assert.equal(Builder.minutesText(60), 'ca. 5 Min.');
-  // Haltezeit zählt: Plank 60 s dauert länger als 30 s
-  assert.ok(Builder.estimate([{ ex: 'a-plank', sets: 3, hold: 60 }]) > Builder.estimate([{ ex: 'a-plank', sets: 3, hold: 30 }]));
-  // pro Seite braucht doppelt so lange
-  const perSide = LIB.find((e) => /pro (Seite|Bein|Arm)/.test(e.unit || '') && !e.timer);
-  assert.ok(perSide, 'es gibt Übungen pro Seite');
-  assert.ok(Builder.itemSeconds({ ex: perSide.id }) > 30 + perSide.sets * perSide.rest);
-  // Standardwerte: ohne Angaben rechnet die Schätzung mit der Bibliothek
-  assert.equal(Builder.estimate([{ ex: 'x-squat' }]), Builder.estimate([{ ex: 'x-squat', sets: EX['x-squat'].sets, rest: EX['x-squat'].rest, reps: EX['x-squat'].reps }]));
+test('Wiederholungen: drei Bereiche, Plus und Minus verschieben den Bereich um eins', () => {
+  assert.deepEqual(REPS, ['6–8', '8–10', '8–12']);
+  assert.deepEqual(Builder.REPS, REPS);
+  assert.equal(Builder.repsShift('8–12', 1), '9–13');
+  assert.equal(Builder.repsShift('8–12', -1), '7–11');
+  assert.equal(Builder.repsShift('6–8', -1), '5–7');
+  assert.equal(Builder.repsShift('10', 1), '11', 'eine einzelne Zahl bleibt eine einzelne Zahl');
+  assert.equal(Builder.repsShift('max.', 1), '9–13', 'ohne Zahl geht es von 8–12 aus');
+  assert.equal(Builder.repsShift(undefined, -1), '7–11');
+  assert.equal(Builder.repsShift('1–3', -1), null, 'unter 1 geht es nicht');
+  assert.equal(Builder.repsShift('1', -1), null);
+  assert.equal(Builder.repsShift('90–99', 1), null, 'über 99 geht es nicht');
+  // mehrfach drücken kommt zurück
+  let v = '8–12';
+  for (let i = 0; i < 7; i++) v = Builder.repsShift(v, 1);
+  for (let i = 0; i < 7; i++) v = Builder.repsShift(v, -1);
+  assert.equal(v, '8–12');
+  // jede Übung beginnt mit einem der drei Bereiche; Haltezeit-Übungen haben keine Wiederholungen
+  for (const e of LIB) if (!e.timer) assert.ok(REPS.includes(e.reps), e.id + ' hat ' + e.reps);
+  const r = Builder.resolveItem({ ex: 'x-squat', reps: '9–13' });
+  assert.equal(r.reps, '9–13');
+  assert.equal(Builder.resolveItem({ ex: 'x-squat' }).reps, EX['x-squat'].reps);
+});
+
+test('Keine Zeit und keine Stufe: die Schnittstelle kennt weder Minuten noch Einsteiger', () => {
+  for (const name of ['estimate', 'minutesOf', 'minutesText', 'itemSeconds', 'avgReps']) assert.equal(Builder[name], undefined, name);
+  const r = Builder.suggest({ groups: ['ganz'], equip: ALL, seed: 1, minutes: 10, level: 1 });
+  assert.equal(r.minutes, undefined);
+  assert.equal(r.items.length, Builder.countFor(['ganz'], false), 'Minuten und Stufe werden ignoriert');
 });
 
 test('Nötige Ausrüstung: lesbare Liste ohne Doppelte, leer bei reinem Körpergewicht', () => {
@@ -67,51 +80,53 @@ test('Gruppen: Hauptbereich zählt voll, Nebenbereich halb; Ganzkörper-Training
   for (const e of LIB) assert.ok(Builder.groupsOf(e).length >= 1, e.id + ' liegt in keiner Gruppe');
 });
 
-test('Vorschlag: nur Übungen, die zur Ausrüstung passen, nie doppelt, nie über der Stufe (ausser bei Mangel)', () => {
+test('Vorschlag: nur Übungen, die zur Ausrüstung passen, nie doppelt, nie über "Geübt" (ausser bei Mangel)', () => {
   for (const equip of [[], ['band'], ['kh', 'bank'], GYM, ALL]) {
     const have = Builder.haveSet(equip);
     for (const g of GROUPS) {
-      for (const level of [1, 2, 3]) {
-        const r = Builder.suggest({ groups: [g.id], equip, minutes: 45, level, seed: 7 });
-        const list = ids(r.items);
-        assert.equal(new Set(list).size, list.length, g.id + ' doppelte Übung');
-        for (const id of list) {
-          assert.ok(Builder.eqOK(EX[id], have), g.id + ' ' + id + ' passt nicht zur Ausrüstung ' + equip.join('+'));
-          if (!r.relaxed) assert.ok(EX[id].lvl <= level, id + ' ist schwerer als Stufe ' + level);
-        }
+      const r = Builder.suggest({ groups: [g.id], equip, seed: 7 });
+      const list = ids(r.items);
+      assert.equal(new Set(list).size, list.length, g.id + ' doppelte Übung');
+      for (const id of list) {
+        assert.ok(Builder.eqOK(EX[id], have), g.id + ' ' + id + ' passt nicht zur Ausrüstung ' + equip.join('+'));
+        if (!r.relaxed) assert.ok(EX[id].lvl <= Builder.LEVEL, id + ' ist schwerer als Stufe ' + Builder.LEVEL);
       }
     }
   }
+  assert.equal(Builder.LEVEL, 2);
 });
 
 test('Vorschlag: der Bereich stimmt, zuerst Übungen mit diesem Hauptbereich', () => {
-  const r = Builder.suggest({ groups: ['arme'], equip: ['kh', 'bank', 'kz', 'ma', 'lh', 'stange'], minutes: 45, level: 3, seed: 3 });
-  assert.ok(r.items.length >= 5);
+  const r = Builder.suggest({ groups: ['arme'], equip: ['kh', 'bank', 'kz', 'ma', 'lh', 'stange'], seed: 3 });
+  assert.equal(r.items.length, 5);
   for (const it of r.items) assert.ok(Builder.inGroup(EX[it.ex], 'arme'), it.ex);
   const main = r.items.filter((it) => Builder.weightIn(EX[it.ex], 'arme') === 1).length;
-  assert.ok(main / r.items.length >= 0.7, 'mindestens 70 % mit Hauptbereich Arme: ' + main + '/' + r.items.length);
-  const legs = Builder.suggest({ groups: ['beine'], equip: GYM, minutes: 60, level: 2, seed: 4 });
+  assert.ok(main / r.items.length >= 0.6, 'mindestens 60 % mit Hauptbereich Arme: ' + main + '/' + r.items.length);
+  const legs = Builder.suggest({ groups: ['beine'], equip: GYM, seed: 4 });
   assert.ok(legs.items.every((it) => Builder.inGroup(EX[it.ex], 'beine')));
-  const two = Builder.suggest({ groups: ['bauch', 'gesaess'], equip: [], minutes: 30, level: 2, seed: 5 });
+  const two = Builder.suggest({ groups: ['bauch', 'gesaess'], equip: [], seed: 5 });
   assert.ok(two.items.some((it) => Builder.inGroup(EX[it.ex], 'bauch')) && two.items.some((it) => Builder.inGroup(EX[it.ex], 'gesaess')), 'beide Bereiche kommen vor');
 });
 
-test('Vorschlag: die Zeit passt, wenn genug Übungen da sind', () => {
-  for (const minutes of TIMES) {
-    for (const level of [1, 2, 3]) {
-      const r = Builder.suggest({ groups: ['ganz'], equip: ALL, minutes, level, seed: 11 });
-      assert.ok(r.minutes <= minutes * 1.2 + 2, minutes + ' Min. Stufe ' + level + ' ergibt ' + r.minutes);
-      assert.ok(r.minutes >= minutes * 0.6, minutes + ' Min. Stufe ' + level + ' ergibt nur ' + r.minutes);
-      assert.equal(r.minutes, Builder.minutesOf(r.items));
-    }
+test('Vorschlag: die Anzahl hängt nur von den Bereichen ab, nicht von einer Zeit', () => {
+  assert.equal(Builder.countFor(['beine'], false), 5);
+  assert.equal(Builder.countFor(['beine', 'arme'], false), 6);
+  assert.equal(Builder.countFor(['beine', 'arme', 'bauch'], false), 7);
+  assert.equal(Builder.countFor(['ganz'], false), 7);
+  assert.equal(Builder.countFor(['beine'], true), 4, 'ein kleiner Start hat vier Übungen');
+  for (const [groups, n] of [[['beine'], 5], [['beine', 'ruecken'], 6], [['ganz'], 7], [['brust', 'ruecken', 'arme'], 7]]) {
+    const r = Builder.suggest({ groups, equip: ALL, seed: 2 });
+    assert.equal(r.items.length, n, groups.join('+'));
+    assert.ok(r.items.every((it) => it.sets === 3 && it.reps === undefined && it.rest === undefined), 'drei Sätze, Rest aus der Bibliothek');
   }
-  const small = Builder.suggest({ groups: ['ganz'], equip: ALL, minutes: 10, level: 1, seed: 2 });
-  assert.ok(small.items.length >= 2 && small.items.length <= 6);
-  assert.ok(small.items.every((it) => it.sets <= 2), 'kurzes Training: höchstens zwei Sätze');
+  const small = Builder.suggest({ groups: ['ganz'], equip: ALL, seed: 2, quick: true });
+  assert.equal(small.items.length, 4);
+  assert.ok(small.items.every((it) => it.sets === 2), 'kleiner Start: zwei Sätze');
+  assert.ok(small.items.every((it) => it.rest == null || it.rest <= 45), 'und kurze Pausen');
 });
 
 test('Vorschlag: gleiche Eingabe gibt das gleiche Training, anderer Wert ein anderes', () => {
-  const o = { groups: ['ganz'], equip: ALL, minutes: 60, level: 2, seed: 5 };
+  const o = { groups: ['ganz'], equip: ALL, seed: 5 };
   assert.deepEqual(Builder.suggest(o), Builder.suggest({ ...o }));
   const variants = new Set();
   for (let seed = 1; seed <= 12; seed++) variants.add(ids(Builder.suggest({ ...o, seed }).items).join());
@@ -121,21 +136,20 @@ test('Vorschlag: gleiche Eingabe gibt das gleiche Training, anderer Wert ein and
 });
 
 test('Vorschlag: grosse Bewegungen zuerst, kleine am Schluss', () => {
-  const r = Builder.suggest({ groups: ['ganz'], equip: GYM, minutes: 60, level: 2, seed: 9 });
+  const r = Builder.suggest({ groups: ['ganz'], equip: GYM, seed: 9 });
   const pr = r.items.map((it) => Builder.PRIORITY[EX[it.ex].pat] || 5);
   for (let i = 1; i < pr.length; i++) assert.ok(pr[i] <= pr[i - 1], 'Reihenfolge: ' + ids(r.items).join(' '));
 });
 
-test('Vorschlag: auch ohne Ausrüstung bekommt jeder Bereich, jede Zeit und jede Stufe ein brauchbares Training', () => {
+test('Vorschlag: auch ohne Ausrüstung bekommt jeder Bereich ein brauchbares Training', () => {
   for (const g of GROUPS) {
-    for (const minutes of TIMES) {
-      for (const level of [1, 2, 3]) {
-        const r = Builder.suggest({ groups: [g.id], equip: [], minutes, level, seed: 1 });
-        assert.ok(r.items.length >= 2, g.label + ' ' + minutes + ' Min. Stufe ' + level + ': nur ' + r.items.length + ' Übungen');
-        assert.ok(r.minutes >= 5, g.label + ' ' + minutes + ' Min.');
-      }
+    for (const quick of [false, true]) {
+      const r = Builder.suggest({ groups: [g.id], equip: [], seed: 1, quick });
+      assert.ok(r.items.length >= 2, g.label + (quick ? ' (klein)' : '') + ': nur ' + r.items.length + ' Übungen');
+      assert.ok(r.items.length <= Builder.countFor([g.id], quick));
     }
   }
+  assert.deepEqual(Builder.suggest({ groups: ['arme'], equip: [], seed: 1, exclude: LIB.map((e) => e.id) }).items, [], 'ohne passende Übung bleibt die Liste leer');
 });
 
 test('Alternativen: gleiche Ausrüstung, nie schon im Training, ähnliche Übungen zuerst', () => {
@@ -170,8 +184,7 @@ test('Fertige Trainings: jeder Bereich hat mindestens ein passendes, mehrere Stu
     const fits = ready.filter((t) => Builder.isFullBody(t.items) || Builder.groupShare(t.items, g.id) >= Builder.SHARE);
     assert.ok(fits.length >= 2, g.label + ': nur ' + fits.length + ' fertige Trainings');
   }
-  const minutes = ready.map((t) => Builder.minutesOf(t.items));
-  assert.ok(Math.min(...minutes) <= 36 && Math.max(...minutes) >= 80, 'kurz und lang: ' + Math.min(...minutes) + '–' + Math.max(...minutes));
+  assert.ok(ready.every((t) => t.items.length >= 5 && t.items.length <= 14), 'jedes fertige Training hat 5 bis 14 Übungen');
   assert.ok(ready.some((t) => Builder.needs(t.items).length === 0), 'es gibt Trainings ohne Geräte');
   assert.ok(ready.some((t) => Builder.needs(t.items).includes('TRX')) && ready.some((t) => Builder.needs(t.items).includes('Kettlebell')));
   for (const e of EQUIP) if (e.id !== 'mb') assert.ok(ready.some((t) => t.items.some((i) => EX[i.ex].eq.some((tok) => tok.split('|').includes(e.id)))), e.label);
@@ -180,8 +193,31 @@ test('Fertige Trainings: jeder Bereich hat mindestens ein passendes, mehrere Stu
 test('Bibliothek pro Bereich sortiert: leichteste zuerst, dann nach Name', () => {
   for (const g of GROUPS) {
     const l = Builder.listGroup(g.id);
-    for (let i = 1; i < l.length; i++) assert.ok(l[i - 1].lvl < l[i].lvl || (l[i - 1].lvl === l[i].lvl && l[i - 1].name <= l[i].name), g.id + ' ' + l[i - 1].name);
+    for (let i = 1; i < l.length; i++) assert.ok(l[i - 1].lvl < l[i].lvl || (l[i - 1].lvl === l[i].lvl && l[i - 1].name.localeCompare(l[i].name, 'de') <= 0), g.id + ' ' + l[i - 1].name);
   }
   const have = Builder.haveSet([]);
   assert.ok(Builder.listGroup('beine', have).every((e) => Builder.eqOK(e, have)));
+});
+
+test('Alle Übungen: jede Übung genau einmal, unter ihrem Hauptbereich, Bereiche in fester Reihenfolge', () => {
+  const all = Builder.allByGroup(null);
+  assert.deepEqual(all.map((g) => g.id), GROUPS.map((g) => g.id));
+  const seen = {};
+  for (const g of all) {
+    for (const e of g.list) {
+      assert.equal(seen[e.id], undefined, e.id + ' kommt doppelt vor');
+      seen[e.id] = g.id;
+      assert.equal(Builder.mainGroup(e), g.id);
+      assert.ok(GROUPS.find((x) => x.id === g.id).leaves.includes(e.regions[0]), e.id + ' steht unter ' + g.id);
+    }
+    for (let i = 1; i < g.list.length; i++) assert.ok(g.list[i - 1].lvl <= g.list[i].lvl, g.id + ': leichtere zuerst');
+  }
+  assert.equal(Object.keys(seen).length, LIB.length, 'alle ' + LIB.length + ' Übungen sind dabei');
+  // mit Ausrüstungsfilter bleibt jede Übung genau einmal, nur passende
+  const have = Builder.haveSet(['kh', 'bank']);
+  const some = Builder.allByGroup(have);
+  const flat = some.flatMap((g) => g.list);
+  assert.equal(new Set(flat.map((e) => e.id)).size, flat.length);
+  assert.ok(flat.every((e) => Builder.eqOK(e, have)));
+  assert.equal(flat.length, LIB.filter((e) => Builder.eqOK(e, have)).length);
 });

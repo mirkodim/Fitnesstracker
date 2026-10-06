@@ -34,19 +34,15 @@ var EQUIP = [
   { id: 'trx', label: 'TRX (Schlingentrainer)', short: 'TRX', grp: 'Zubehör' },
   { id: 'band', label: 'Widerstandsband', grp: 'Zubehör' }
 ];
+/* Where the user trains. Three places are enough; single pieces of equipment can still be picked one by one. */
 var PRESETS = [
   { id: 'gym', label: 'Fitnessstudio', sub: 'Alles ist da', equip: ['kh', 'lh', 'kb', 'mb', 'ma', 'kz', 'bank', 'box', 'stange', 'trx', 'band'] },
   { id: 'homegym', label: 'Homegym', sub: 'Hanteln, Bank, Stange', equip: ['kh', 'lh', 'kb', 'bank', 'box', 'stange', 'trx', 'band'] },
-  { id: 'home', label: 'Zuhause', sub: 'Wenig Ausrüstung', equip: ['box', 'band'] },
-  { id: 'travel', label: 'Unterwegs', sub: 'Gar nichts dabei', equip: [] },
-  { id: 'physio', label: 'Physiotherapie', sub: 'Bänder, Bank, Bälle', equip: ['kh', 'mb', 'kz', 'bank', 'band'] }
+  { id: 'none', label: 'Ohne Ausrüstung', sub: 'Nur dein Körpergewicht', equip: [] }
 ];
-var LEVELS = [
-  { id: 1, label: 'Einsteiger', sub: 'Ich fange an oder starte neu' },
-  { id: 2, label: 'Geübt', sub: 'Ich trainiere regelmässig' },
-  { id: 3, label: 'Fortgeschritten', sub: 'Ich kenne die Übungen gut' }
-];
-var TIMES = [10, 20, 30, 45, 60, 90];
+/* The three repetition ranges the app offers. They do not overlap much and are enough for strength (6–8), a bit lighter (8–10) and the usual middle (8–12);
+   everything in between is set with the minus and plus buttons. Every exercise in lib.js starts with one of them. */
+var REPS = ['6–8', '8–10', '8–12'];
 
 var NUTR = [
   { k: 'kcal', l: 'Kalorien', u: 'kcal' },
@@ -58,5 +54,5 @@ var NUTR = [
 ];
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { KNEE_NOTE: KNEE_NOTE, GROUPS: GROUPS, LEAVES: LEAVES, EQUIP: EQUIP, PRESETS: PRESETS, LEVELS: LEVELS, TIMES: TIMES, NUTR: NUTR };
+  module.exports = { KNEE_NOTE: KNEE_NOTE, GROUPS: GROUPS, LEAVES: LEAVES, EQUIP: EQUIP, PRESETS: PRESETS, REPS: REPS, NUTR: NUTR };
 }

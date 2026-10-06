@@ -1,5 +1,5 @@
 /* The trainings that come with the app. "A" and "B" are the two days of the first version (their ids are in old calendar entries, so they stay).
-   The others are ready-made suggestions of 30 to 90 minutes. A training is a list of items { ex, sets, reps, rest, hold, note };
+   The others are ready-made suggestions (no times: a training lasts as long as it lasts). A training is a list of items { ex, sets, reps, rest, hold, note };
    what an item leaves out comes from the exercise in lib.js. Ids of ready-made trainings start with "p-". */
 var TEMPLATES = [];
 var TEMPLATE_MAP = {};
@@ -49,7 +49,7 @@ var TEMPLATE_MAP = {};
     { ex: 'x-sideplank', sets: 2, hold: 20 }, { ex: 'x-hollow', sets: 3, hold: 20 }, { ex: 'x-legraise', sets: 3 }
   ] });
 
-  tr({ id: 'p-hiit', name: 'Schwitzen in 30 Minuten', sub: 'Kurze Pausen, hoher Puls', items: [
+  tr({ id: 'p-hiit', name: 'Schwitzen mit kurzen Pausen', sub: 'Ohne Geräte, hoher Puls', items: [
     { ex: 'x-jack', sets: 3, rest: 30 }, { ex: 'x-squat', sets: 3, rest: 30 }, { ex: 'x-mountain', sets: 3, rest: 30 },
     { ex: 'x-pushup-knee', sets: 3, rest: 30 }, { ex: 'x-lunge', sets: 3, rest: 30 }, { ex: 'x-burpee', sets: 3, rest: 45 },
     { ex: 'x-crunch', sets: 3, rest: 30 }
@@ -127,7 +127,7 @@ var TEMPLATE_MAP = {};
     { ex: 'x-hangknee', sets: 3 }, { ex: 'x-calf', sets: 3 }, { ex: 'x-hollow', sets: 3, hold: 30 }
   ] });
 
-  tr({ id: 'p-gross', name: 'Der grosse Trainingstag', sub: 'Ganzkörper im Fitnessstudio, 90 Minuten', items: [
+  tr({ id: 'p-gross', name: 'Der grosse Trainingstag', sub: 'Ganzkörper im Fitnessstudio, ausführlich', items: [
     { ex: 'x-legpress', sets: 4 }, { ex: 'x-slrdl', sets: 3 }, { ex: 'x-pulldown', sets: 4 }, { ex: 'x-dbpress', sets: 4 },
     { ex: 'x-cablerow', sets: 3 }, { ex: 'x-ohp', sets: 3 }, { ex: 'x-legcurl', sets: 3 }, { ex: 'x-pushdown', sets: 3 },
     { ex: 'x-cablecurl', sets: 3 }, { ex: 'x-cablecrunch', sets: 3 }, { ex: 'x-calf', sets: 3 }, { ex: 'x-lateral', sets: 3 },

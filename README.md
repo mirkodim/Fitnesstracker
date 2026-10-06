@@ -1,14 +1,16 @@
 # Trainings-Strichliste
 
-Eine ruhige Trainings-App für alle, die sich schwer tun, anzufangen: Sie fragt **„Was möchtest du heute trainieren?“**, hilft Schritt für Schritt, ein Training zusammenzustellen, oder schlägt ein fertiges vor. Immer nur eine Übung im Fokus, grosse Knöpfe, Strichliste für die Sätze, automatische Pausen mit Timer, Halte-Timer, Kalender und Essens-Tracker. Die App läuft **ohne Internet** und speichert alle Daten **nur auf dem Handy**. Im Repo liegen nur Code und Übungstexte, keine persönlichen Daten.
+Eine ruhige Trainings-App für alle, die sich schwer tun, anzufangen: Sie öffnet bei **Meine Trainings** (ein Tipp, und es geht los), fragt unter **Erstellen** **„Was möchtest du heute trainieren?“**, stellt mit einer einzigen Frage ein Training zusammen oder schlägt ein fertiges vor. Immer nur eine Übung im Fokus, grosse Knöpfe, Strichliste für die Sätze, automatische Pausen mit Timer, Halte-Timer, Kalender und Essens-Tracker. Die App läuft **ohne Internet** und speichert alle Daten **nur auf dem Handy**. Im Repo liegen nur Code und Übungstexte, keine persönlichen Daten.
 
 ## Was die App kann
 
-* **Startfrage und Assistent:** Bereich antippen (Beine, Gesäss, Arme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper, auch mehrere), dann **Neues Training erstellen** (Ausrüstung → Zeit → Erfahrung → Vorschlag, den man anpassen, tauschen und erweitern kann) oder **Bestehendes Training wählen**. Dazu **„Wenig Lust? Nur 10 Minuten“** und **„Überrasch mich“**.
-* **Übungsbibliothek mit 92 Übungen:** sortiert nach Bereichen und Gliedmassen (Oberschenkel, Unterschenkel, Gesäss, Oberarme, Unterarme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper). Eine Übung steht in jedem Bereich, den sie trainiert. Jede hat eine **Animation** (Strichfigur, auch „so nicht“ in Orange), „Darauf achten“, häufige Fehler, wo man es spürt und leichtere und schwerere Varianten.
-* **Ausrüstung als Filter:** Fitnessstudio, Homegym, Zuhause, Unterwegs, Physiotherapie oder einzeln (Kurz- und Langhanteln, Kettlebell, Medizinball, Maschinen, Kabelzug, Bank, Kiste, Klimmzugstange, TRX, Band). „Passt zu meiner Ausrüstung“ blendet aus, was nicht geht; ein bestehendes Training lässt sich an die Ausrüstung anpassen.
-* **Meine Trainings:** Eigene Trainings unter eigenem Namen speichern, bearbeiten, löschen (mit Rückgängig). **19 fertige Trainings** der App dauern 30 bis 90 Minuten; Tag A und Tag B der ersten Version sind unverändert dabei.
-* **Essen:** Nährwerte **pro 100 g, pro 100 ml** oder für die ganze Menge, Tagesbilanz, Protein-Ziel und Kalorien-Ziel (beide freiwillig).
+* **Vier Reiter:** **Meine Trainings** (der erste: Tag A, Tag B und nur die selbst erstellten Trainings, ein Tipp auf die Zeile startet), **Erstellen** (neue Trainings und die Übungen), **Kalender** und **Essen**. Ein angefangenes Training bleibt offen, auch wenn man kurz in einen anderen Reiter schaut.
+* **Erstellen, Teil „Training“:** Bereich antippen (Beine, Gesäss, Arme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper, auch mehrere), **Neues Training erstellen**, dann **eine einzige Frage: wo trainierst du?** (Fitnessstudio, Homegym, Ohne Ausrüstung). Ein Tipp, und der Vorschlag steht da: je nach Bereichen 5 bis 7 Übungen mit drei Sätzen (ein „kleiner Start“ hat 4 mit zwei Sätzen). Keine Frage nach Zeit oder Erfahrung. Dazu **„Vorschläge der App ansehen“** (19 fertige Trainings), **„Wenig Lust? Ein kleiner Start“** und **„Überrasch mich“**.
+* **Anpassen:** Im Vorschlag lässt sich jede Übung öffnen (Sätze, Wiederholungen, Pause, Reihenfolge, tauschen, ansehen) und mit dem **Papierkorb** herausnehmen (mit Rückgängig). **Wiederholungen:** drei Bereiche zur Wahl (**6–8, 8–10, 8–12**) und **− / +**, das den Bereich um eins verschiebt (aus 8–12 wird 9–13). Es gibt nirgends eine Zeitangabe: ein Training dauert, solange es dauert.
+* **Erstellen, Teil „Übungen“:** Bibliothek mit 92 Übungen, sortiert nach Bereichen und Gliedmassen (Oberschenkel, Unterschenkel, Gesäss, Oberarme, Unterarme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper). Über den Körperteilen steht **„Alle Übungen“**: jede Übung einmal, nach Körperteil sortiert, die leichten zuerst, mit einer Leiste zum Springen. Jede Übung hat eine **Animation** (Strichfigur, auch „so nicht“ in Orange), „Darauf achten“, häufige Fehler, wo man es spürt und leichtere und schwerere Varianten.
+* **Ausrüstung als Filter:** Fitnessstudio, Homegym, Ohne Ausrüstung oder einzeln (Kurz- und Langhanteln, Kettlebell, Medizinball, Maschinen, Kabelzug, Bank, Kiste, Klimmzugstange, TRX, Band). „Passt zu meiner Ausrüstung“ und „Nur passende Übungen“ blenden aus, was nicht geht; ein bestehendes Training lässt sich an die Ausrüstung anpassen. Vorschläge nehmen nur Übungen bis „Geübt“; schwere wie Klimmzug, Kreuzheben, Langhantel-Kniebeuge oder Bankdrücken fügt man bei Bedarf selbst hinzu.
+* **Eigene Trainings:** unter eigenem Namen speichern, bearbeiten, löschen (mit Rückgängig). Tag A und Tag B der ersten Version sind unverändert dabei, mit ihren Zahlen aus dem ersten Plan.
+* **Essen:** Nährwerte **pro 100 g, pro 100 ml** oder für die ganze Menge, Tagesbilanz, Protein-Ziel und Kalorien-Ziel (beide freiwillig). „Zuletzt gegessen“ zeigt die letzten acht Lebensmittel; unter **„Hinzufügen“** öffnet **„Bisherige Lebensmittel“** alles, was je eingetragen wurde (A bis Z, mit Suche), ein Tipp füllt das Formular.
 * Schweizer Rechtschreibung (ss statt ß).
 
 **Live:** https://mirkodim.github.io/Fitnesstracker/
@@ -53,14 +55,14 @@ Die medizinischen Hinweise sind bewusst vorsichtig: keine Diagnosen, keine Thera
 |---|---|
 | `index.html` | Schale, Metadaten, Manifest-Link, Skripte |
 | `styles.css` | Gestaltung (hell und dunkel automatisch, eigene Schriften) |
-| `plan.js` | Daten: Bereiche, Ausrüstung, Voreinstellungen, Zeiten, Erfahrungsstufen, Nährwertfelder |
-| `lib.js` | Die Übungsbibliothek: eine Zeile pro Übung mit Bereichen, Ausrüstung, Stufe, Sätzen und allen Texten |
+| `plan.js` | Daten: Bereiche, Ausrüstung, die drei Orte zum Trainieren, die drei Wiederholungsbereiche, Nährwertfelder |
+| `lib.js` | Die Übungsbibliothek: ein Eintrag pro Übung mit Bereichen, Ausrüstung, Schwierigkeit, Sätzen, Wiederholungen und allen Texten |
 | `trainings.js` | Die mitgelieferten Trainings (Tag A, Tag B und 19 Vorschläge) |
-| `builder.js` | Reine Logik für „Neues Training“: Zeitschätzung, Vorschlag, Alternativen, Anpassen an die Ausrüstung |
+| `builder.js` | Reine Logik für „Neues Training“: Vorschlag nach Bereichen, Alternativen, Anpassen an die Ausrüstung, − / + bei den Wiederholungen, „Alle Übungen“ |
 | `store.js` | Reine Logik ohne Oberfläche: Zustand (Schema 3), Migration, eigene Trainings, Prüfung, Import, Essensrechnung |
-| `app.js` | Oberfläche des Trainings, Kalender und Essen, Ereignisse, Timer, Service-Worker-Anbindung, Update-Leiste |
-| `ui-flow.js` | Startfrage, Assistent, Editor, „Meine Trainings“ |
-| `ui-lib.js` | Reiter „Übungen“ mit Suche, Bereichen und Detailseite |
+| `app.js` | Reiter und Zurück-Taste, Trainingsansicht, Kalender und Essen (mit „Bisherige Lebensmittel“), Ereignisse, Timer, Service-Worker-Anbindung, Update-Leiste |
+| `ui-flow.js` | „Meine Trainings“, „Erstellen“ (Bereiche, Ort, Vorschlag, Editor, Speichern), Vorschläge der App |
+| `ui-lib.js` | Teil „Übungen“ von „Erstellen“: Suche, Bereiche, „Alle Übungen“, Detailseite |
 | `fig.js` | Strichfiguren-Engine (Seiten- und Frontansicht, Requisiten, Vorschaubilder) |
 | `anims.js` | Die Animation jeder Übung, Schlüsselposen wie bei den Texten in `lib.js` |
 | `sw.js` | Service Worker: alles vorab speichern, dann zuerst aus dem Speicher; neue Version wartet auf den Tipp |
@@ -84,13 +86,13 @@ npm run sheets -- x-squat x-pullup   # Kontaktbögen der Animationen nach tests/
 npm run icons                # Symbole neu erzeugen
 ```
 
-Die Browser-Tests (Playwright) laufen mit dem vorhandenen Chromium (`CHROMIUM_PATH` oder `/opt/pw-browsers/chromium`), bei 360×740 und 320×640, hell und dunkel, Sprache `de-DE`. Sie prüfen unter anderem: keine Konsolenfehler und keine fremden Hosts, Offline-Start, Installierbarkeit (Chromes eigene Prüfung), den Update-Ablauf mit zwei echten Versionen, Tag A und B komplett inklusive Plank, den ganzen Weg von der Startfrage über den Assistenten bis zum gespeicherten und gestarteten Training, bestehende Trainings (Filter, Anpassen, Löschen mit Rückgängig), die Zurück-Taste des Handys, die Bibliothek, **die Animation jeder einzelnen Übung** (alle 92 werden abgespielt), Kalender und Essen bearbeiten (auch pro 100 ml), Import des Altformats, kein scharfes S in der Oberfläche, kein seitliches Überlaufen bei 320 px und Tippziele ab 48 px.
+Die Browser-Tests (Playwright) laufen mit dem vorhandenen Chromium (`CHROMIUM_PATH` oder `/opt/pw-browsers/chromium`), bei 360×740 und 320×640, hell und dunkel, Sprache `de-DE`. Sie prüfen unter anderem: keine Konsolenfehler und keine fremden Hosts, Offline-Start, Installierbarkeit (Chromes eigene Prüfung), den Update-Ablauf mit zwei echten Versionen, Tag A und B komplett inklusive Plank, den ganzen Weg von der Startfrage über die eine Frage zum Ort bis zum gespeicherten und gestarteten Training, die Wiederholungen mit − und + samt Grenzen, Meine Trainings, die Vorschläge der App (Filter, Anpassen, Löschen mit Rückgängig), die Zurück-Taste des Handys, die Bibliothek mit „Alle Übungen“, dass nirgends eine Zeitangabe steht, „Bisherige Lebensmittel“, **die Animation jeder einzelnen Übung** (alle 92 werden abgespielt), Kalender und Essen bearbeiten (auch pro 100 ml), Import des Altformats, kein scharfes S in der Oberfläche, kein seitliches Überlaufen bei 320 px und Tippziele ab 48 px.
 
 ### Eine Übung oder ein Training ergänzen
 
-1. In `lib.js` einen Eintrag hinzufügen (eindeutige Id, nie wiederverwenden oder entfernen: gespeicherte Trainings und der Kalender verweisen darauf).
+1. In `lib.js` einen Eintrag hinzufügen (eindeutige Id, nie wiederverwenden oder entfernen: gespeicherte Trainings und der Kalender verweisen darauf). Die Wiederholungen sind einer der drei Bereiche aus `plan.js` (`REPS`).
 2. In `anims.js` die Animation unter derselben Id zeichnen. `npm run sheets -- <id>` zeigt sie als Bild an, `npm run test:unit` prüft die Geometrie (Gliedlängen, Reichweite, Boden, Bildrand).
-3. Ein fertiges Training kommt in `trainings.js`; seine Dauer (30 bis 90 Minuten) und die Übungen prüft `tests/unit/plan.test.mjs`.
+3. Ein fertiges Training kommt in `trainings.js` (ohne Zeitangabe im Namen); seine Übungen prüft `tests/unit/plan.test.mjs`.
 4. Neue Dateien in `sw.js` (`PRECACHE`) und `tools/build.mjs` (`FILES`) eintragen.
 
 Hinweise:

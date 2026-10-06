@@ -38,7 +38,7 @@ async function check(page, label, info) {
 const food = (id, name, g, v, mode = '100') => ({ id, name, g, mode, v });
 const seed = () => ({
   schema: 3,
-  prefs: { equip: ['kh', 'bank'], preset: '', level: 2, minutes: 45 },
+  prefs: { equip: ['kh', 'bank'] },
   trainings: [{ id: 'u1', name: 'Mein Beintag mit einem sehr langen Namen zum Testen des Umbruchs', items: [{ ex: 'x-squat' }, { ex: 'x-bridge' }, { ex: 'x-crunch' }, { ex: 'x-goblet' }] }],
   log: {
     [TODAY]: [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 2 }, weights: { 'a-hip': '60' }, note: 'Knie war gut' }, { day: 'B', sets: {}, weights: {}, note: '' }],
@@ -50,56 +50,67 @@ const seed = () => ({
 });
 const tile = (page, g) => page.locator('.gt[data-g="' + g + '"]');
 const weiter = (page) => page.getByRole('button', { name: 'Weiter', exact: true });
+const place = (page, p) => page.locator('[data-act="wiz-place"][data-p="' + p + '"]');
 
-test('Start, Frage und Assistent: jeder Schritt passt auf den Bildschirm', async ({ page, site }, info) => {
+test('Meine Trainings, Erstellen und Assistent: jeder Schritt passt auf den Bildschirm', async ({ page, site }, info) => {
   await openApp(page, site, { state: seed() });
-  await check(page, 'start', info);
+  await check(page, 'meine trainings', info);
+  await tab(page, 'Erstellen').click();
+  await check(page, 'erstellen', info);
   for (const g of ['beine', 'gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) await tile(page, g).click();
-  await check(page, 'start alles gewaehlt', info);
+  await check(page, 'erstellen alles gewaehlt', info);
   for (const g of ['gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) await tile(page, g).click();
-  await weiter(page).click();
-  await check(page, 'auswahl neu oder bestehend', info);
-  await page.getByRole('button', { name: /Neues Training erstellen/ }).click();
-  await check(page, 'ausruestung', info);
-  await page.locator('.pre[data-p="gym"]').click();
-  await check(page, 'ausruestung studio', info);
-  await weiter(page).click();
-  await check(page, 'zeit', info);
-  await page.locator('[data-m="60"]').click();
-  await check(page, 'erfahrung', info);
-  await page.locator('[data-l="3"]').click();
+  await page.locator('[data-act="mk-new"]').click();
+  await check(page, 'ort', info);
+  await page.getByRole('button', { name: 'Einzelne Geräte wählen' }).click();
+  await check(page, 'ort einzelne geraete', info);
+  await page.getByRole('button', { name: 'Einzelne Geräte schliessen' }).click();
+  await place(page, 'gym').click();
   await check(page, 'vorschlag', info);
   await page.locator('.brow').first().locator('.brow-head').click();
   await check(page, 'vorschlag zeile offen', info);
+  await page.locator('.brow').first().getByRole('button', { name: 'Wiederholungen mehr' }).click();
+  await check(page, 'vorschlag wiederholungen angepasst', info);
   await page.locator('.brow').first().getByRole('button', { name: 'Tauschen' }).click();
   await check(page, 'uebung tauschen', info);
   await page.locator('[data-act="pick-view"]').first().click();
   await check(page, 'uebung tauschen ansehen', info);
   await page.getByRole('button', { name: 'Dafür tauschen' }).click();
   await check(page, 'vorschlag nach tausch', info);
+  const name = await page.locator('.brow').last().locator('.brow-head b').innerText();
+  await page.locator('.brow').last().getByRole('button', { name: name + ' entfernen' }).click();
+  await check(page, 'vorschlag uebung entfernt', info);
   await weiter(page).click();
   await check(page, 'name', info);
   await page.getByLabel('Name').fill('Ein ziemlich langer Name fuer das Training, der umbrechen muss');
   await page.getByRole('button', { name: 'Speichern und starten' }).click();
   await check(page, 'training gestartet', info);
+  await page.getByRole('button', { name: 'Zurück' }).first().click();
+  await check(page, 'meine trainings mit eigenem und angefangenem', info);
 });
 
-test('Bestehende Trainings, Vorschau, schnelle Wege', async ({ page, site }, info) => {
+test('Vorschläge der App, Vorschau, schnelle Wege', async ({ page, site }, info) => {
   await openApp(page, site, { state: seed() });
-  await page.locator('[data-act="flow-mine"]').click();
-  await check(page, 'bestehende trainings', info);
-  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
-  await check(page, 'bestehende trainings gefiltert', info);
-  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
-  await page.locator('.tcard[data-id="u1"]').click();
+  await page.locator('[data-act="tr-open"][data-id="u1"]').click();
   await check(page, 'vorschau eigenes training', info);
+  await page.getByRole('button', { name: 'Bearbeiten' }).click();
+  await check(page, 'eigenes training bearbeiten', info);
+  await page.locator('.brow').first().locator('.brow-head').click();
+  await check(page, 'eigenes training bearbeiten zeile offen', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
+  await page.getByRole('button', { name: 'Zurück' }).first().click();
+  await tab(page, 'Erstellen').click();
+  await page.locator('[data-act="mk-existing"]').click();
+  await check(page, 'vorschlaege der app', info);
+  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
+  await check(page, 'vorschlaege der app gefiltert', info);
+  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
   await page.locator('.tcard[data-id="p-kraft"]').click();
   await check(page, 'vorschau mit fehlender ausruestung', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.locator('[data-act="flow-quick"]').click();
-  await check(page, 'kurzes training', info);
+  await check(page, 'kleiner start', info);
 });
 
 test('Training: Fokuskarte, Hinweise für jede Übung, Pause, Plank, Fertig', async ({ page, site }, info) => {
@@ -154,9 +165,10 @@ test('Fertig-Karte, Kalender-Formular, Kalender mit offenem Eintrag', async ({ p
   await check(page, 'kalender training waehlen', info);
 });
 
-test('Übungen: Bereiche, Suche, Liste, Ausrüstung, Übung mit Animation', async ({ page, site }, info) => {
+test('Übungen: Bereiche, Alle Übungen, Suche, Liste, Ausrüstung, Übung mit Animation', async ({ page, site }, info) => {
   await openApp(page, site, { state: seed() });
-  await tab(page, 'Übungen').click();
+  await tab(page, 'Erstellen').click();
+  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
   await check(page, 'uebungen', info);
   await page.getByRole('button', { name: /Meine Ausrüstung/ }).click();
   await check(page, 'uebungen ausruestung', info);
@@ -164,6 +176,13 @@ test('Übungen: Bereiche, Suche, Liste, Ausrüstung, Übung mit Animation', asyn
   await page.locator('#lib-q').fill('Kniebeuge');
   await check(page, 'uebungen suche', info);
   await page.locator('#lib-q').fill('');
+  await page.locator('[data-act="lib-all"]').click();
+  await check(page, 'alle uebungen', info);
+  await page.getByRole('group', { name: 'Zu einem Körperteil springen' }).getByRole('button', { name: 'Rücken' }).click();
+  await check(page, 'alle uebungen ruecken', info);
+  await page.getByRole('button', { name: 'Nur passende Übungen' }).click();
+  await check(page, 'alle uebungen gefiltert', info);
+  await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.locator('.gt[data-g="beine"]').click();
   await check(page, 'uebungen bereich beine', info);
   await page.locator('.row', { hasText: 'Goblet-Kniebeuge' }).first().click();
@@ -180,6 +199,11 @@ test('Essen: Liste, Bearbeiten mit Kopierfeld, Ziel, Sicherung, Update-Leiste', 
   await check(page, 'essen', info);
   await page.getByRole('button', { name: 'pro 100 ml' }).click();
   await check(page, 'essen pro 100 ml', info);
+  await page.getByRole('button', { name: 'Bisherige Lebensmittel' }).click();
+  await check(page, 'essen bisherige lebensmittel', info);
+  await page.locator('#book-q').fill('mi');
+  await check(page, 'essen bisherige lebensmittel suche', info);
+  await page.getByRole('button', { name: 'Bisherige Lebensmittel' }).click();
   await page.getByRole('button', { name: 'Mehr Werte (Zucker, Ballaststoffe)' }).click();
   await check(page, 'essen mehr werte', info);
   await page.getByRole('button', { name: 'Ziele ändern' }).click();

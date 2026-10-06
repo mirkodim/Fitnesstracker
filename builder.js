@@ -1,12 +1,14 @@
 /* Builder: the helpful part of "Neues Training". Pure functions (no DOM, no storage), so they run in the browser (global Builder)
    and in Node, where the tests use them.
-   - which exercises fit the equipment the user has (eqOK), how long a training takes (estimate),
-   - a suggestion for a region, a time and a level (suggest), alternatives for one exercise (alternatives), fitting a training to other equipment (adapt).
+   - which exercises fit the equipment the user has (eqOK),
+   - a suggestion for one or more body areas and a place to train (suggest), alternatives for one exercise (alternatives),
+     fitting a training to other equipment (adapt), the plus and minus of the repetitions (repsShift), the list of all exercises (allByGroup).
+   There is no time and no level anywhere: a training lasts as long as it lasts, and a suggestion always uses the easier half of the library.
    A training item is { ex: id, sets, reps, rest, hold } where everything but ex falls back to the library defaults. */
 var Builder = (function (data) {
   'use strict';
 
-  var LIB = data.LIB, EX = data.EX, GROUPS = data.GROUPS, EQUIP = data.EQUIP;
+  var LIB = data.LIB, EX = data.EX, GROUPS = data.GROUPS, EQUIP = data.EQUIP, REPS = data.REPS;
   var GROUP = {}, EQ = {};
   GROUPS.forEach(function (g) { GROUP[g.id] = g; });
   EQUIP.forEach(function (e) { EQ[e.id] = e; });
@@ -55,34 +57,21 @@ var Builder = (function (data) {
     };
   }
 
-  /* ---------- time ---------- */
-  function avgReps(reps) {
-    var m = String(reps == null ? '' : reps).match(/\d+/g);
-    if (!m) return 10;                                   // "max." and the like
-    return m.length >= 2 ? (+m[0] + +m[1]) / 2 : +m[0];
-  }
+  /* ---------- items ---------- */
   function perSide(ex) { return /pro (Seite|Bein|Arm)/.test(ex.unit || ''); }
   function resolveItem(it) {
     var ex = EX[it.ex];
-    return {
-      ex: ex, sets: it.sets || ex.sets, rest: it.rest != null ? it.rest : ex.rest, reps: it.reps || ex.reps,
-      hold: it.hold || ex.hold, side: ex.timer ? (ex.sides || 1) : (perSide(ex) ? 2 : 1)
-    };
+    return { ex: ex, sets: it.sets || ex.sets, rest: it.rest != null ? it.rest : ex.rest, reps: it.reps || ex.reps, hold: it.hold || ex.hold };
   }
-  /* seconds of one exercise: setting up, the sets themselves (about 3.5 s a repetition) and the pause after every set */
-  function itemSeconds(it) {
-    var r = resolveItem(it), work = r.ex.timer ? (r.hold + 5) * r.side : avgReps(r.reps) * 3.5 * r.side + 5;
-    return 30 + r.sets * (work + r.rest);
+  /* The plus and minus next to the repetitions move both numbers of a range by d ("8–12" becomes "9–13"); a single number moves by d.
+     Text without numbers ("max.") starts from 8–12. Returns null when the result would leave 1 to 99. */
+  function repsShift(reps, d) {
+    var m = String(reps == null ? '' : reps).match(/\d+/g), lo = 8, hi = 12, range = true;
+    if (m) { lo = +m[0]; hi = m.length > 1 ? +m[1] : lo; range = m.length > 1; }
+    lo += d; hi += d;
+    if (lo < 1 || hi > 99) return null;
+    return range ? lo + '–' + hi : String(lo);
   }
-  function estimate(items) {
-    var total = 0;
-    items.forEach(function (it) { total += itemSeconds(it); });
-    if (items.length) total -= resolveItem(items[items.length - 1]).rest;      // no pause after the very last set
-    return Math.max(0, Math.round(total));
-  }
-  function minutesOf(items) { return Math.round(estimate(items) / 60); }
-  /* what the app shows: "ca. 45 Min." in steps of five */
-  function minutesText(sec) { return 'ca. ' + Math.max(5, Math.round(sec / 300) * 5) + ' Min.'; }
 
   /* ---------- needs ---------- */
   /* the equipment a training needs, readable ("Kurzhanteln", "Langhantel oder Kurzhanteln") and without duplicates */
@@ -125,45 +114,42 @@ var Builder = (function (data) {
   }
 
   /* ---------- suggestion ---------- */
-  function setsFor(ex, level, minutes) {
-    if (minutes <= 20) return 2;
-    if (level === 1) return minutes >= 45 ? 3 : 2;
-    if (level === 3 && minutes >= 60 && !ex.timer && (PRIORITY[ex.pat] || 0) >= 9) return 4;
-    return 3;
+  var LEVEL = 2;                       // a suggestion uses exercises up to "Geübt"; the demanding ones (Klimmzug, Kreuzheben ...) are added by hand
+  /* how many exercises a suggestion has: a few for one area, more for several areas or the whole body, a handful for a small start */
+  function countFor(gids, quick) {
+    if (quick) return 4;
+    if (gids.indexOf('ganz') >= 0 || gids.length >= 3) return 7;
+    return gids.length === 2 ? 6 : 5;
   }
-  function makeItem(ex, level, minutes) {
-    var it = { ex: ex.id, sets: setsFor(ex, level, minutes) };
-    if (minutes <= 20 && ex.rest > 45) it.rest = 45;
-    if (ex.timer) it.hold = level === 1 ? ex.holds[0] : (level === 3 ? ex.holds[ex.holds.length - 1] : ex.hold);
+  function makeItem(ex, quick) {
+    var it = { ex: ex.id, sets: quick ? 2 : 3 };
+    if (quick && ex.rest > 45) it.rest = 45;
     return it;
   }
 
-  /* o: { groups: [group ids], equip: [ids], minutes, level (1-3), seed, exclude: [exercise ids] } -> { items, minutes, relaxed } */
+  /* o: { groups: [group ids], equip: [ids], seed, quick, exclude: [exercise ids] } -> { items, relaxed } */
   function suggest(o) {
-    var level = o.level || 1, minutes = o.minutes || 45, have = haveSet(o.equip), rng = rngOf(o.seed || 1);
+    var have = haveSet(o.equip), rng = rngOf(o.seed || 1), quick = !!o.quick;
     var gids = (o.groups && o.groups.length) ? o.groups : ['ganz'], balanced = gids.indexOf('ganz') >= 0;
-    var wanted = balanced ? FULL : gids;
+    var wanted = balanced ? FULL : gids, cap = countFor(gids, quick);
     var leaves = leavesOf(balanced ? FULL.concat(['ganz']) : gids), excluded = haveSet(o.exclude);
     var relaxed = false;
 
     function build(maxLvl) {
-      var pool = LIB.filter(function (ex) { return eqOK(ex, have) && ex.lvl <= maxLvl && inLeaves(ex, leaves) && !excluded[ex.id]; });
-      return pool;
+      return LIB.filter(function (ex) { return eqOK(ex, have) && ex.lvl <= maxLvl && inLeaves(ex, leaves) && !excluded[ex.id]; });
     }
-    var pool = build(level);
-    if (pool.length < 3 && level < 3) { pool = build(level + 1); relaxed = true; }
-    if (!pool.length) return { items: [], minutes: 0, relaxed: relaxed };
+    var pool = build(LEVEL);
+    if (pool.length < 3) { pool = build(3); relaxed = true; }
+    if (!pool.length) return { items: [], relaxed: relaxed };
 
-    var picks = [], used = {}, pats = {}, seen = {}, cap = minutes <= 20 ? 6 : 12, target = minutes * 60;
+    var picks = [], used = {}, pats = {}, seen = {};
     function score(ex, gid) {
       var s = (PRIORITY[ex.pat] || 5) + rng() * 4 - (pats[ex.pat] || 0) * 6 + weightIn(ex, gid) * 6;
       ex.regions.forEach(function (r) { if (!seen[r]) s += 1.5; });
-      if (level === 3) s += (ex.lvl - 1) * 1.5;
-      if (level === 1 && ex.lvl === 1) s += 1;
+      if (ex.lvl === LEVEL) s += 1.5;                      // the middle level is the aim, the easiest exercises fill the gaps
       return s;
     }
-    var stop = false;
-    while (!stop && picks.length < cap) {
+    while (picks.length < cap) {
       var progressed = false;
       for (var gi = 0; gi < wanted.length && picks.length < cap; gi++) {
         var cand = pool.filter(function (ex) { return !used[ex.id] && inGroup(ex, wanted[gi]); });
@@ -172,20 +158,16 @@ var Builder = (function (data) {
         if (!cand.length) continue;
         var best = null, bs = -1e9;
         cand.forEach(function (ex) { var s = score(ex, wanted[gi]); if (s > bs) { bs = s; best = ex; } });
-        var trial = picks.concat([makeItem(best, level, minutes)]);
-        if (picks.length >= 3 && estimate(trial) > target * 1.12) { stop = true; break; }
-        picks = trial; used[best.id] = true; pats[best.pat] = (pats[best.pat] || 0) + 1;
+        picks.push(makeItem(best, quick)); used[best.id] = true; pats[best.pat] = (pats[best.pat] || 0) + 1;
         best.regions.forEach(function (r) { seen[r] = true; });
         progressed = true;
-        if (estimate(picks) >= target * 0.92 && picks.length >= 3) { stop = true; break; }
       }
       if (!progressed) break;
     }
     // big moves first, then the smaller ones (stable: the pick order decides between equals)
     var order = picks.map(function (it, i) { return { it: it, i: i, p: PRIORITY[EX[it.ex].pat] || 5 }; });
     order.sort(function (a, b) { return (b.p - a.p) || (a.i - b.i); });
-    var items = order.map(function (o2) { return o2.it; });
-    return { items: items, minutes: minutesOf(items), relaxed: relaxed };
+    return { items: order.map(function (o2) { return o2.it; }), relaxed: relaxed };
   }
 
   /* ---------- alternatives ---------- */
@@ -222,19 +204,33 @@ var Builder = (function (data) {
     return { items: out, replaced: replaced, dropped: dropped };
   }
 
+  function byLevelThenName(a, b) { return (a.lvl - b.lvl) || a.name.localeCompare(b.name, 'de'); }
   /* exercises of one group, easiest first (for the picker) */
   function listGroup(gid, have) {
     var l = LIB.filter(function (ex) { return inGroup(ex, gid) && (!have || eqOK(ex, have)); });
-    l.sort(function (a, b) { return (a.lvl - b.lvl) || (a.name < b.name ? -1 : 1); });
+    l.sort(byLevelThenName);
     return l;
+  }
+  /* the group an exercise is filed under first: the group of its main region */
+  function mainGroup(ex) {
+    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].leaves.indexOf(ex.regions[0]) >= 0) return GROUPS[i].id;
+    return 'ganz';
+  }
+  /* "Alle Übungen": every exercise exactly once, under its main group. Groups in the order of GROUPS, easiest first inside a group. -> [{ id, list }] */
+  function allByGroup(have) {
+    return GROUPS.map(function (g) {
+      var list = LIB.filter(function (ex) { return mainGroup(ex) === g.id && (!have || eqOK(ex, have)); });
+      list.sort(byLevelThenName);
+      return { id: g.id, list: list };
+    });
   }
 
   return {
-    PRIORITY: PRIORITY, FULL: FULL,
+    PRIORITY: PRIORITY, FULL: FULL, REPS: REPS, LEVEL: LEVEL,
     haveSet: haveSet, eqOK: eqOK, missing: missing, eqLabel: eqLabel, leavesOf: leavesOf, inLeaves: inLeaves, inGroup: inGroup, groupsOf: groupsOf, rngOf: rngOf,
-    avgReps: avgReps, perSide: perSide, resolveItem: resolveItem, itemSeconds: itemSeconds, estimate: estimate, minutesOf: minutesOf, minutesText: minutesText,
-    needs: needs, weightIn: weightIn, SHARE: SHARE, groupShare: groupShare, isFullBody: isFullBody, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup
+    perSide: perSide, resolveItem: resolveItem, repsShift: repsShift, needs: needs, weightIn: weightIn, SHARE: SHARE, groupShare: groupShare, isFullBody: isFullBody,
+    countFor: countFor, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup, mainGroup: mainGroup, allByGroup: allByGroup
   };
-})(typeof module !== 'undefined' && module.exports ? Object.assign({}, require('./plan.js'), require('./lib.js')) : { LIB: LIB, EX: EX, GROUPS: GROUPS, EQUIP: EQUIP });
+})(typeof module !== 'undefined' && module.exports ? Object.assign({}, require('./plan.js'), require('./lib.js')) : { LIB: LIB, EX: EX, GROUPS: GROUPS, EQUIP: EQUIP, REPS: REPS });
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Builder;

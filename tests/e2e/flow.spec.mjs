@@ -132,9 +132,9 @@ test.describe('Training', () => {
       await sets(page, 3, { skipLast: i < names.length - 1 });
     }
     await expect(page.locator('h2.name')).toHaveText('Fertig für heute');
-    // Tag A ist unberührt, die Haken von Tag B bleiben erhalten: zurück zur Startseite, Tag A starten
+    // Tag A ist unberührt, die Haken von Tag B bleiben erhalten: zurück zur Liste, Tag A starten
     await page.getByRole('button', { name: 'Zurück' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
     await startFromList(page, 'A');
     await expect(top(page)).toContainText('0 von 15 Sätzen');
     await page.getByRole('button', { name: 'Zurück' }).first().click();
@@ -173,13 +173,13 @@ test.describe('Training', () => {
     expect((await stored(page)).sets.A ?? {}).toEqual({});
   });
 
-  test('Startseite: angefangenes Training wird angeboten, nach der Rückkehr geht es weiter', async ({ page, site }) => {
+  test('Meine Trainings: angefangenes Training wird angeboten, nach der Rückkehr geht es weiter', async ({ page, site }) => {
     await openApp(page, site);
     await startFromList(page, 'A');
     await done(page, 1).click();
     await next(page).click();
     await page.getByRole('button', { name: 'Zurück' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    await expect(page.locator('h2.mt')).toHaveText('Meine Trainings');
     await expect(page.locator('.card.go')).toContainText('Du bist mittendrin');
     await expect(page.locator('.card.go')).toContainText('Tag A');
     await expect(page.locator('.card.go')).toContainText('1 von 15');
@@ -512,5 +512,100 @@ test.describe('Essen', () => {
     await expect(page.locator('.note', { hasText: 'Essen:' })).toContainText('67 kcal · 12 g Protein · 1 Eintrag');
     await page.getByRole('button', { name: 'Essen ansehen' }).click();
     await expect(page.locator('.fe')).toHaveCount(1);
+  });
+  test('Bisherige Lebensmittel: alles, was je eingetragen wurde, A bis Z, mit Suche; ein Tipp füllt das Formular', async ({ page, site }) => {
+    const names = ['Magerquark', 'Äpfel', 'Haferflocken', 'Banane', 'Reis', 'Zimt', 'Joghurt natur', 'Hähnchenbrust', 'Olivenöl', 'Mandeln', 'Linsen', 'Ei'];
+    const mk = (n, i) => ({ id: 'f' + i, name: n, g: 100 + i, mode: n === 'Olivenöl' ? 'ml' : '100', v: { kcal: 50 + i, p: 3 + i } });
+    const all = names.map(mk);
+    const state = { schema: 3, food: { '2026-10-03': all.slice(0, 6), '2026-10-04': all.slice(6) }, recent: all.slice(4).reverse() };
+    await openApp(page, site, { state });
+    await tab(page, 'Essen').click();
+    const chips = page.getByRole('group', { name: 'Zuletzt gegessen' }).getByRole('button');
+    await expect(chips).toHaveCount(8);                                           // "zuletzt gegessen" zeigt höchstens acht
+    const add = page.getByRole('button', { name: 'Hinzufügen' }), book = page.getByRole('button', { name: 'Bisherige Lebensmittel' });
+    await expect(book).toBeVisible();
+    await expect(book).toHaveAttribute('aria-expanded', 'false');
+    // der Knopf steht gleich unter "Hinzufügen"
+    const a = await add.boundingBox(), b = await book.boundingBox();
+    expect(b.y).toBeGreaterThanOrEqual(a.y + a.height);
+    expect(b.y - (a.y + a.height)).toBeLessThan(40);
+    await expect(page.locator('#book')).toHaveCount(0);
+    await book.click();
+    await expect(book).toHaveAttribute('aria-expanded', 'true');
+    // alle zwölf, nicht nur acht, von A bis Z (Ä unter A)
+    const rows = page.locator('[data-act="book-pick"]');
+    await expect(rows).toHaveCount(12);
+    await expect(rows.locator('b')).toHaveText(['Äpfel', 'Banane', 'Ei', 'Haferflocken', 'Hähnchenbrust', 'Joghurt natur', 'Linsen', 'Magerquark', 'Mandeln', 'Olivenöl', 'Reis', 'Zimt']);
+    await expect(page.locator('#book h4')).toHaveText(['A', 'B', 'E', 'H', 'J', 'L', 'M', 'O', 'R', 'Z']);
+    await expect(page.locator('#book-list .hint')).toHaveText('12 Lebensmittel');
+    await expect(rows.filter({ hasText: 'Magerquark' })).toContainText('50 kcal · 3 g Protein pro 100 g');
+    await expect(rows.filter({ hasText: 'Olivenöl' })).toContainText('pro 100 ml');
+    // Suche: tippt man, bleibt das Feld offen und die Liste folgt
+    const q = page.locator('#book-q');
+    await q.click();
+    await q.pressSequentially('ä');
+    await expect(rows.locator('b')).toHaveText(['Äpfel', 'Hähnchenbrust']);
+    await expect(q).toBeFocused();
+    await q.fill('QUARK');
+    await expect(rows).toHaveCount(1);
+    await expect(page.locator('#book-list .hint')).toHaveText('1 Lebensmittel');
+    await q.fill('xyz');
+    await expect(page.locator('#book-list')).toContainText('Kein Lebensmittel gefunden.');
+    await q.fill('');
+    await expect(rows).toHaveCount(12);
+    // ein Tipp füllt das Formular und schliesst die Liste
+    await rows.filter({ hasText: 'Olivenöl' }).click();
+    await expect(page.locator('#book')).toHaveCount(0);
+    await expect(book).toHaveAttribute('aria-expanded', 'false');
+    await expect(field(page, 'name')).toHaveValue('Olivenöl');
+    await expect(field(page, 'g')).toHaveValue('108');
+    await expect(field(page, 'kcal')).toHaveValue('58');
+    await expect(field(page, 'p')).toHaveValue('11');
+    await expect(page.getByRole('button', { name: 'pro 100 ml' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#food-msg')).toContainText('Übernommen');
+    await expect(page.locator('#food-preview')).toHaveText('Bei 108 ml: 63 kcal · 11,9 g Protein');
+    await field(page, 'g').fill('15');
+    await add.click();
+    await expect(entry(page, 'Olivenöl').locator('.fe-name small')).toHaveText('15 ml');
+    expect((await stored(page)).food[TODAY][0]).toMatchObject({ name: 'Olivenöl', g: 15, mode: 'ml', v: { kcal: 58, p: 11 } });
+    // ein neues Lebensmittel: die Liste "zuletzt gegessen" bleibt bei acht, die Liste der bisherigen wächst
+    await page.getByRole('button', { name: 'pro 100 g' }).click();
+    await fill(page, { name: 'Skyr', g: '150', kcal: '63', p: '11' });
+    await add.click();
+    await expect(chips).toHaveCount(8);
+    await expect(chips.first()).toHaveText('Skyr');
+    await book.click();
+    await expect(rows).toHaveCount(13);
+    await expect(rows.locator('b').nth(10)).toHaveText('Reis');
+    await expect(page.locator('#book h4')).toHaveText(['A', 'B', 'E', 'H', 'J', 'L', 'M', 'O', 'R', 'S', 'Z']);
+    // beim Bearbeiten eines Eintrags gibt es den Knopf nicht
+    await book.click();
+    await entry(page, 'Skyr').getByRole('button', { name: 'Skyr bearbeiten' }).click();
+    await expect(book).toHaveCount(0);
+    await page.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(book).toBeVisible();
+    // nach dem Neuladen ist alles noch da
+    await page.reload();
+    await tab(page, 'Essen').click();
+    await page.getByRole('button', { name: 'Bisherige Lebensmittel' }).click();
+    await expect(page.locator('[data-act="book-pick"]')).toHaveCount(13);
+  });
+
+  test('Bisherige Lebensmittel ohne Einträge: ein ruhiger Hinweis, nichts zum Antippen', async ({ page, site }) => {
+    await openApp(page, site);
+    await tab(page, 'Essen').click();
+    await expect(page.getByRole('group', { name: 'Zuletzt gegessen' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Bisherige Lebensmittel' }).click();
+    await expect(page.locator('#book-list')).toContainText('Hier erscheinen alle Lebensmittel, die du einträgst.');
+    await expect(page.locator('[data-act="book-pick"]')).toHaveCount(0);
+    // das erste eingetragene Lebensmittel taucht danach auf
+    await fill(page, { name: 'Magerquark', g: '250', kcal: '67', p: '12' });
+    await page.getByRole('button', { name: 'Hinzufügen' }).click();
+    await page.getByRole('button', { name: 'Bisherige Lebensmittel' }).click();
+    await expect(page.locator('[data-act="book-pick"]')).toHaveCount(1);
+    // eine andere Seite und zurück schliesst die Liste
+    await tab(page, 'Kalender').click();
+    await tab(page, 'Essen').click();
+    await expect(page.locator('#book')).toHaveCount(0);
   });
 });
