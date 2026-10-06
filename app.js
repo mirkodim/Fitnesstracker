@@ -708,6 +708,11 @@
   }
 
   /* ---------- views: food ---------- */
+  function kcalBar(T) {
+    if (!S.goalK) return '';
+    var got = T.sum.kcal || 0, pct = Math.min(100, Math.round(got / S.goalK * 100));
+    return '<p class="prog"><span>Kalorien</span><span>' + fmt(got, 'kcal') + ' von ' + fmt(S.goalK, 'kcal') + ' kcal</span></p><div class="bar"><i style="width:' + pct + '%"></i></div>';
+  }
   function proteinBar(T) {
     if (S.goalP) {
       var got = T.sum.p || 0, pct = Math.min(100, Math.round(got / S.goalP * 100));
@@ -723,7 +728,7 @@
       '<button class="icon" type="button" data-act="food-prev" aria-label="Vorheriger Tag">' + CHEV_L + '</button>' +
       '<div class="mt-wrap"><h2 class="mt">' + (isToday ? 'Heute' : WDL[parseKey(k).getDay()]) + '</h2><div class="sub">' + longDate(k) + '</div></div>' +
       '<button class="icon" type="button" data-act="food-next" aria-label="Nächster Tag"' + (isToday ? ' disabled' : '') + '>' + CHEV_R + '</button></div>' +
-      proteinBar(T) + '</header>';
+      proteinBar(T) + kcalBar(T) + '</header>';
   }
 
   function goalHintText() {
@@ -739,6 +744,8 @@
     var w = S.weightKg, hint = goalHintText();
     return '<div class="goal">' +
       '<div class="fcol"><label for="goal-p">Protein-Ziel pro Tag (g)</label><input id="goal-p" data-goal="p" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 100" value="' + (S.goalP ? esc(numStr(S.goalP)) : '') + '"></div>' +
+      '<div class="fcol"><label for="goal-k">Kalorien-Ziel pro Tag (kcal)</label><input id="goal-k" data-goal="k" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 2000" value="' + (S.goalK ? esc(numStr(S.goalK)) : '') + '"></div>' +
+      '<p class="hint">Wie viele kcal dir guttun, hängt von Alter, Grösse, Alltag und Ziel ab. Die App nennt dafür keinen Richtwert. Eine Ernährungsberatung oder dein Arzt kann dir helfen. Wenn Zählen Stress macht, lass das Feld einfach leer.</p>' +
       '<div class="fcol"><label for="goal-w">Körpergewicht (kg), nur für den Richtwert</label><input id="goal-w" data-goal="w" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 60" value="' + (w ? esc(numStr(w)) : '') + '"></div>' +
       '<p class="hint" id="goal-hint">' + hint + '</p>' +
       '<div id="goal-btn">' + goalBtnHTML() + '</div>' +
@@ -760,14 +767,20 @@
       }
       h += '</div>';
     }
+    if (S.goalK) {
+      var kg = Math.round(T.sum.kcal || 0), kleft = S.goalK - kg, kp = Math.min(100, Math.round(kg / S.goalK * 100));
+      h += '<div class="prot kcal"><div class="prot-top"><span class="eyebrow">Kalorien</span><span class="hint">Ziel ' + fmt(S.goalK, 'kcal') + ' kcal</span></div>' +
+        '<p class="prot-num kc-num"><b>' + fmt(kg, 'kcal') + '</b><span>von ' + fmt(S.goalK, 'kcal') + ' kcal</span></p><div class="bar"><i style="width:' + kp + '%"></i></div>' +
+        '<p class="prot-sub kc-sub">' + (kleft > 0 ? 'Noch ' + fmt(kleft, 'kcal') + ' kcal bis zum Ziel' : (kleft === 0 ? 'Genau am Ziel' : 'Über dem Ziel: ' + fmt(-kleft, 'kcal') + ' kcal')) + '</p></div>';
+    }
     var tiles = '';
     window.NUTR.forEach(function (n) {
-      if (n.k === 'p' || !T.has[n.k]) return;
+      if (n.k === 'p' || (n.k === 'kcal' && S.goalK) || !T.has[n.k]) return;
       tiles += '<div class="tile"><b>' + fmt(T.sum[n.k], n.u) + '<i>' + n.u + '</i></b><span>' + n.l + '</span></div>';
     });
     if (tiles) h += '<div class="tiles">' + tiles + '</div>';
     if (T.skipped) h += '<p class="hint">' + (T.skipped === 1 ? '1 Eintrag hat keine Menge und ist nicht eingerechnet.' : T.skipped + ' Einträge haben keine Menge und sind nicht eingerechnet.') + '</p>';
-    h += '<button class="link" type="button" data-act="goal-toggle">' + (R.goalOpen ? 'Protein-Ziel schliessen' : (S.goalP ? 'Protein-Ziel ändern' : 'Protein-Ziel festlegen')) + '</button>';
+    h += '<button class="link" type="button" data-act="goal-toggle">' + (R.goalOpen ? 'Ziele schliessen' : ((S.goalP || S.goalK) ? 'Ziele ändern' : 'Ziele festlegen')) + '</button>';
     if (R.goalOpen) h += goalHTML();
     return h + '</section>';
   }
@@ -1079,6 +1092,7 @@
     else if (ew) { var en1 = openEntry(); if (en1) { Store.setEntryWeight(en1, ew, t.value); save(); } }
     else if (enote) { var en2 = openEntry(); if (en2) { Store.setEntryNote(en2, t.value); save(); } }
     else if (gl === 'p') { S.goalP = Store.num(t.value) > 0 ? Store.num(t.value) : null; save(); }
+    else if (gl === 'k') { S.goalK = Store.num(t.value) > 0 ? Store.num(t.value) : null; save(); }
     else if (gl === 'w') {
       S.weightKg = Store.num(t.value) > 0 ? Store.num(t.value) : null; save();
       var hEl = document.getElementById('goal-hint'), bEl = document.getElementById('goal-btn');

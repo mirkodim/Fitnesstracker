@@ -50,7 +50,7 @@ var Store = (function (data) {
     return {
       schema: SCHEMA, cur: 'A', last: [], trainings: [], sets: {}, stamp: {}, logged: {}, weights: {}, holdSecs: {},
       prefs: { equip: null, preset: '', level: 1, minutes: 45 },
-      log: {}, food: {}, recent: [], goalP: null, weightKg: null
+      log: {}, food: {}, recent: [], goalP: null, goalK: null, weightKg: null
     };
   }
 
@@ -321,12 +321,13 @@ var Store = (function (data) {
     s.food = cleanFood(raw.food);
     s.recent = cleanRecent(raw.recent);
     s.goalP = posNum(raw.goalP);
+    s.goalK = posNum(raw.goalK);
     s.weightKg = posNum(raw.weightKg);
     return s;
   }
 
   /* ---------- backup text / file ---------- */
-  var KNOWN = ['log', 'food', 'recent', 'sets', 'weights', 'goalP', 'weightKg', 'plankSecs', 'day', 'stamp', 'logged', 'trainings', 'cur', 'holdSecs', 'prefs'];
+  var KNOWN = ['log', 'food', 'recent', 'sets', 'weights', 'goalP', 'goalK', 'weightKg', 'plankSecs', 'day', 'stamp', 'logged', 'trainings', 'cur', 'holdSecs', 'prefs'];
   function looksLikeBackup(o) { return isObj(o) && KNOWN.some(function (k) { return k in o; }); }
 
   /* Accepts what "Daten kopieren" or "Als Datei sichern" produced, also from the old claude.ai version.
