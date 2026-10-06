@@ -516,6 +516,191 @@ x({ id: 'x-neckstretch', name: 'Nacken dehnen', gear: 'Körpergewicht, im Sitzen
   mistakes: ['Mit der Hand am Kopf ziehen.', 'Die Schulter geht nach oben.', 'Der Kopf dreht nach vorn oder hinten.', 'Wippen oder federn.'],
   feel: 'Ein sanftes Ziehen an der Seite des Halses. Bei Schmerz, Kribbeln oder Schwindel sofort stoppen.' });
 
+/* ===== Bauch ===== */
+
+x({ id: 'x-crunch', name: 'Crunch', gear: 'Körpergewicht, auf der Matte', reg: 'bauch', eq: '', lvl: 1, pat: 'crunch',
+  sets: 3, reps: '10–15', rest: 30,
+  cues: ['Rücken am Boden, nur den Oberkörper ein Stück aufrollen.', 'Der Nacken bleibt lang, die Hände stützen nur den Kopf.'],
+  watch: ['Lege dich auf den Rücken, die Füsse stehen am Boden, die Knie sind gebeugt.', 'Die Hände liegen locker hinter dem Kopf oder auf der Brust, die Ellbogen zeigen zur Seite.', 'Atme aus und rolle Kopf und Schultern nur etwa eine Handbreit vom Boden auf, der untere Rücken bleibt am Boden.', 'Spanne den Bauch am höchsten Punkt kurz an.', 'Senke dich langsam wieder ab, ohne den Kopf ganz abzulegen.'],
+  mistakes: ['Mit den Händen am Kopf ziehen.', 'Der Kopf wird nach vorn gedrückt (Kinn auf der Brust).', 'Mit Schwung hochschnellen.', 'Zu hoch aufsetzen, der untere Rücken hebt ab.'],
+  feel: 'Die geraden Bauchmuskeln. Es geht um eine kleine, saubere Bewegung, nicht um das hohe Aufsetzen.',
+  easier: 'Die Arme über der Brust verschränken und nur wenig anheben.',
+  harder: 'Die Beine anheben oder eine Hantel auf die Brust legen.' });
+
+x({ id: 'x-legraise', name: 'Beinheben liegend', gear: 'Körpergewicht, auf der Matte', reg: 'bauch', eq: '', lvl: 2, pat: 'legraise',
+  sets: 3, reps: '8–12', rest: 45,
+  cues: ['Der untere Rücken bleibt am Boden, kein Hohlkreuz.', 'Die Beine langsam heben und noch langsamer ablassen.'],
+  watch: ['Lege dich auf den Rücken, die Arme liegen neben dem Körper, die Handflächen am Boden.', 'Strecke die Beine und halte sie zusammen.', 'Hebe die Beine bis senkrecht in die Höhe, der untere Rücken bleibt am Boden.', 'Senke sie langsam, bis sie knapp über dem Boden sind. Nur so tief, wie der Rücken am Boden bleibt.', 'Atme beim Heben aus.'],
+  mistakes: ['Der untere Rücken wölbt sich ab (Hohlkreuz).', 'Die Beine schwingen mit Schwung.', 'Die Knie werden stark gebeugt.', 'Der Kopf wird angehoben und der Nacken verspannt.'],
+  feel: 'Der untere Teil der Bauchmuskeln und die Hüftbeuger.',
+  easier: 'Die Knie beugen oder nur ein Bein nach dem anderen heben.',
+  harder: 'Die Beine knapp über dem Boden halten, bevor du sie wieder hebst.' });
+
+x({ id: 'x-sideplank', name: 'Seitstütz', gear: 'Körpergewicht, auf der Matte', reg: 'bauch ruecken', eq: '', lvl: 2, pat: 'core', timer: true, holds: [15, 20, 30], sides: 2,
+  sets: 2, rest: 30,
+  cues: ['Der Ellbogen unter der Schulter, der Körper bildet eine gerade Linie.', 'Das Becken bleibt oben, nichts sackt durch.'],
+  watch: ['Lege dich auf die Seite, der Ellbogen liegt unter der Schulter, der Unterarm zeigt nach vorn.', 'Die Beine sind gestreckt und übereinander, die Füsse aufeinander.', 'Hebe das Becken, bis der Körper von Kopf bis Fuss eine gerade Linie bildet.', 'Die obere Hand liegt an der Hüfte oder zeigt zur Decke.', 'Atme ruhig weiter, halte die Zeit und wechsle dann die Seite.'],
+  mistakes: ['Das Becken sackt durch.', 'Die Schulter wandert zum Ohr.', 'Der Körper kippt nach vorn oder hinten.', 'Die Luft wird angehalten.'],
+  feel: 'Die seitlichen Bauchmuskeln und der Rumpf, dazu die Schulter der Stützseite.',
+  easier: 'Die Knie bleiben am Boden, nur die Hüfte wird angehoben.',
+  harder: 'Den oberen Arm zur Decke strecken oder das obere Bein anheben.' });
+
+x({ id: 'x-deadbug', name: 'Dead Bug', gear: 'Körpergewicht, auf der Matte', reg: 'bauch', eq: '', lvl: 1, pat: 'core',
+  sets: 3, reps: '8–10', unit: 'Wdh. pro Seite', rest: 30,
+  cues: ['Der untere Rücken bleibt am Boden, ganz ruhig atmen.', 'Gegenüberliegender Arm und gegenüberliegendes Bein strecken.'],
+  watch: ['Lege dich auf den Rücken, die Arme zeigen zur Decke, die Knie sind über den Hüften im rechten Winkel gebeugt.', 'Drücke den unteren Rücken leicht in den Boden und halte ihn dort.', 'Strecke langsam einen Arm nach hinten über den Kopf und das gegenüberliegende Bein nach vorn.', 'Atme aus, wenn du streckst, und komme langsam zurück.', 'Dann die andere Seite. Nur so weit, wie der Rücken am Boden bleibt.'],
+  mistakes: ['Der untere Rücken hebt sich ab.', 'Arm und Bein derselben Seite bewegen sich.', 'Zu schnell und mit Schwung.', 'Die Luft wird angehalten.'],
+  feel: 'Die tiefen Bauchmuskeln, die den Rumpf stabil halten.',
+  easier: 'Nur die Beine oder nur die Arme bewegen.' });
+
+x({ id: 'x-bicycle', name: 'Fahrrad-Crunch', gear: 'Körpergewicht, auf der Matte', reg: 'bauch', eq: '', lvl: 2, pat: 'crunch',
+  sets: 3, reps: '10–20', unit: 'Wdh. pro Seite', rest: 30,
+  cues: ['Ellbogen zum gegenüberliegenden Knie, der Oberkörper dreht mit.', 'Langsam, nicht strampeln.'],
+  watch: ['Lege dich auf den Rücken, die Hände leicht hinter dem Kopf.', 'Hebe die Schultern leicht an und bringe die Knie in die Luft.', 'Strecke ein Bein aus, bringe das andere Knie zur Brust und drehe den Oberkörper, sodass der gegenüberliegende Ellbogen zum Knie geht.', 'Wechsle die Seite in einer ruhigen Bewegung.', 'Der Kopf wird nicht mit den Händen gezogen.'],
+  mistakes: ['Mit den Händen am Nacken ziehen.', 'Zu schnell strampeln.', 'Das gestreckte Bein sinkt so tief, dass der Rücken ein Hohlkreuz macht.', 'Nur die Ellbogen bewegen, der Oberkörper dreht nicht mit.'],
+  feel: 'Gerade und schräge Bauchmuskeln.' });
+
+x({ id: 'x-mountain', name: 'Bergsteiger (Mountain Climbers)', gear: 'Körpergewicht, auf der Matte', reg: 'bauch oberschenkel', eq: '', lvl: 2, pat: 'cardio',
+  sets: 3, reps: '20–30', unit: 'Wdh. gesamt', rest: 45,
+  cues: ['Stütz auf den Händen, der Körper bleibt eine Linie.', 'Die Knie abwechselnd Richtung Brust ziehen.'],
+  watch: ['Gehe in den Stütz auf den Händen, die Hände unter den Schultern, der Körper eine gerade Linie.', 'Spanne Bauch und Gesäss an.', 'Ziehe ein Knie zur Brust, dann wechsle schnell die Beine.', 'Die Hüfte bleibt unten und ruhig, sie hüpft nicht.', 'Beginne langsam und steigere das Tempo, wenn die Technik sitzt.'],
+  mistakes: ['Die Hüfte ragt nach oben.', 'Der Bauch hängt durch.', 'Die Hände wandern nach vorn.', 'Zu schnell und unsauber.'],
+  feel: 'Der Bauch und die Beuger der Hüfte, dazu Schultern und Arme, die stützen. Der Puls geht rasch hoch.',
+  easier: 'Die Hände auf eine Erhöhung stellen oder langsam im Schritttempo.' });
+
+x({ id: 'x-hangknee', name: 'Knieheben im Hang', gear: 'Klimmzugstange', reg: 'bauch unterarme', eq: 'stange', lvl: 3, pat: 'legraise',
+  sets: 3, reps: '6–12', rest: 60,
+  cues: ['Ruhig hängen, die Schultern aktiv, dann die Knie bis zur Hüfte heben.', 'Nicht schwingen.'],
+  watch: ['Greife die Stange etwa schulterbreit und hänge mit gestreckten Armen, die Schulterblätter sind leicht nach unten gezogen.', 'Spanne den Bauch an und rolle das Becken leicht ein.', 'Hebe beide Knie kontrolliert bis auf Hüfthöhe oder höher.', 'Senke sie langsam wieder ab, ohne dass der Körper schwingt.', 'Atme beim Heben aus.'],
+  mistakes: ['Mit Schwung aus dem Körper hochkippen.', 'Die Schultern hängen schlaff und werden belastet.', 'Die Beine werden nur mit den Hüftbeugern gezogen, der Bauch bleibt ausser Acht.', 'Zu viele Wiederholungen mit schwacher Technik.'],
+  feel: 'Der untere Bauch und die Hüftbeuger, dazu die Unterarme, die dich halten.',
+  easier: 'Im Stütz am Barren oder die Füsse auf dem Boden lassen und nur ein Knie nach dem anderen heben.' });
+
+x({ id: 'x-hollow', name: 'Hollow Hold', gear: 'Körpergewicht, auf der Matte', reg: 'bauch', eq: '', lvl: 2, pat: 'core', timer: true, holds: [15, 20, 30],
+  sets: 3, rest: 30,
+  cues: ['Der untere Rücken bleibt am Boden, der Körper bildet eine flache Schale.', 'Arme und Beine lang, Schultern leicht vom Boden.'],
+  watch: ['Lege dich auf den Rücken und strecke die Arme über den Kopf.', 'Drücke den unteren Rücken fest in den Boden.', 'Hebe Schultern, Arme und die gestreckten Beine leicht an, sodass der Körper eine flache Schale bildet.', 'Je tiefer die Beine, desto schwerer. Wähle eine Höhe, bei der der Rücken am Boden bleibt.', 'Atme ruhig weiter und halte die Zeit.'],
+  mistakes: ['Der untere Rücken wölbt sich vom Boden ab.', 'Der Kopf wird nach vorn gedrückt.', 'Die Luft wird angehalten.', 'Die Knie sind gebeugt, obwohl das Ziel gestreckte Beine sind.'],
+  feel: 'Der ganze Bauch arbeitet gegen den Boden. Eine anspruchsvolle Haltung.',
+  easier: 'Die Knie anwinkeln oder die Arme am Körper lassen.',
+  harder: 'Die Arme über den Kopf und die Beine tiefer halten.' });
+
+x({ id: 'x-cablecrunch', name: 'Kabel-Crunch kniend', gear: 'Kabelzug mit Seil', reg: 'bauch', eq: 'kz', lvl: 2, pat: 'crunch',
+  sets: 3, reps: '10–15', rest: 60, weight: true,
+  cues: ['Das Seil am Kopf halten, die Wirbelsäule einrollen.', 'Die Hüfte bleibt ruhig, der Bauch zieht.'],
+  watch: ['Knie dich vor das Kabel, das Seil ist oben befestigt, die Hände halten es neben dem Kopf.', 'Der Rücken ist gerade, das Gesäss über den Fersen.', 'Rolle den Oberkörper ein, bringe die Ellbogen Richtung Knie.', 'Spanne am tiefsten Punkt den Bauch an.', 'Rolle langsam wieder auf, ohne die Hüfte zu bewegen.'],
+  mistakes: ['Mit den Armen ziehen.', 'Das Gesäss geht auf und ab.', 'Zu schwer, der Rücken wird nur gebeugt statt eingerollt.', 'Zu schnell.'],
+  feel: 'Die geraden Bauchmuskeln, mit gutem Widerstand.' });
+
+x({ id: 'x-sidebend', name: 'Seitbeugen mit Kurzhantel', gear: 'Kurzhantel', reg: 'bauch', eq: 'kh', lvl: 1, pat: 'sidebend',
+  sets: 3, reps: '10–15', unit: 'Wdh. pro Seite', rest: 45, weight: true,
+  cues: ['Gerade nach unten zur Seite, nicht nach vorn.', 'Die andere Hand locker am Kopf oder an der Hüfte.'],
+  watch: ['Stehe aufrecht, in einer Hand eine Hantel, die andere Hand hinter dem Kopf oder an der Hüfte.', 'Beuge den Oberkörper seitlich nach unten in Richtung der Hantel, ohne dich zu drehen.', 'Spüre die Dehnung an der Gegenseite.', 'Richte dich mit der Kraft der seitlichen Bauchmuskeln wieder auf.', 'Mach alle Wiederholungen auf einer Seite, dann wechsle.'],
+  mistakes: ['Nach vorn oder hinten beugen statt zur Seite.', 'Zu schwere Hantel.', 'Mit Schwung auf- und abwippen.', 'Beide Hanteln gleichzeitig, das hebt sich auf.'],
+  feel: 'Die seitlichen Bauchmuskeln.' });
+
+/* ===== Oberarme ===== */
+
+x({ id: 'x-bbcurl', name: 'Langhantel-Curl', gear: 'Langhantel oder SZ-Stange', reg: 'oberarme unterarme', eq: 'lh', lvl: 2, pat: 'curl',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Ellbogen bleiben neben dem Körper, nur die Unterarme bewegen sich.', 'Oben kurz anspannen, langsam ablassen.'],
+  watch: ['Stehe hüftbreit, greife die Stange untergriffig, etwa schulterbreit.', 'Die Ellbogen liegen am Körper, der Oberkörper ist aufrecht.', 'Rolle die Stange nach oben, bis die Unterarme senkrecht sind.', 'Halte oben kurz an und senke die Stange in etwa 3 Sekunden.', 'Atme beim Hochrollen aus.'],
+  mistakes: ['Mit dem Oberkörper schwingen.', 'Die Ellbogen wandern nach vorn.', 'Die Handgelenke knicken ein.', 'Unten nicht ganz strecken.'],
+  feel: 'Der Bizeps an der Vorderseite des Oberarms.' });
+
+x({ id: 'x-cablecurl', name: 'Kabel-Curl', gear: 'Kabelzug', reg: 'oberarme unterarme', eq: 'kz', lvl: 1, pat: 'curl',
+  sets: 3, reps: '10–15', rest: 45, weight: true,
+  cues: ['Der Zug ist immer da, auch unten nicht ablegen.', 'Ellbogen am Körper, nur die Unterarme bewegen sich.'],
+  watch: ['Stelle das Kabel unten ein und greife die Stange oder das Seil, einen Schritt vor dem Gerät.', 'Stehe aufrecht, die Ellbogen am Körper.', 'Rolle den Griff nach oben, bis die Unterarme senkrecht sind.', 'Halte oben kurz an und lasse langsam wieder ab, das Gewicht bleibt in der Spannung.', 'Atme beim Hochrollen aus.'],
+  mistakes: ['Die Ellbogen wandern nach vorn.', 'Mit dem Rücken zurücklehnen.', 'Das Gewicht wird unten abgelegt.', 'Zu schnell.'],
+  feel: 'Der Bizeps, mit gleichmässigem Widerstand über die ganze Bewegung.' });
+
+x({ id: 'x-trxcurl', name: 'TRX-Curl', gear: 'TRX-Bänder', reg: 'oberarme unterarme', eq: 'trx', lvl: 2, pat: 'curl',
+  sets: 3, reps: '8–12', rest: 45,
+  cues: ['Der Körper bleibt gerade, die Ellbogen auf Schulterhöhe.', 'Die Hände kommen zur Stirn.'],
+  watch: ['Greife die Griffe mit den Handflächen zu dir, gehe zurück, bis die Bänder gespannt sind.', 'Lehne dich mit geradem Körper nach hinten, die Arme sind gestreckt.', 'Beuge die Ellbogen und ziehe die Hände zur Stirn, die Ellbogen bleiben auf gleicher Höhe.', 'Der Körper bleibt eine gerade Linie von den Füssen zum Kopf.', 'Strecke die Arme langsam wieder aus.'],
+  mistakes: ['Die Hüfte hängt durch.', 'Die Ellbogen sinken nach unten.', 'Mit dem Körper ziehen statt mit den Armen.', 'Zu flach, die Spannung geht verloren.'],
+  feel: 'Der Bizeps. Je weiter du dich zurücklehnst, desto schwerer wird es.',
+  easier: 'Aufrechter stehen.',
+  harder: 'Die Füsse weiter nach vorn stellen.' });
+
+x({ id: 'x-pushdown', name: 'Trizeps-Pushdown am Kabel', gear: 'Kabelzug mit Stange oder Seil', reg: 'oberarme', eq: 'kz', lvl: 1, pat: 'extension',
+  sets: 3, reps: '10–15', rest: 45, weight: true,
+  cues: ['Die Ellbogen bleiben fest am Körper.', 'Nach unten strecken und oben unter Spannung zurückkommen.'],
+  watch: ['Stelle das Kabel oben ein und greife die Stange oder das Seil.', 'Stehe aufrecht, die Ellbogen am Körper, die Unterarme zeigen waagerecht nach vorn.', 'Strecke die Arme nach unten, bis sie gerade sind.', 'Halte unten kurz an und spanne den Trizeps an.', 'Lasse den Griff langsam wieder nach oben kommen, die Ellbogen bleiben dabei an Ort und Stelle.'],
+  mistakes: ['Die Ellbogen wandern nach vorn.', 'Der Oberkörper beugt sich mit.', 'Die Schultern werden hochgezogen.', 'Zu schwer, dann wird mit dem Körper gedrückt.'],
+  feel: 'Die Hinterseite der Oberarme (Trizeps).' });
+
+x({ id: 'x-skull', name: 'Trizepsstrecken liegend', gear: 'SZ-Stange oder Kurzhanteln und Bank', reg: 'oberarme', eq: 'bank kh|lh', lvl: 2, pat: 'extension',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Oberarme bleiben senkrecht, nur die Unterarme bewegen sich.', 'Zur Stirn senken und wieder strecken.'],
+  watch: ['Lege dich auf die Bank, die Hantel oder Stange halten die Arme gestreckt über der Brust.', 'Die Oberarme bleiben senkrecht und still.', 'Beuge die Ellbogen und senke die Gewichte kontrolliert Richtung Stirn oder hinter den Kopf.', 'Strecke die Arme wieder, ohne die Ellbogen nach aussen zu drehen.', 'Wähle ein Gewicht, das du sicher kontrollierst.'],
+  mistakes: ['Die Ellbogen sinken nach hinten, es wird ein Zug aus der Schulter.', 'Die Ellbogen zeigen weit zur Seite.', 'Zu schwer, die Hantel gefährdet den Kopf.', 'Das Gesäss hebt ab.'],
+  feel: 'Die Hinterseite der Oberarme (Trizeps). Achte beim Senken auf den Kopf.' });
+
+x({ id: 'x-kickbacktri', name: 'Trizeps-Kickback', gear: 'Kurzhantel', reg: 'oberarme', eq: 'kh', lvl: 1, pat: 'extension',
+  sets: 3, reps: '10–15', unit: 'Wdh. pro Arm', rest: 45, weight: true,
+  cues: ['Der Oberarm liegt parallel zum Rücken und bleibt still.', 'Den Unterarm nach hinten ausstrecken und kurz halten.'],
+  watch: ['Beuge den Oberkörper nach vorn, stütze die freie Hand auf dem Oberschenkel, der Rücken bleibt gerade.', 'Ziehe den Oberarm mit der Hantel an den Körper, parallel zum Rücken.', 'Der Unterarm hängt senkrecht nach unten.', 'Strecke den Arm nach hinten, bis er gerade ist, und halte kurz.', 'Beuge ihn kontrolliert wieder, der Oberarm bleibt dabei still.'],
+  mistakes: ['Der Oberarm sinkt nach unten, der Schwung macht die Arbeit.', 'Der Rücken wird rund.', 'Zu schwer, der Körper schwingt mit.', 'Der Arm wird nicht ganz gestreckt.'],
+  feel: 'Die Hinterseite des Oberarms (Trizeps). Hier genügt ein leichtes Gewicht.' });
+
+x({ id: 'x-ohtri', name: 'Trizepsstrecken über Kopf', gear: 'Kurzhantel', reg: 'oberarme', eq: 'kh', lvl: 1, pat: 'extension',
+  sets: 3, reps: '10–12', rest: 45, weight: true,
+  cues: ['Die Ellbogen zeigen nach oben und bleiben nah am Kopf.', 'Nur die Unterarme bewegen sich.'],
+  watch: ['Stehe oder sitze aufrecht und halte eine Hantel mit beiden Händen über dem Kopf, die Arme sind gestreckt.', 'Beuge die Ellbogen und senke die Hantel langsam hinter den Kopf.', 'Die Ellbogen zeigen zur Decke und bleiben eng.', 'Strecke die Arme wieder nach oben, bis sie gerade sind.', 'Der Rumpf bleibt fest, kein Hohlkreuz.'],
+  mistakes: ['Die Ellbogen fallen nach aussen.', 'Der Rücken geht ins Hohlkreuz.', 'Die Hantel wird zu schwer gewählt.', 'Der Kopf wird nach vorn gestreckt.'],
+  feel: 'Die Hinterseite der Oberarme, vor allem der lange Kopf des Trizeps. Bei Schulterbeschwerden im Sitzen und mit leichtem Gewicht üben.' });
+
+/* ===== Unterarme ===== */
+
+x({ id: 'x-wristcurl', name: 'Handgelenkcurl', gear: 'Kurzhantel oder Langhantel', reg: 'unterarme', eq: 'kh|lh', lvl: 1, pat: 'wrist',
+  sets: 3, reps: '12–20', rest: 30, weight: true,
+  cues: ['Die Unterarme liegen auf den Oberschenkeln, nur die Handgelenke bewegen sich.', 'Leichtes Gewicht, kleine, saubere Bewegung.'],
+  watch: ['Setze dich hin und stütze die Unterarme auf die Oberschenkel, die Hände ragen über die Knie, die Handflächen zeigen nach oben.', 'Lasse die Hantel langsam in die Finger rollen, dann schliesse die Finger.', 'Beuge das Handgelenk und hebe die Hantel nach oben.', 'Halte oben kurz an und senke wieder ab.', 'Die Unterarme bleiben liegen.'],
+  mistakes: ['Die Arme heben mit ab.', 'Zu schwer, die Bewegung wird ruckartig.', 'Zu schnell.', 'Schmerz im Handgelenk ignorieren.'],
+  feel: 'Die Unterseite der Unterarme. Bei Schmerzen im Handgelenk oder in der Sehne bitte aufhören und mit der Physiotherapie abklären.' });
+
+x({ id: 'x-farmer', name: 'Koffertragen', gear: 'Zwei Kurzhanteln oder Kettlebells', reg: 'unterarme schultern', eq: 'kh|kb', lvl: 1, pat: 'carry', timer: true, holds: [30, 45, 60],
+  sets: 3, rest: 60, weight: true,
+  cues: ['Aufrecht gehen, die Schultern unten, fest zugreifen.', 'Kleine, ruhige Schritte.'],
+  watch: ['Nimm in jede Hand ein schweres Gewicht und stehe aufrecht.', 'Die Schultern sind zurück und unten, der Bauch ist leicht angespannt.', 'Gehe mit kleinen, ruhigen Schritten und schwinge die Gewichte nicht.', 'Atme ruhig weiter.', 'Halte die Zeit durch, dann stelle die Gewichte kontrolliert ab.'],
+  mistakes: ['Der Oberkörper kippt zur Seite.', 'Die Schultern gehen nach vorn und oben.', 'Zu grosse Schritte, die Gewichte schwingen.', 'Zu schwer, der Griff geht verloren.'],
+  feel: 'Unterarme und Griffkraft, dazu Schultern, Rücken und Rumpf, die dich aufrecht halten.' });
+
+x({ id: 'x-deadhang', name: 'Hängen an der Stange', gear: 'Klimmzugstange', reg: 'unterarme ruecken', eq: 'stange', lvl: 2, pat: 'hold', timer: true, holds: [15, 20, 30],
+  sets: 3, rest: 60,
+  cues: ['Fest zugreifen, die Schulterblätter aktiv, die Beine ruhig.', 'Locker atmen.'],
+  watch: ['Greife die Stange etwa schulterbreit und hänge mit gestreckten Armen.', 'Ziehe die Schulterblätter leicht nach unten, ohne die Arme zu beugen.', 'Die Beine hängen ruhig oder sind leicht angewinkelt.', 'Atme weiter und halte die Zeit.', 'Springe zum Beenden nicht ab, sondern stelle die Füsse kontrolliert ab.'],
+  mistakes: ['Die Schultern hängen schlaff bis zu den Ohren.', 'Die Luft wird angehalten.', 'Der Körper schaukelt.', 'Zu lange, bis der Griff plötzlich nachgibt.'],
+  feel: 'Griffkraft und Unterarme, dazu eine sanfte Dehnung für die Schultern. Bei Schulterschmerzen die Zeit kürzen oder weglassen.' });
+
+/* ===== Ganzkörper ===== */
+
+x({ id: 'x-burpee', name: 'Burpee', gear: 'Körpergewicht', reg: 'ganz', eq: '', lvl: 3, pat: 'cardio',
+  sets: 3, reps: '6–12', rest: 60,
+  cues: ['Hocke, Stütz, zurück in die Hocke, hochspringen.', 'Ruhig anfangen, die Technik zählt mehr als das Tempo.'],
+  watch: ['Stehe aufrecht, gehe in die Hocke und setze die Hände auf den Boden.', 'Springe oder gehe mit den Füssen zurück in den Stütz.', 'Optional: ein Liegestütz.', 'Springe oder gehe mit den Füssen wieder zu den Händen.', 'Springe nach oben, die Arme gehen über den Kopf. Dann gleich in die nächste Wiederholung.'],
+  mistakes: ['Der Rücken hängt im Stütz durch.', 'Mit sehr hohem Tempo, bis die Technik zerfällt.', 'Der Landeplatz ist rutschig.', 'Die Knie fallen nach innen.'],
+  feel: 'Der ganze Körper arbeitet, der Puls steigt schnell. Gehen statt Springen ist eine gute, sanftere Form.',
+  easier: 'Die Füsse nacheinander zurücksetzen und ohne Sprung aufstehen.' });
+
+x({ id: 'x-jack', name: 'Hampelmann', gear: 'Körpergewicht', reg: 'ganz', eq: '', lvl: 1, pat: 'cardio',
+  sets: 3, reps: '20–30', rest: 30,
+  cues: ['Locker auf den Fussballen, die Arme schwingen mit.', 'Weich landen, die Knie leicht gebeugt.'],
+  watch: ['Stehe mit geschlossenen Füssen, die Arme am Körper.', 'Springe mit den Füssen auseinander und hebe gleichzeitig die Arme seitlich über den Kopf.', 'Springe zurück in die Ausgangsposition.', 'Lande weich auf den Fussballen mit leicht gebeugten Knien.', 'Atme gleichmässig.'],
+  mistakes: ['Hart auf den Fersen landen.', 'Die Knie sind durchgedrückt.', 'Die Arme werden schlaff geschwungen.', 'Zu schnell, bis der Atem fehlt.'],
+  feel: 'Der Puls geht hoch, die Beine und Schultern arbeiten. Bei Knie- oder Gelenkproblemen als Schritt-Variante ohne Sprung (Step Jack).',
+  easier: 'Ohne Sprung: abwechselnd einen Fuss zur Seite setzen.' });
+
+x({ id: 'x-thruster', name: 'Thruster', gear: 'Zwei Kurzhanteln', reg: 'ganz', eq: 'kh', lvl: 2, pat: 'squat',
+  sets: 3, reps: '8–12', rest: 75, weight: true, knee: true,
+  cues: ['Tief in die Kniebeuge, dann mit Schwung hochstehen und über den Kopf drücken.', 'Eine fliessende Bewegung.'],
+  watch: ['Stehe hüftbreit, die Hanteln auf den Schultern, die Ellbogen zeigen nach vorn.', 'Gehe in die Kniebeuge, die Knie über den Füssen, der Rücken bleibt gerade.', 'Drücke dich kräftig nach oben und nutze den Schwung, um die Hanteln über den Kopf zu drücken.', 'Oben stehen die Arme gestreckt und der Körper aufrecht.', 'Senke die Hanteln wieder zu den Schultern und gehe sofort in die nächste Kniebeuge.'],
+  mistakes: ['Die Knie fallen nach innen.', 'Die Hanteln werden nur mit den Armen gedrückt, ohne die Beine.', 'Der Rücken wird rund.', 'Zu schwer, die Technik zerfällt.'],
+  feel: 'Beine, Gesäss, Schultern und Rumpf in einer Bewegung. Bei Knieproblemen nur so tief, wie es dir gut tut.',
+  easier: 'Zuerst Kniebeuge und Schulterdrücken getrennt üben.' });
+
 /* ==== new exercises below ==== */
 
 })();
