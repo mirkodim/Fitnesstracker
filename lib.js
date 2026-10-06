@@ -701,6 +701,42 @@ x({ id: 'x-thruster', name: 'Thruster', gear: 'Zwei Kurzhanteln', reg: 'ganz', e
   feel: 'Beine, Gesäss, Schultern und Rumpf in einer Bewegung. Bei Knieproblemen nur so tief, wie es dir gut tut.',
   easier: 'Zuerst Kniebeuge und Schulterdrücken getrennt üben.' });
 
+/* ===== zwei leichte Übungen für Arme und Brust ohne Geräte ===== */
+
+x({ id: 'x-wallpush', name: 'Liegestütze an der Wand', gear: 'Körpergewicht, feste Wand', reg: 'brust schultern oberarme', eq: '', lvl: 1, pat: 'push',
+  sets: 3, reps: '10–15', rest: 45,
+  cues: ['Je weiter die Füsse von der Wand, desto schwerer.', 'Der Körper bleibt eine gerade Linie von den Fersen bis zum Kopf.'],
+  watch: ['Stehe etwa eine Armlänge vor einer festen Wand und stütze die Hände auf Schulterhöhe an der Wand ab.', 'Die Füsse stehen hüftbreit, der Körper ist eine gerade Linie vom Kopf bis zu den Fersen.', 'Beuge die Ellbogen schräg nach hinten und bringe die Brust zur Wand.', 'Drücke dich kräftig wieder weg, bis die Arme fast gestreckt sind.', 'Atme beim Hinbewegen ein und beim Wegdrücken aus.'],
+  mistakes: ['Das Gesäss ragt nach hinten.', 'Der Bauch hängt durch.', 'Die Ellbogen zeigen weit zur Seite.', 'Die Füsse rutschen weg, die Wand ist glatt.'],
+  feel: 'Brust, vordere Schulter und Trizeps, in einer sehr leichten Form. Ein guter Einstieg zu den Liegestützen.',
+  harder: 'Die Füsse weiter von der Wand entfernt aufstellen oder die Hände auf eine Bank legen.' });
+
+x({ id: 'x-floordip', name: 'Dips am Boden', gear: 'Körpergewicht, auf der Matte', reg: 'oberarme schultern', eq: '', lvl: 1, pat: 'dip',
+  sets: 3, reps: '8–12', rest: 45,
+  cues: ['Die Hände hinter dir, die Hüfte hoch bis zur Tischposition.', 'Die Ellbogen nach hinten beugen, die Schultern bleiben unten.'],
+  watch: ['Setze dich auf den Boden, die Knie sind gebeugt, die Füsse stehen flach.', 'Stütze die Hände hinter dir auf, die Finger zeigen nach vorn.', 'Hebe die Hüfte in die Tischposition, der Rumpf ist fast waagerecht.', 'Beuge die Ellbogen nach hinten und senke die Hüfte Richtung Boden, nur ein kleines Stück.', 'Drücke dich wieder hoch, ohne die Ellbogen hart durchzudrücken.'],
+  mistakes: ['Zu tief, die Schultern rutschen nach vorn.', 'Die Schultern wandern zu den Ohren.', 'Die Ellbogen zeigen zur Seite.', 'Die Hände sind weit weg von der Hüfte.'],
+  feel: 'Hinterseite der Oberarme (Trizeps), dazu Brust und vordere Schulter. Wenn die Schulter zwickt, nur kleine Bewegungen machen.',
+  easier: 'Die Füsse näher an die Hüfte stellen und nur wenig absenken.',
+  harder: 'Die Beine strecken.' });
+
+/* ===== zwei weitere Übungen für den Rücken ohne Geräte ===== */
+
+x({ id: 'x-swimmer', name: 'Schwimmer am Boden', gear: 'Körpergewicht, auf der Matte', reg: 'ruecken gesaess', eq: '', lvl: 1, pat: 'extend',
+  sets: 3, reps: '10–16', unit: 'Wdh. gesamt', rest: 30,
+  cues: ['Gegenüberliegender Arm und gegenüberliegendes Bein heben, im Wechsel.', 'Der Blick bleibt zum Boden, der Nacken lang.'],
+  watch: ['Lege dich auf den Bauch, die Arme nach vorn gestreckt, die Beine gestreckt.', 'Der Blick geht zum Boden, der Nacken bleibt lang.', 'Hebe einen Arm und das gegenüberliegende Bein leicht an.', 'Wechsle langsam im Takt, so als würdest du kraulen.', 'Atme gleichmässig weiter, der Bauchnabel bleibt leicht eingezogen.'],
+  mistakes: ['Zu hoch, der untere Rücken wird gestaucht.', 'Der Kopf wird in den Nacken gelegt.', 'Zu schnell, mit Schwung.', 'Die Luft wird angehalten.'],
+  feel: 'Rückenstrecker, Gesäss und hintere Schulter im Wechsel.',
+  easier: 'Langsamer und nur wenige Zentimeter anheben.' });
+
+x({ id: 'x-wallangel', name: 'Wand-Engel', gear: 'Körpergewicht, Wand', reg: 'ruecken schultern', eq: '', lvl: 1, pat: 'mob',
+  sets: 2, reps: '8–12', rest: 30,
+  cues: ['Rücken, Kopf und Arme an die Wand, die Arme gleiten nach oben.', 'Nur so weit, wie die Arme die Wand berühren.'],
+  watch: ['Stelle dich mit dem Rücken an eine Wand, die Füsse etwa eine Fusslänge von der Wand entfernt.', 'Kopf, Schulterblätter und Gesäss berühren die Wand, der untere Rücken bleibt natürlich.', 'Bringe die Arme in die W-Position: Ellbogen im rechten Winkel, Ellbogen und Handrücken an der Wand.', 'Gleite langsam mit den Armen nach oben, bis sie fast gestreckt sind (Y-Position).', 'Gleite wieder zurück in die W-Position. Bewege dich nur so weit, wie die Arme an der Wand bleiben.'],
+  mistakes: ['Der untere Rücken wölbt sich von der Wand weg.', 'Die Schultern werden zu den Ohren gezogen.', 'Die Arme lösen sich von der Wand.', 'Zu schnell und mit Gewalt.'],
+  feel: 'Oberer Rücken und Schultern. Eine sanfte Mobilisation, auch gut zum Aufwärmen. Ein Ziehen ist in Ordnung, Schmerz nicht.' });
+
 /* ==== new exercises below ==== */
 
 })();

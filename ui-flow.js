@@ -31,10 +31,11 @@ function FlowUI(A) {
   function greeting() { var h = new Date().getHours(); return h < 11 ? 'Guten Morgen' : (h < 18 ? 'Guten Tag' : 'Guten Abend'); }
   function groupsOfItems(its) {
     var out = [];
-    GROUPS.forEach(function (g) { if (g.id === 'ganz') return; var s = Builder.groupShare(its, g.id); if (s >= 0.34) out.push({ id: g.id, s: s }); });
+    GROUPS.forEach(function (g) { if (g.id === 'ganz') return; var s = Builder.groupShare(its, g.id); if (s >= Builder.SHARE) out.push({ id: g.id, s: s }); });
     out.sort(function (a, b) { return b.s - a.s; });
     return out.slice(0, 3).map(function (o) { return o.id; });
   }
+  function chipGroups(its) { return Builder.isFullBody(its) ? ['ganz'] : groupsOfItems(its); }
   function equipOf(prefs) { return prefs.equip || []; }
   function haveNow() { return Builder.haveSet(equipOf(S().prefs)); }
 
@@ -98,11 +99,11 @@ function FlowUI(A) {
     return t.defItems.every(function (it) { return Builder.eqOK(EX[it.ex], have); });
   }
   function matchGroups(t) {
-    if (!R.exf.sel || !R.sel.length || R.sel.indexOf('ganz') >= 0) return true;
-    return R.sel.some(function (g) { return Builder.groupShare(items(t), g) >= 0.34; });
+    if (!R.exf.sel || !R.sel.length || R.sel.indexOf('ganz') >= 0 || Builder.isFullBody(items(t))) return true;
+    return R.sel.some(function (g) { return Builder.groupShare(items(t), g) >= Builder.SHARE; });
   }
   function tcardHTML(t) {
-    var its = items(t), need = Builder.needs(its), gs = groupsOfItems(its);
+    var its = items(t), need = Builder.needs(its), gs = chipGroups(its);
     return '<button type="button" class="tcard" data-act="tr-open" data-id="' + esc(t.id) + '"><span class="tc-top"><b>' + esc(t.name) + '</b>' +
       '<small>' + minutesText(its) + ' · ' + t.items.length + ' Übungen' + (t.sub ? ' · ' + esc(t.sub) : '') + '</small></span>' +
       '<span class="tc-chips">' + chipsFor(gs) + '</span>' +

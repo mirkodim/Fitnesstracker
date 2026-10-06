@@ -1361,6 +1361,74 @@
       ] });
   })();
 
+  /* ===== zwei leichte Übungen für Arme und Brust ohne Geräte ===== */
+
+  /* Liegestütze an der Wand: flat feet, the body leans into the wall and pushes away */
+  (function () {
+    var A = [143.6, G], W = [233, 66];
+    var up = norm({ ankle: A, lean: 20, wrist: W });
+    var dn = norm({ ankle: A, lean: 36, wrist: W });
+    var b = bendBody(A, [A[0] + 116 * Math.sin(20 * D2R), A[1] - 116 * Math.cos(20 * D2R)], -1);
+    var bad = norm({ ankle: A, lean: b.lean, torso: b.torso, wrist: W });
+    add('x-wallpush', { reps: 3, hl: ['torso', 'upper', 'fore'], thumb: 0, props: [{ t: 'rail', x1: 236, y1: 10, x2: 236, y2: 178 }],
+      steps: [
+        { pose: up, ms: 1000, hold: 400, label: 'Kräftig wegdrücken, der Körper bleibt eine Linie' },
+        { pose: dn, ms: 1400, hold: 400, label: 'Die Brust zur Wand bringen, Ellbogen schräg nach hinten' },
+        { pose: up, ms: 1000, hold: 300, label: 'Kräftig wegdrücken, der Körper bleibt eine Linie' },
+        { pose: bad, ms: 800, hold: 1100, bad: true, label: 'Falsch: Das Gesäss ragt nach hinten' }
+      ] });
+  })();
+
+  /* Dips am Boden: hands behind, hips up to the table, then down a little */
+  (function () {
+    var A = [166, G], W = [96, 172];
+    var up = norm({ sh: [100, 124], th: -80, ankle: A, wrist: W, ha: -15 });
+    var dn = norm({ sh: [100, 146], th: -62, ankle: A, wrist: W, ha: -15 });
+    var bad = norm({ sh: [100, 156], th: -78, ankle: A, wrist: W, ha: -5 });
+    add('x-floordip', { reps: 3, hl: ['upper', 'torso'], thumb: 0, sweep: true,
+      steps: [
+        { pose: up, ms: 1000, hold: 400, label: 'Hochdrücken bis zur Tischposition, die Ellbogen nicht hart durchstrecken' },
+        { pose: dn, ms: 1400, hold: 400, label: 'Die Ellbogen nach hinten beugen, die Hüfte nur ein Stück senken' },
+        { pose: up, ms: 1000, hold: 300, label: 'Hochdrücken bis zur Tischposition, die Ellbogen nicht hart durchstrecken' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu tief, die Schultern rutschen nach vorn' }
+      ] });
+  })();
+
+  /* ===== zwei weitere Übungen für den Rücken ===== */
+
+  /* Schwimmer am Boden: lying on the belly, one arm and the opposite leg lift, then swap */
+  (function () {
+    var H = [110, 170], down = [204, 172], lifted = [198, 143], legDown = [38.2, 172], legUp = [41, 151];
+    var pose = function (w, w2, a, a2, extra) {
+      return norm(Object.assign({ hip: H, th: 84, ankle: a, fa: 170, ankle2: a2, fa2: 170, wrist: w, wrist2: w2, ha: 72, es: -1 }, extra || {}));
+    };
+    var one = pose(lifted, down, legDown, legUp), two = pose(down, lifted, legUp, legDown);
+    var bad = pose([190, 125], [194, 142], [45, 139.5], [45, 139.5], { th: 55, ha: 22, round: -10 });
+    add('x-swimmer', { reps: 4, hl: ['torso', 'glute'], thumb: 0, sweep: true,
+      steps: [
+        { pose: one, ms: 900, hold: 150, label: 'Einen Arm und das gegenüberliegende Bein leicht anheben' },
+        { pose: two, ms: 900, hold: 150, label: 'Langsam wechseln, der Blick bleibt zum Boden' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu hoch, der Kopf im Nacken' }
+      ] });
+  })();
+
+  /* Wand-Engel (front view): the arms slide up the wall from the W to the Y */
+  (function () {
+    var w = normF({ arms: [55, 175] });
+    var mid = normF({ arms: [110, 160] });
+    var y = normF({ arms: [140, 140] });
+    var shrug = normF({ arms: [140, 140], sh: 8 });
+    add('x-wallangel', { view: 'f', reps: 3, hl: ['trap', 'upper'], thumb: 1, props: [],
+      steps: [
+        { pose: w, ms: 1300, hold: 300, label: 'Ellbogen im rechten Winkel, Ellbogen und Handrücken an der Wand' },
+        { pose: mid, ms: 600, hold: 0, label: 'Die Arme an der Wand nach oben gleiten lassen' },
+        { pose: y, ms: 700, hold: 500, label: 'Bis fast gestreckt, die Schultern bleiben unten' },
+        { pose: mid, ms: 800, hold: 0, label: 'Langsam zurück gleiten' },
+        { pose: w, ms: 700, hold: 300, label: 'Ellbogen im rechten Winkel, Ellbogen und Handrücken an der Wand' },
+        { pose: shrug, ms: 800, hold: 1200, bad: true, label: 'Falsch: Die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
   /* ==== new animations below ==== */
 
 })(typeof module !== 'undefined' && module.exports ? require('./fig.js') : FIG);

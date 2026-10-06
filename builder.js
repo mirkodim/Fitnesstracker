@@ -13,7 +13,8 @@ var Builder = (function (data) {
 
   /* which pattern is worth doing first (big, demanding moves before small ones) */
   var PRIORITY = { squat: 10, hinge: 10, bridge: 9, vpull: 9, row: 9, push: 9, vpush: 9, lunge: 8, swing: 8, cond: 7, carry: 7,
-    core: 6, hold: 6, rot: 6, raise: 5, curl: 5, tri: 5, fly: 5, shrug: 4, calf: 4, neck: 4, wrist: 4, mob: 3 };
+    core: 6, hold: 6, rot: 6, raise: 5, curl: 5, tri: 5, fly: 5, shrug: 4, calf: 4, neck: 4, wrist: 4, mob: 3,
+    bench: 9, ohp: 8, ext: 6, legcurl: 6, dip: 6, cardio: 7, extension: 5, crunch: 5, legraise: 5, kick: 5, abd: 5, shin: 4, extend: 4, pullapart: 4, sidebend: 4, stretch: 2 };
   var FULL = ['beine', 'gesaess', 'brust', 'ruecken', 'bauch', 'schultern', 'arme'];
 
   /* ---------- helpers ---------- */
@@ -101,11 +102,26 @@ var Builder = (function (data) {
     });
     return out;
   }
+  /* how much an exercise belongs to a group: 1 = its main region (the first one) is in the group, 0.5 = only a side region, 0 = not at all.
+     A row trains the back first and the arms on the side, so it counts fully for "Rücken" but only half for "Arme". */
+  function weightIn(ex, gid) {
+    if (!GROUP[gid]) return 0;
+    if (GROUP[gid].leaves.indexOf(ex.regions[0]) >= 0) return 1;
+    return inGroup(ex, gid) ? 0.5 : 0;
+  }
+  var SHARE = 0.25;                                      // a training counts for a group from this share on
   function groupShare(items, gid) {
     if (!items.length || !GROUP[gid]) return 0;
     var n = 0;
-    items.forEach(function (it) { if (inGroup(EX[it.ex], gid)) n++; });
+    items.forEach(function (it) { n += weightIn(EX[it.ex], gid); });
     return n / items.length;
+  }
+
+  /* a training that works at least four of the big areas properly is a whole-body training: it fits every question "Was möchtest du trainieren?" */
+  function isFullBody(items) {
+    var n = 0;
+    FULL.forEach(function (g) { if (groupShare(items, g) >= 0.13) n++; });
+    return n >= 4 && (groupShare(items, 'beine') >= 0.13 || groupShare(items, 'gesaess') >= 0.13);
   }
 
   /* ---------- suggestion ---------- */
@@ -139,8 +155,8 @@ var Builder = (function (data) {
     if (!pool.length) return { items: [], minutes: 0, relaxed: relaxed };
 
     var picks = [], used = {}, pats = {}, seen = {}, cap = minutes <= 20 ? 6 : 12, target = minutes * 60;
-    function score(ex) {
-      var s = (PRIORITY[ex.pat] || 5) + rng() * 4 - (pats[ex.pat] || 0) * 6;
+    function score(ex, gid) {
+      var s = (PRIORITY[ex.pat] || 5) + rng() * 4 - (pats[ex.pat] || 0) * 6 + weightIn(ex, gid) * 6;
       ex.regions.forEach(function (r) { if (!seen[r]) s += 1.5; });
       if (level === 3) s += (ex.lvl - 1) * 1.5;
       if (level === 1 && ex.lvl === 1) s += 1;
@@ -151,9 +167,11 @@ var Builder = (function (data) {
       var progressed = false;
       for (var gi = 0; gi < wanted.length && picks.length < cap; gi++) {
         var cand = pool.filter(function (ex) { return !used[ex.id] && inGroup(ex, wanted[gi]); });
+        var mainOnes = cand.filter(function (ex) { return weightIn(ex, wanted[gi]) === 1; });
+        if (mainOnes.length) cand = mainOnes;               // exercises that train this area first, those that only help on the side later
         if (!cand.length) continue;
         var best = null, bs = -1e9;
-        cand.forEach(function (ex) { var s = score(ex); if (s > bs) { bs = s; best = ex; } });
+        cand.forEach(function (ex) { var s = score(ex, wanted[gi]); if (s > bs) { bs = s; best = ex; } });
         var trial = picks.concat([makeItem(best, level, minutes)]);
         if (picks.length >= 3 && estimate(trial) > target * 1.12) { stop = true; break; }
         picks = trial; used[best.id] = true; pats[best.pat] = (pats[best.pat] || 0) + 1;
@@ -215,7 +233,7 @@ var Builder = (function (data) {
     PRIORITY: PRIORITY, FULL: FULL,
     haveSet: haveSet, eqOK: eqOK, missing: missing, eqLabel: eqLabel, leavesOf: leavesOf, inLeaves: inLeaves, inGroup: inGroup, groupsOf: groupsOf, rngOf: rngOf,
     avgReps: avgReps, perSide: perSide, resolveItem: resolveItem, itemSeconds: itemSeconds, estimate: estimate, minutesOf: minutesOf, minutesText: minutesText,
-    needs: needs, groupShare: groupShare, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup
+    needs: needs, weightIn: weightIn, SHARE: SHARE, groupShare: groupShare, isFullBody: isFullBody, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup
   };
 })(typeof module !== 'undefined' && module.exports ? Object.assign({}, require('./plan.js'), require('./lib.js')) : { LIB: LIB, EX: EX, GROUPS: GROUPS, EQUIP: EQUIP });
 
