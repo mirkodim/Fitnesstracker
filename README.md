@@ -8,7 +8,7 @@ Eine ruhige Trainings-App für alle, die sich schwer tun, anzufangen: Sie fragt 
 * **Übungsbibliothek mit 92 Übungen:** sortiert nach Bereichen und Gliedmassen (Oberschenkel, Unterschenkel, Gesäss, Oberarme, Unterarme, Rücken, Bauch, Brust, Schultern, Nacken, Ganzkörper). Eine Übung steht in jedem Bereich, den sie trainiert. Jede hat eine **Animation** (Strichfigur, auch „so nicht“ in Orange), „Darauf achten“, häufige Fehler, wo man es spürt und leichtere und schwerere Varianten.
 * **Ausrüstung als Filter:** Fitnessstudio, Homegym, Zuhause, Unterwegs, Physiotherapie oder einzeln (Kurz- und Langhanteln, Kettlebell, Medizinball, Maschinen, Kabelzug, Bank, Kiste, Klimmzugstange, TRX, Band). „Passt zu meiner Ausrüstung“ blendet aus, was nicht geht; ein bestehendes Training lässt sich an die Ausrüstung anpassen.
 * **Meine Trainings:** Eigene Trainings unter eigenem Namen speichern, bearbeiten, löschen (mit Rückgängig). **19 fertige Trainings** der App dauern 30 bis 90 Minuten; Tag A und Tag B der ersten Version sind unverändert dabei.
-* **Essen:** Nährwerte **pro 100 g, pro 100 ml** oder für die ganze Menge, Tagesbilanz, Protein-Ziel.
+* **Essen:** Nährwerte **pro 100 g, pro 100 ml** oder für die ganze Menge, Tagesbilanz, Protein-Ziel und Kalorien-Ziel (beide freiwillig).
 * Schweizer Rechtschreibung (ss statt ß).
 
 **Live:** https://mirkodim.github.io/Fitnesstracker/

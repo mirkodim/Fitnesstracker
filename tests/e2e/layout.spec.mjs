@@ -182,7 +182,7 @@ test('Essen: Liste, Bearbeiten mit Kopierfeld, Ziel, Sicherung, Update-Leiste', 
   await check(page, 'essen pro 100 ml', info);
   await page.getByRole('button', { name: 'Mehr Werte (Zucker, Ballaststoffe)' }).click();
   await check(page, 'essen mehr werte', info);
-  await page.getByRole('button', { name: 'Protein-Ziel ändern' }).click();
+  await page.getByRole('button', { name: 'Ziele ändern' }).click();
   await check(page, 'essen ziel', info);
   await page.getByRole('button', { name: /Magerquark mit Beeren.* bearbeiten/ }).click();
   await check(page, 'essen bearbeiten', info);

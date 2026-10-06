@@ -442,3 +442,12 @@ test('Training eintragen: freier Platz, nackter Eintrag bekommt Details, Eintrag
   assert.equal(Store.logSession(s, '2026-10-06', 'A', today).reason, 'future');
   assert.equal(Store.logSession(s, 'x', 'A', today).reason, 'invalid');
 });
+
+test('Kalorien-Ziel: wird gespeichert, alte Daten ohne Ziel bleiben gültig, Unsinn wird verworfen', () => {
+  assert.equal(Store.migrate({ schema: 3, goalK: 1800 }).goalK, 1800);
+  assert.equal(Store.migrate({ schema: 3 }).goalK, null);
+  assert.equal(Store.migrate({ schema: 2, goalP: 100 }).goalK, null);
+  assert.equal(Store.migrate({ schema: 3, goalK: -5 }).goalK, null);
+  assert.equal(Store.migrate({ schema: 3, goalK: 'viel' }).goalK, null);
+  assert.equal(Store.newState().goalK, null);
+});

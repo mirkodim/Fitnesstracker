@@ -325,22 +325,39 @@ test.describe('Essen', () => {
     const e = entry(page, 'Magerquark');
     await expect(e.locator('.nchip').nth(0)).toHaveText('168 kcal');
     await expect(e.locator('.nchip').nth(1)).toHaveText('30 g Protein');
-    await expect(page.locator('.prot-num b')).toHaveText('30');
+    await expect(page.locator('.prot-num:not(.kc-num) b')).toHaveText('30');
     await expect(page.locator('.tile', { hasText: 'Kalorien' }).locator('b')).toContainText('168');
     // Protein-Ziel
-    await page.getByRole('button', { name: 'Protein-Ziel festlegen' }).click();
+    await page.getByRole('button', { name: 'Ziele festlegen' }).click();
     await page.locator('#goal-w').fill('60');
     await expect(page.locator('#goal-hint')).toContainText('84 bis 120 g');
     await page.getByRole('button', { name: /1,6 g pro kg übernehmen \(96 g\)/ }).click();
-    await expect(page.locator('.prot-num')).toContainText('von 96 g');
-    await expect(page.locator('.prot-sub')).toHaveText('Noch 66 g bis zum Ziel');
+    await expect(page.locator('.prot-num:not(.kc-num)')).toContainText('von 96 g');
+    await expect(page.locator('.prot-sub:not(.kc-sub)')).toHaveText('Noch 66 g bis zum Ziel');
     await expect(page.locator('header.top .prog')).toContainText('30 von 96 g');
+    // Kalorien-Ziel: gleiche Bedienung wie beim Protein, die Kachel "Kalorien" wird zur Zielanzeige
+    await page.locator('#goal-k').fill('2000');
+    await page.locator('#goal-k').blur();
+    await expect(page.locator('.kc-num')).toContainText('168');
+    await expect(page.locator('.kc-num')).toContainText('von 2000 kcal');
+    await expect(page.locator('.kc-sub')).toHaveText('Noch 1832 kcal bis zum Ziel');
+    await expect(page.locator('header.top .prog').nth(1)).toContainText('168 von 2000 kcal');
+    await expect(page.locator('.tile', { hasText: 'Kalorien' })).toHaveCount(0);
+    expect((await stored(page)).goalK).toBe(2000);
+    await page.locator('#goal-k').fill('100');
+    await page.locator('#goal-k').blur();
+    await expect(page.locator('.kc-sub')).toHaveText('Über dem Ziel: 68 kcal');
+    await page.locator('#goal-k').fill('');
+    await page.locator('#goal-k').blur();
+    await expect(page.locator('.kc-num')).toHaveCount(0);
+    expect((await stored(page)).goalK).toBeNull();
+    await expect(page.locator('.tile', { hasText: 'Kalorien' }).locator('b')).toContainText('168');
     // ganze Menge ohne Gramm wird mit eingerechnet, pro 100 g ohne Gramm nicht
     await page.getByRole('button', { name: 'ganze Menge' }).click();
     await fill(page, { name: 'Riegel', kcal: '210', p: '20' });
     await expect(page.locator('#food-preview')).toHaveText('Gesamt: 210 kcal · 20 g Protein');
     await field(page, 'p').press('Enter');
-    await expect(page.locator('.prot-num b')).toHaveText('50');
+    await expect(page.locator('.prot-num:not(.kc-num) b')).toHaveText('50');
     await page.getByRole('button', { name: 'pro 100 g' }).click();
     await fill(page, { name: 'Haferflocken', kcal: '370' });
     await expect(page.locator('#food-preview')).toContainText('Ohne Menge werden die Werte nur pro 100 g gespeichert');
@@ -394,7 +411,7 @@ test.describe('Essen', () => {
     expect((await stored(page)).food[TODAY][0].mode).toBe('100');
     await expect(entry(page, 'Hafermilch').locator('.fe-name small')).toHaveText('200 g');
     // Tagesbilanz zählt ml wie g
-    await expect(page.locator('.prot-num b')).toHaveText('2,4');
+    await expect(page.locator('.prot-num:not(.kc-num) b')).toHaveText('2,4');
   });
 
   test('Eintrag bearbeiten: Formular füllt sich, Speichern, Abbrechen, nichts geht verloren', async ({ page, site }) => {
