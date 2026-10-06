@@ -245,7 +245,7 @@ function FlowUI(A) {
         '<button type="button" class="prow-i" data-act="b-del" data-ex="' + it.ex + '" aria-label="' + esc(ex.name) + ' entfernen">' + I.TRASH + '</button></div>' + (open ? panelHTML(it, i, n) : '') + '</div>';
     }).join('') + '</div>';
     h += '<button class="btn ghost" type="button" data-act="b-add">Übung hinzufügen</button>';
-    if (!edit && d.mode === 'new') h += '<button class="btn ghost sm" type="button" data-act="b-reroll">Anderen Vorschlag zeigen</button>';
+    if (!edit && d.mode === 'new' && R.wiz) h += '<button class="btn ghost sm" type="button" data-act="b-reroll">Anderen Vorschlag zeigen</button>';
     h += '<button class="btn" type="button" data-act="b-next"' + (n ? '' : ' disabled') + '>' + (edit ? 'Speichern' : 'Weiter') + '</button>';
     var sub = n ? plural(n, 'Übung', 'Übungen') + ' · ' + plural(setCount(d.items), 'Satz', 'Sätze') : 'Noch leer';
     return { head: topBar(edit ? 'Training bearbeiten' : 'Dein Vorschlag', sub), foot: false, main: h };
@@ -275,6 +275,7 @@ function FlowUI(A) {
         return '<button type="button" class="rc" data-act="pick-group" data-g="' + g.id + '" aria-pressed="' + (c.g === g.id) + '">' + g.label + '</button>';
       }).join('') + '</div>';
       if (d.equip) h += '<div class="chiprow"><button type="button" class="rc" data-act="pick-mine" aria-pressed="' + !!c.mine + '">Nur mit meiner Ausrüstung</button></div>';
+      h += A.choiceBtn('pick-library', 'Alle Übungen durchblättern', 'Mit Suche; mit „+“ kommen mehrere auf einmal ins Training.');
     } else {
       h += '<p class="hint">Diese Übungen trainieren dasselbe und passen zu deiner Ausrüstung.</p>';
     }
@@ -285,7 +286,8 @@ function FlowUI(A) {
   /* ---------- name and save ---------- */
   /* "Beine & Gesäss", and a number behind it when the user already has a training of that name */
   function suggestName() {
-    var d = R.bd, base = d.groups && d.groups.length ? joinNice(labelsOf(d.groups)).replace(/, /g, ' & ').replace(' und ', ' & ') : 'Training';
+    var d = R.bd, gs = d.groups && d.groups.length ? d.groups : chipGroups(d.items);
+    var base = gs.length ? joinNice(labelsOf(gs)).replace(/, /g, ' & ').replace(' und ', ' & ') : 'Training';
     var all = Store.allTrainings(S()), taken = {};
     all.own.concat(all.ready).forEach(function (t) { taken[t.name.toLowerCase()] = true; });
     var name = base, i = 2;
@@ -485,6 +487,7 @@ function FlowUI(A) {
   function saveDraft() {
     var d = R.bd, s = S(), t;
     if (!d.items.length) return;
+    if (!d.groups || !d.groups.length) d.groups = chipGroups(d.items);
     if (d.mode === 'edit') {
       t = null;
       s.trainings.forEach(function (x) { if (x.id === d.id) t = x; });
@@ -522,6 +525,10 @@ function FlowUI(A) {
 
   /* picking */
   act('pick-group', function (b) { R.pickCtx.g = b.getAttribute('data-g'); A.render(); });
+  /* the whole library with the plus buttons: the same training keeps growing, "Weiter" leads back to it */
+  act('pick-library', function () {
+    A.go({ tab: 'make', seg: 'lib', flow: 'home', detail: null, lib: { g: null, all: true, q: '', mine: R.lib.mine, eq: false } });
+  });
   act('pick-mine', function () { R.pickCtx.mine = !R.pickCtx.mine; A.render(); });
   act('pick-view', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
   act('pick-add', function (b) {

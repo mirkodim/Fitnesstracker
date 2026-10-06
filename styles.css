@@ -511,3 +511,16 @@ select {
 /* food: "Bisherige Lebensmittel" */
 .book { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
 .book h4.sec { margin-top: 10px; }
+
+/* library rows: the row opens the exercise, the plus puts it into the new training */
+.row-main { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; gap: 14px; padding: 0; text-align: left; background: none; border: 0; color: inherit; cursor: pointer; }
+.row-add { flex: none; width: 48px; height: 48px; display: grid; place-items: center; padding: 0; cursor: pointer; border-radius: 12px; border: 2px solid var(--line); background: var(--surface-2); color: var(--accent); }
+.row-add[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* what is in the new training so far, stuck above the bottom bar */
+.draftbar {
+  position: sticky; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; background: var(--surface); border: 2px solid var(--accent); border-radius: 16px; box-shadow: 0 4px 18px rgba(0, 0, 0, .14);
+}
+.draftbar > span { flex: 1 1 8em; min-width: 0; line-height: 1.2; }
+.draftbar .btn.sm { width: auto; min-width: 96px; }
+.draftbar .link { padding: 0 6px; }
