@@ -40,7 +40,8 @@ test('Die zehn Übungen der ersten Version: Angaben und Hinweise sind wortgleich
     assert.equal(!!e.weight, !!s.weight, id + ' Gewichtsfeld');
     assert.equal(!!e.knee, !!s.knee, id + ' Knie');
     assert.equal(!!e.timer, !!s.timer, id);
-    if (!s.timer) { assert.equal(e.reps, s.big, id); assert.equal(e.unit, s.unit, id); }
+    // die Wiederholungen von Tag A und B stehen unverändert in den Trainings (siehe unten); die Bibliothek beginnt mit einem der drei Bereiche
+    if (!s.timer) { assert.equal(e.unit, s.unit, id); assert.ok(plan.REPS.includes(e.reps), id + ' ' + e.reps); }
     assert.equal(e.rest, s.rest, id);
     const t = swiss(ref.TIPS[id]);
     assert.deepEqual({ watch: e.watch, mistakes: e.mistakes, feel: e.feel }, t, id + ' Hinweise');
@@ -133,12 +134,28 @@ test('Jeder Bereich hat genug Übungen, auch ohne jede Ausrüstung', () => {
   for (const leaf of Object.keys(LEAVES)) assert.ok(LIB.some((ex) => ex.regions.includes(leaf)), leaf);
 });
 
-test('Jedes Gerät kommt in mindestens einer Übung vor, jede Voreinstellung ist gültig', () => {
+test('Jedes Gerät kommt in mindestens einer Übung vor, es gibt genau drei Orte zum Trainieren', () => {
   for (const e of EQUIP) assert.ok(LIB.some((ex) => ex.eq.some((t) => t.split('|').includes(e.id))), e.label + ' wird nicht gebraucht');
   for (const p of PRESETS) assert.ok(p.equip.every((id) => EQUIP.some((e) => e.id === id)), p.id);
+  assert.deepEqual(PRESETS.map((p) => p.label), ['Fitnessstudio', 'Homegym', 'Ohne Ausrüstung']);
+  assert.deepEqual(PRESETS.map((p) => p.id), ['gym', 'homegym', 'none']);
+  assert.equal(PRESETS[0].equip.length, EQUIP.length, 'im Fitnessstudio ist alles da');
+  assert.deepEqual(PRESETS[2].equip, []);
+  assert.ok(PRESETS[1].equip.length > 0 && PRESETS[1].equip.length < EQUIP.length);
+  assert.equal(plan.LEVELS, undefined, 'keine Stufenfrage mehr');
+  assert.equal(plan.TIMES, undefined, 'keine Zeitfrage mehr');
 });
 
-test('Vorlagen: 30 bis 90 Minuten, gültige Übungen, passende Angaben', () => {
+test('Wiederholungen: genau drei Bereiche, jede Übung beginnt mit einem davon', () => {
+  assert.deepEqual(plan.REPS, ['6–8', '8–10', '8–12']);
+  for (const ex of LIB) if (!ex.timer) assert.ok(plan.REPS.includes(ex.reps), ex.id + ' hat ' + ex.reps);
+  const used = new Set(LIB.filter((e) => !e.timer).map((e) => e.reps));
+  assert.equal(used.size, 3, 'alle drei Bereiche werden gebraucht');
+  // die fertigen Vorschläge nehmen die Werte der Bibliothek, nur Tag A und B behalten ihre eigenen aus dem ersten Plan
+  for (const t of TEMPLATES.filter((x) => !x.origin)) for (const it of t.items) assert.equal(it.reps, undefined, t.id + ' ' + it.ex);
+});
+
+test('Vorlagen: gültige Übungen, passende Angaben, nirgends eine Zeitangabe', () => {
   const ready = TEMPLATES.filter((t) => !t.origin);
   assert.ok(ready.length >= 14, 'mindestens 14 Vorschläge, es sind ' + ready.length);
   const ids = TEMPLATES.map((t) => t.id);
@@ -147,10 +164,7 @@ test('Vorlagen: 30 bis 90 Minuten, gültige Übungen, passende Angaben', () => {
     assert.ok(t.name && t.items.length >= 3, t.id);
     assert.equal(new Set(t.items.map((i) => i.ex)).size, t.items.length, t.id + ' doppelte Übung');
     for (const it of t.items) assert.ok(EX[it.ex], t.id + ' ' + it.ex);
-    const min = Builder.minutesOf(t.items);
-    if (!t.origin) {
-      assert.match(t.id, /^p-/);
-      assert.ok(min >= 30 && min <= 90, t.name + ': ' + min + ' Minuten');
-    }
+    if (!t.origin) assert.match(t.id, /^p-/);
+    assert.doesNotMatch(t.name + ' ' + (t.sub || ''), /\d+\s*(Min|Minute|Stunde)|\bMin\.|Dauer/i, t.id + ' nennt eine Zeit');
   }
 });

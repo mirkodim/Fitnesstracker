@@ -1,6 +1,6 @@
 /* Trainings-Strichliste: screens, events, timers and the installable-app parts (service worker, update bar).
    Rules and data handling live in store.js, the exercises in lib.js, the ready-made trainings in trainings.js, the stick figures in fig.js and anims.js.
-   The start flow ("Was möchtest du heute trainieren?", assistant, "Meine Trainings") is in ui-flow.js, the exercise library in ui-lib.js.
+   The training screens (Meine Trainings, the part "Training" of Erstellen with its assistant) are in ui-flow.js, the exercise library in ui-lib.js.
    Both get the shared pieces of this file through the object A and add their screens and button handlers (A.acts). */
 (function () {
   'use strict';
@@ -14,12 +14,13 @@
   var EYE = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
   var TRASH = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7M10.5 11v5.5M13.5 11v5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var ICONS = {
-    train: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-    lib: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4.5 4.5h6.5v15H4.5zM13 4.5h6.5v6.5H13zM13 13h6.5v6.5H13z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    mine: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    make: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     cal: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     food: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8.5c0-1.5 1.5-1.5 1.5-3.5M14 8.5c0-1.5 1.5-1.5 1.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
   };
-  var TABS = [['train', 'Training'], ['lib', 'Übungen'], ['cal', 'Kalender'], ['food', 'Essen']];
+  /* Meine Trainings opens first. Erstellen holds the new training and the exercise library. */
+  var TABS = [['mine', 'Meine Trainings'], ['make', 'Erstellen'], ['cal', 'Kalender'], ['food', 'Essen']];
 
   var MON = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   var WDL = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
@@ -40,11 +41,11 @@
   var now0 = new Date();
   /* runtime state, never stored */
   var R = {
-    tab: 'train', flow: 'home', pv: null, detail: null, sel: [], lib: { g: null, q: '', mine: false, eq: false },
+    tab: 'mine', flow: 'home', mineRun: false, pv: null, detail: null, sel: [], lib: { g: null, all: false, q: '', mine: false, eq: false },
     rest: null, plank: null, fresh: null, confirm: false, last: null, pick: {}, demoOpen: false, calForm: false,
     cal: { y: now0.getFullYear(), m: now0.getMonth() }, calSel: todayKey(), calOpen: null, calUndo: null, calAdd: false,
     foodDate: todayKey(), draft: Store.newDraft('100'), foodMsg: '', foodGoto: null, undo: null, edit: null, copyOpen: false, editY: 0,
-    goalOpen: false, bkOpen: false, bkMsg: '', restore: null,
+    bookOpen: false, bookQ: '', goalOpen: false, bkOpen: false, bkMsg: '', restore: null,
     upd: null, offlineReady: false, saveFailed: false, loadStatus: loaded.status
   };
 
@@ -205,11 +206,11 @@
 
   /* ---------- navigation: every step forward is one entry in the browser history, so the phone's back button steps back ---------- */
   var navStack = [], pendingPops = 0;
-  function snap() { return { tab: R.tab, flow: R.flow, pv: R.pv, detail: R.detail ? { id: R.detail.id } : null, lib: JSON.parse(JSON.stringify(R.lib)), sel: R.sel.slice() }; }
-  function applySnap(s) { R.tab = s.tab; R.flow = s.flow; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.sel = s.sel; }
+  function snap() { return { tab: R.tab, flow: R.flow, seg: R.seg, pv: R.pv, detail: R.detail ? { id: R.detail.id } : null, lib: JSON.parse(JSON.stringify(R.lib)), sel: R.sel.slice() }; }
+  function applySnap(s) { R.tab = s.tab; R.flow = s.flow; R.seg = s.seg; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.sel = s.sel; }
   function resetTransient() {
     R.plank = null; R.confirm = false; R.undo = null; R.calUndo = null; R.edit = null; R.copyOpen = false; R.foodGoto = null; R.restore = null;
-    R.calForm = false; R.calAdd = false; R.demoOpen = false;
+    R.calForm = false; R.calAdd = false; R.demoOpen = false; R.bookOpen = false;
   }
   function go(patch) {
     navStack.push(snap());
@@ -241,7 +242,7 @@
       applySnap(s); resetTransient(); render(); toTop();
       return;
     }
-    R.tab = 'train'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop();
+    R.tab = 'mine'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop();
   }
   window.addEventListener('popstate', function () {
     if (navStack.length) {
@@ -249,14 +250,20 @@
       pendingPops = 0;
       while (n-- > 0 && navStack.length) s = navStack.pop();
       applySnap(s); resetTransient(); render(); toTop();
-    } else if (R.tab !== 'train' || R.flow !== 'home' || R.detail) { pendingPops = 0; R.tab = 'train'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop(); }
+    } else if (R.tab !== 'mine' || R.flow !== 'home' || R.detail) { pendingPops = 0; R.tab = 'mine'; R.flow = 'home'; R.detail = null; resetTransient(); render(); toTop(); }
   });
   try { history.replaceState({ d: 0 }, ''); } catch (e) { /* ignore */ }
 
+  /* A tab always opens at its start, except that a training in progress stays open: whoever looks something up in Erstellen
+     or writes down a meal comes back to the same exercise. Tapping the tab one is on leads back to its start. */
   function goTab(tab, key) {
     var patch = { tab: tab, detail: null };
-    if (tab === 'train' && R.tab === 'train' && R.flow !== 'run') patch.flow = 'home';
-    if (tab === 'lib' && R.tab === 'lib') patch.lib = { g: null, q: '', mine: R.lib.mine, eq: false };
+    if (R.tab === 'mine') R.mineRun = R.flow === 'run' && !R.detail;
+    if (tab === 'mine') patch.flow = R.mineRun ? 'run' : 'home';
+    if (tab === 'make') {
+      patch.flow = 'home';
+      if (R.tab === 'make') patch.lib = { g: null, all: false, q: '', mine: R.lib.mine, eq: false };
+    }
     if (tab === 'food' && key && parseKey(key)) patch.foodDate = key;
     if (tab === 'cal' && key && parseKey(key)) { var d = parseKey(key); patch.calSel = key; patch.cal = { y: d.getFullYear(), m: d.getMonth() }; patch.calOpen = null; }
     go(patch);
@@ -267,7 +274,7 @@
     Store.touch(S, id);
     R.rest = null; R.last = null;
     save();
-    if (fresh) resetTo({ tab: 'train', flow: 'run', detail: null }); else go({ tab: 'train', flow: 'run', detail: null });
+    if (fresh) resetTo({ tab: 'mine', flow: 'run', detail: null }); else go({ tab: 'mine', flow: 'run', detail: null });
   }
 
   /* ---------- actions: training run ---------- */
@@ -359,7 +366,7 @@
     if (Store.isBlankEntry(e)) { R.foodMsg = 'Trage mindestens etwas ein. Alle Felder sind freiwillig.'; setMsg('food-msg', R.foodMsg); return; }
     e.id = Store.uid();
     Store.addFood(S, R.foodDate, e);
-    R.undo = null; R.foodGoto = null;
+    R.undo = null; R.foodGoto = null; R.bookOpen = false;
     R.draft = Store.newDraft(R.draft.mode);
     R.foodMsg = 'Eingetragen.';
     save(); render();
@@ -439,7 +446,8 @@
     S = state;
     refreshDays();
     R.pick = {}; R.rest = null; R.plank = null; R.last = null; R.restore = null; R.edit = null; R.calOpen = null; R.calUndo = null; R.undo = null;
-    R.flow = resumeCandidate() ? 'run' : 'home';
+    R.mineRun = !!resumeCandidate();
+    R.flow = (R.tab === 'mine' && R.mineRun) ? 'run' : 'home';
     save();
     R.bkMsg = 'Wiederhergestellt: ' + countsText(Store.counts(S)) + '.';
     render();
@@ -785,6 +793,31 @@
     return h + '</section>';
   }
 
+  /* "Bisherige Lebensmittel": everything that was ever entered, A to Z, with a search. A tap fills the form. */
+  function bookMeta(e) {
+    var parts = Store.partsOf(e.v);
+    return parts.length ? parts.join(' · ') + (e.mode === 'por' ? ' für die ganze Menge' : ' pro 100 ' + Store.unitOf(e.mode)) : 'ohne Nährwerte';
+  }
+  function bookListHTML() {
+    var all = Store.foodBook(S), q = R.bookQ.trim().toLowerCase(), last = '';
+    var list = q ? all.filter(function (e) { return e.name.toLowerCase().indexOf(q) >= 0; }) : all;
+    if (!all.length) return '<p class="empty">Hier erscheinen alle Lebensmittel, die du einträgst.</p>';
+    if (!list.length) return '<p class="empty">Kein Lebensmittel gefunden.</p>';
+    var h = '<p class="hint" role="status">' + (list.length === 1 ? '1 Lebensmittel' : list.length + ' Lebensmittel') + '</p>';
+    list.forEach(function (e) {
+      var L = e.name.charAt(0).toUpperCase().normalize('NFD').charAt(0);
+      if (!/[A-Z]/.test(L)) L = '#';
+      if (L !== last) { h += (last ? '</div>' : '') + '<h4 class="eyebrow sec">' + L + '</h4><div class="list">'; last = L; }
+      h += '<button type="button" class="row" data-act="book-pick" data-name="' + esc(e.name) + '"><span class="rn"><b>' + esc(e.name) + '</b><small>' + esc(bookMeta(e)) + '</small></span>' + CHEV_R + '</button>';
+    });
+    return h + '</div>';
+  }
+  function bookHTML() {
+    return '<div class="book" id="book"><div class="fcol"><label class="sr" for="book-q">Lebensmittel suchen</label>' +
+      '<input id="book-q" data-bookq="1" type="search" enterkeyhint="search" autocomplete="off" placeholder="Lebensmittel suchen" value="' + esc(R.bookQ) + '"></div>' +
+      '<div id="book-list">' + bookListHTML() + '</div></div>';
+  }
+
   function fieldHTML(n, d) {
     return '<div class="fcol"><label for="f-' + n.k + '">' + n.l + ' (' + n.u + ')</label><input id="f-' + n.k + '" data-draft-v="' + n.k + '" type="text" inputmode="decimal" autocomplete="off" value="' + esc(d.v[n.k]) + '"></div>';
   }
@@ -819,7 +852,9 @@
       }
       h += '</div>';
     } else {
-      h += '<button class="btn" type="button" data-act="food-add">Hinzufügen</button>';
+      h += '<button class="btn" type="button" data-act="food-add">Hinzufügen</button>' +
+        '<button class="btn ghost sm" type="button" data-act="book-toggle" aria-expanded="' + R.bookOpen + '">Bisherige Lebensmittel</button>';
+      if (R.bookOpen) h += bookHTML();
     }
     h += '<p class="msg" id="food-msg">' + esc(R.foodMsg) + '</p>';
     if (R.foodGoto) h += '<div class="note undo"><span>Zum Tag wechseln?</span><button class="link" type="button" data-act="food-goto" data-key="' + R.foodGoto + '">Ansehen</button></div>';
@@ -857,7 +892,7 @@
       ? 'Deine Daten bleiben nur auf diesem Handy gespeichert. Das Training beginnt jeden Tag neu.'
       : '<span class="warn">Gerade kann nichts gespeichert werden.</span> Die Daten bleiben nur, solange die App offen ist. Sichere sie mit „Daten kopieren“ oder „Als Datei sichern“.') + '</p>';
     if (R.loadStatus === 'corrupt') h += '<p>Die gespeicherten Daten waren nicht lesbar und wurden beiseitegelegt. Die App hat neu begonnen.</p>';
-    if (R.tab === 'train' && R.flow === 'run') {
+    if (R.tab === 'mine' && R.flow === 'run') {
       var name = curTraining().name;
       h += R.confirm
         ? '<div class="confirm"><span>Alle Haken von ' + esc(name) + ' löschen?</span><div class="two">' +
@@ -896,6 +931,12 @@
   };
   FlowUI(A);
   LibUI(A);
+  /* the search field of "Bisherige Lebensmittel" filters the list while typing and leaves the field alone (the keyboard stays open) */
+  A.inputs.bookq = function (t) {
+    R.bookQ = t.value;
+    var el = document.getElementById('book-list');
+    if (el) el.innerHTML = bookListHTML();
+  };
 
   R.flow = resumeCandidate() ? 'run' : 'home';
 
@@ -909,8 +950,7 @@
     else if (R.tab === 'food') {
       var k = R.foodDate, T = Store.dayTotals(S, k);
       head = foodHeaderHTML(); main = summaryHTML(T) + formHTML() + foodListHTML(k);
-    } else if (R.tab === 'lib') { v = A.views.lib(); head = v.head; main = v.main; foot = v.foot !== false; }
-    else if (R.flow === 'run') { v = runView(); head = v.head; main = v.main; }
+    } else if (R.tab === 'mine' && R.flow === 'run') { v = runView(); head = v.head; main = v.main; }
     else { v = A.views.flow(); head = v.head; main = v.main; foot = v.foot !== false; }
     app.innerHTML = '<h1 class="sr">Trainings-Strichliste</h1>' + head + '<main>' + main + '</main>' + (foot ? footHTML() : '') + navHTML();
     R.fresh = null;
@@ -928,7 +968,7 @@
     var t = curTraining(), d = t.id, cur = currentEx(t), n, k;
 
     if (a === 'tab') { goTab(b.getAttribute('data-tab'), b.getAttribute('data-key')); }
-    else if (a === 'flow-home') { R.rest = null; R.plank = null; go({ tab: 'train', flow: 'home', detail: null }); }
+    else if (a === 'flow-home') { R.rest = null; R.plank = null; go({ tab: 'mine', flow: 'home', detail: null }); }
     else if (a === 'set' && cur) {
       var i = parseInt(b.getAttribute('data-i'), 10); n = doneSets(d, cur.id);
       setCount(cur, i < n ? i : n + 1);
@@ -1019,6 +1059,16 @@
     } else if (a === 'food-recent') {
       var rc = S.recent[parseInt(b.getAttribute('data-i'), 10)];
       if (rc) { R.draft = Store.draftFromEntry(rc); R.foodMsg = ''; R.foodGoto = null; render(); }
+    } else if (a === 'book-toggle') {
+      R.bookOpen = !R.bookOpen; R.bookQ = ''; render();
+      if (R.bookOpen) scrollToId('book');
+    } else if (a === 'book-pick') {
+      var bn = b.getAttribute('data-name'), be = null;
+      Store.foodBook(S).forEach(function (x) { if (x.name === bn) be = x; });
+      if (be) {
+        R.draft = Store.draftFromEntry(be); R.bookOpen = false; R.foodMsg = 'Übernommen. Prüfe die Menge und tippe auf „Hinzufügen“.'; R.foodGoto = null;
+        render(); scrollToId('food-form');
+      }
     } else if (a === 'food-edit') {
       startFoodEdit(b.getAttribute('data-id'));
     } else if (a === 'food-save') {
@@ -1123,7 +1173,7 @@
   });
 
   /* ---------- timers ---------- */
-  var inRun = function () { return R.tab === 'train' && R.flow === 'run' && !R.detail; };
+  var inRun = function () { return R.tab === 'mine' && R.flow === 'run' && !R.detail; };
   setInterval(function () {
     var now = Date.now(), el;
     if (R.plank) {

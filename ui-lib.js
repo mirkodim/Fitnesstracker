@@ -1,5 +1,7 @@
-/* The exercise library (tab "Übungen") and the detail page of one exercise (animation, hints). The detail page is also reachable from the
-   start flow (R.detail), so it is drawn over whatever screen opened it. LibUI(A) adds A.views.lib and A.views.detail and the button handlers. */
+/* The exercise library (the part "Übungen" of the tab "Erstellen") and the detail page of one exercise (animation, hints).
+   The library has three screens: the start (search, equipment, the areas of the body, the button "Alle Übungen"), one area, and all exercises
+   sorted by area. The detail page is also reachable from the start flow (R.detail), so it is drawn over whatever screen opened it.
+   LibUI(A) adds A.views.lib and A.views.detail and the button handlers. */
 function LibUI(A) {
   'use strict';
 
@@ -10,6 +12,7 @@ function LibUI(A) {
 
   function S() { return A.S(); }
   function act(name, fn) { A.acts[name] = fn; }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
   function haveNow() { var p = S().prefs; return p.equip ? Builder.haveSet(p.equip) : null; }
   function eqText(ex) {
     if (!ex.eq.length) return 'Nur Körpergewicht';
@@ -50,11 +53,15 @@ function LibUI(A) {
       h += '<section class="card"><div><h3 class="eyebrow">Meine Ausrüstung</h3><p class="hint">Damit zeige ich dir, was du damit trainieren kannst. Gespeichert wird nur auf diesem Handy.</p></div>' + A.eqPanelHTML(s.prefs.equip || []) +
         '<button class="btn sm" type="button" data-act="lib-eq">Fertig</button></section>';
     }
-    h += '<div id="lib-tiles"' + (searching ? ' hidden' : '') + '><div class="tiles3 nav3" role="list" aria-label="Bereiche">' + GROUPS.map(function (g) {
-      var n = Builder.listGroup(g.id, l.mine && have ? have : null).length;
-      return '<button type="button" class="gt" role="listitem" data-act="lib-group" data-g="' + g.id + '">' + FIG.icon(g.id) + '<span>' + g.label + '</span><small>' + n + '</small></button>';
-    }).join('') + '</div></div><div id="lib-res">' + resultsHTML() + '</div>';
-    return { head: head('Übungen', LIB.length + ' Übungen mit Animation'), main: h };
+    var shown = Builder.allByGroup(l.mine && have ? have : null).reduce(function (n, g) { return n + g.list.length; }, 0);
+    h += '<div id="lib-tiles"' + (searching ? ' hidden' : '') + '>' +
+      A.choiceBtn('lib-all', 'Alle Übungen', shown + ' Übungen zum Durchblättern, nach Körperteil sortiert') +
+      '<p class="eyebrow by">Oder nach Körperteil</p>' +
+      '<div class="tiles3 nav3" role="list" aria-label="Bereiche">' + GROUPS.map(function (g) {
+        var n = Builder.listGroup(g.id, l.mine && have ? have : null).length;
+        return '<button type="button" class="gt" role="listitem" data-act="lib-group" data-g="' + g.id + '">' + FIG.icon(g.id) + '<span>' + g.label + '</span><small>' + n + '</small></button>';
+      }).join('') + '</div></div><div id="lib-res">' + resultsHTML() + '</div>';
+    return { head: A.rootBar('Übungen', LIB.length + ' Übungen mit Animation'), main: A.segHTML('lib') + h };
   }
 
   function groupView() {
@@ -74,7 +81,28 @@ function LibUI(A) {
     return { head: head(g.label, total + ' Übungen', true), foot: false, main: h };
   }
 
-  A.views.lib = function () { return R.lib.g && GROUP[R.lib.g] ? groupView() : rootView(); };
+  /* "Alle Übungen": every exercise once, under the body area it trains first; a row of buttons jumps to an area */
+  function allView() {
+    var l = R.lib, have = haveNow(), filter = l.mine && have, groups = Builder.allByGroup(filter ? have : null).filter(function (g) { return g.list.length; }), total = 0, h = '';
+    groups.forEach(function (g) { total += g.list.length; });
+    if (S().prefs.equip) {
+      h += '<div class="chiprow"><button type="button" class="rc" data-act="lib-mine" aria-pressed="' + !!l.mine + '">Nur passende Übungen</button></div>';
+    }
+    if (!groups.length) h += '<p class="empty">Nichts dabei, was zu deiner Ausrüstung passt.</p>';
+    h += '<div class="chiprow" role="group" aria-label="Zu einem Körperteil springen">' + groups.map(function (g) {
+      return '<button type="button" class="rc" data-act="lib-jump" data-g="' + g.id + '">' + GROUP[g.id].label + '</button>';
+    }).join('') + '</div>';
+    groups.forEach(function (g) {
+      h += '<section aria-labelledby="all-h-' + g.id + '"><h3 class="eyebrow sec" id="all-h-' + g.id + '">' + GROUP[g.id].label + ' · ' + g.list.length + '</h3><div class="list">' +
+        g.list.map(function (ex) { return rowHTML(ex, have); }).join('') + '</div></section>';
+    });
+    return { head: head('Alle Übungen', plural(total, 'Übung', 'Übungen'), true), foot: false, main: h };
+  }
+
+  A.views.lib = function () {
+    if (R.lib.all) return allView();
+    return R.lib.g && GROUP[R.lib.g] ? groupView() : rootView();
+  };
 
   /* ---------- detail page ---------- */
   A.views.detail = function () {
@@ -87,14 +115,16 @@ function LibUI(A) {
       '<p class="rx"><b>' + (ex.timer ? ex.sets + ' × ' + ex.hold + ' s' : ex.sets + ' × ' + ex.reps) + '</b><span>' + esc(ex.timer ? (ex.sides > 1 ? 'pro Seite halten' : 'halten') : ex.unit) + ' empfohlen</span></p>' +
       '<div class="demo-body">' + A.demoBodyHTML(ex, extra) + '</div>';
     if (ex.knee) h += '<div class="note">' + KNEE_NOTE + '</div>';
-    if (R.tab === 'train' && R.flow === 'pick' && R.bd && R.pickCtx) {
+    if (R.flow === 'pick' && R.bd && R.pickCtx) {
       h += '<button class="btn" type="button" data-act="detail-pick" data-ex="' + ex.id + '">' + (R.pickCtx.mode === 'swap' ? 'Dafür tauschen' : 'Zum Training hinzufügen') + '</button>';
     }
     return { head: head(ex.name, regionsText(ex), true), main: h + '</section>' };
   };
 
   /* ---------- handlers ---------- */
-  act('lib-group', function (b) { A.go({ lib: { g: b.getAttribute('data-g'), q: '', mine: R.lib.mine, eq: false } }); });
+  act('lib-group', function (b) { A.go({ lib: { g: b.getAttribute('data-g'), all: false, q: '', mine: R.lib.mine, eq: false } }); });
+  act('lib-all', function () { A.go({ lib: { g: null, all: true, q: '', mine: R.lib.mine, eq: false } }); });
+  act('lib-jump', function (b) { A.scrollToId('all-h-' + b.getAttribute('data-g')); });
   act('lib-open', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
   act('lib-mine', function () { R.lib.mine = !R.lib.mine; A.render(); });
   act('lib-eq', function () { R.lib.eq = !R.lib.eq; A.render(); });
