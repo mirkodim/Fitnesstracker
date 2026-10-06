@@ -68,7 +68,7 @@ Die medizinischen Hinweise sind bewusst vorsichtig: keine Diagnosen, keine Thera
 | `version.js` | Versionsnummer, wird beim Deploy gesetzt |
 | `tools/` | Bauen (`build.mjs`), Prüfen (`check-site.mjs`), lokaler Server (`serve.mjs`), Icons, Kontaktbögen, Scan |
 | `tests/` | Unit-Tests und Playwright-Tests |
-| `reference/`, `PROMPT.md`, `ANLEITUNG.md` | Vorlage und Auftrag, nicht Teil der veröffentlichten Seite |
+| `reference/` | Vorlage der ersten Version (für den Vergleich in den Tests), nicht Teil der veröffentlichten Seite |
 
 Alle Pfade sind relativ (`./…`), weil GitHub Pages unter `/<repo>/` läuft.
 
