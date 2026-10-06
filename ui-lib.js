@@ -9,6 +9,8 @@ function LibUI(A) {
   var GROUP = {};
   GROUPS.forEach(function (g) { GROUP[g.id] = g; });
   var LVL = ['', 'Einsteiger', 'Geübt', 'Fortgeschritten'];
+  var PLUS = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
+  R.draftAsk = false;                                  // "Verwerfen?" is asked in the strip
 
   function S() { return A.S(); }
   function act(name, fn) { A.acts[name] = fn; }
@@ -25,10 +27,26 @@ function LibUI(A) {
       '<div class="mt-wrap"><h2 class="mt">' + esc(title) + '</h2>' + (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div><span></span></div></header>';
   }
 
+  /* the training that is being made (R.bd, see ui-flow.js): exercises of the library can be put into it from every list */
+  function inDraft(id) { return !!R.bd && R.bd.items.some(function (it) { return it.ex === id; }); }
+  /* one exercise: the row opens its page, the button on the right puts it into the new training (and takes it out again) */
   function rowHTML(ex, have) {
-    var miss = have ? Builder.missing(ex, have) : [];
-    return '<button type="button" class="row' + (miss.length ? ' dim' : '') + '" data-act="lib-open" data-ex="' + ex.id + '">' + A.thumbHTML(ex.id) +
-      '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + esc(LVL[ex.lvl] + ' · ' + eqText(ex)) + (miss.length ? ' · fehlt dir' : '') + '</small></span>' + I.CHEV_R + '</button>';
+    var miss = have ? Builder.missing(ex, have) : [], on = inDraft(ex.id);
+    return '<div class="row' + (miss.length ? ' dim' : '') + '"><button type="button" class="row-main" data-act="lib-open" data-ex="' + ex.id + '">' + A.thumbHTML(ex.id) +
+      '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + esc(LVL[ex.lvl] + ' · ' + eqText(ex)) + (miss.length ? ' · fehlt dir' : '') + '</small></span></button>' +
+      '<button type="button" class="row-add" data-act="lib-add" data-ex="' + ex.id + '" aria-pressed="' + on + '" aria-label="' + esc(ex.name) + (on ? ' aus dem neuen Training nehmen' : ' zum neuen Training hinzufügen') + '">' + (on ? I.CHECK : PLUS) + '</button></div>';
+  }
+  /* the strip at the bottom: what is in the new training so far, and the way on */
+  function draftBar() {
+    var d = R.bd;
+    if (!d || !d.items.length) return '';
+    var n = d.items.length, what = d.mode === 'new' ? 'Neues Training' : 'Training in Arbeit';
+    if (R.draftAsk) {
+      return '<div class="draftbar" role="region" aria-label="Training in Arbeit"><span>Training mit ' + n + (n === 1 ? ' Übung' : ' Übungen') + ' verwerfen?</span>' +
+        '<button class="btn sm" type="button" data-act="draft-drop-yes">Verwerfen</button><button class="btn ghost sm" type="button" data-act="draft-drop-no">Behalten</button></div>';
+    }
+    return '<div class="draftbar" role="region" aria-label="Training in Arbeit"><span><b>' + what + '</b> · ' + n + (n === 1 ? ' Übung' : ' Übungen') + '</span>' +
+      '<button class="btn sm" type="button" data-act="draft-open">Weiter</button><button class="link" type="button" data-act="draft-drop">Verwerfen</button></div>';
   }
 
   function searchHits(q) {
@@ -61,7 +79,7 @@ function LibUI(A) {
         var n = Builder.listGroup(g.id, l.mine && have ? have : null).length;
         return '<button type="button" class="gt" role="listitem" data-act="lib-group" data-g="' + g.id + '">' + FIG.icon(g.id) + '<span>' + g.label + '</span><small>' + n + '</small></button>';
       }).join('') + '</div></div><div id="lib-res">' + resultsHTML() + '</div>';
-    return { head: A.rootBar('Übungen', LIB.length + ' Übungen mit Animation'), main: A.segHTML('lib') + h };
+    return { head: A.rootBar('Übungen', LIB.length + ' Übungen mit Animation'), main: A.segHTML('lib') + h + draftBar() };
   }
 
   function groupView() {
@@ -78,7 +96,7 @@ function LibUI(A) {
       h += '<div class="list">' + (list.length ? list.map(function (ex) { return rowHTML(ex, have); }).join('') : '<p class="empty">Nichts dabei, was zu deiner Ausrüstung passt.</p>') + '</div>';
     });
     h += '<p class="hint">Eine Übung kann mehrere Muskeln trainieren. Sie steht dann in jedem passenden Bereich.</p>';
-    return { head: head(g.label, total + ' Übungen', true), foot: false, main: h };
+    return { head: head(g.label, total + ' Übungen', true), foot: false, main: h + draftBar() };
   }
 
   /* "Alle Übungen": every exercise once, under the body area it trains first; a row of buttons jumps to an area */
@@ -96,7 +114,7 @@ function LibUI(A) {
       h += '<section aria-labelledby="all-h-' + g.id + '"><h3 class="eyebrow sec" id="all-h-' + g.id + '">' + GROUP[g.id].label + ' · ' + g.list.length + '</h3><div class="list">' +
         g.list.map(function (ex) { return rowHTML(ex, have); }).join('') + '</div></section>';
     });
-    return { head: head('Alle Übungen', plural(total, 'Übung', 'Übungen'), true), foot: false, main: h };
+    return { head: head('Alle Übungen', plural(total, 'Übung', 'Übungen'), true), foot: false, main: h + draftBar() };
   }
 
   A.views.lib = function () {
@@ -118,6 +136,11 @@ function LibUI(A) {
     if (R.flow === 'pick' && R.bd && R.pickCtx) {
       h += '<button class="btn" type="button" data-act="detail-pick" data-ex="' + ex.id + '">' + (R.pickCtx.mode === 'swap' ? 'Dafür tauschen' : 'Zum Training hinzufügen') + '</button>';
     }
+    else if (R.tab === 'make' && R.seg === 'lib' && R.flow === 'home') {
+      var on = inDraft(ex.id);
+      h += '<button class="btn' + (on ? ' ghost' : '') + '" type="button" data-act="lib-add" data-ex="' + ex.id + '" aria-pressed="' + on + '">' + (on ? 'Aus dem neuen Training nehmen' : 'Zum neuen Training hinzufügen') + '</button>';
+      if (R.bd && R.bd.items.length) h += '<p class="hint" role="status">Im Training: ' + plural(R.bd.items.length, 'Übung', 'Übungen') + '. Mit „Zurück“ suchst du weitere aus.</p>';
+    }
     return { head: head(ex.name, regionsText(ex), true), main: h + '</section>' };
   };
 
@@ -126,6 +149,23 @@ function LibUI(A) {
   act('lib-all', function () { A.go({ lib: { g: null, all: true, q: '', mine: R.lib.mine, eq: false } }); });
   act('lib-jump', function (b) { A.scrollToId('all-h-' + b.getAttribute('data-g')); });
   act('lib-open', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
+  /* a training made from the library: there is no suggestion, the draft starts empty and takes what is tapped */
+  act('lib-add', function (b) {
+    var id = b.getAttribute('data-ex'), eq = S().prefs.equip, d, i;
+    if (!EX[id]) return;
+    if (!R.bd) R.bd = { mode: 'new', id: null, name: '', items: [], groups: [], equip: eq ? eq.slice() : null, note: '', empty: false, undo: null };
+    d = R.bd; R.draftAsk = false;
+    for (i = 0; i < d.items.length; i++) if (d.items[i].ex === id) break;
+    if (i < d.items.length) d.items.splice(i, 1);
+    else if (d.items.length < 24) d.items.push({ ex: id, sets: EX[id].sets });
+    A.render();
+    var again = document.querySelector('[data-act="lib-add"][data-ex="' + id + '"]');
+    if (again && again.focus) again.focus();
+  });
+  act('draft-open', function () { if (R.bd) A.go({ flow: 'build' }); });
+  act('draft-drop', function () { R.draftAsk = true; A.render(); });
+  act('draft-drop-no', function () { R.draftAsk = false; A.render(); });
+  act('draft-drop-yes', function () { R.bd = null; R.wiz = null; R.bOpen = null; R.draftAsk = false; A.render(); });
   act('lib-mine', function () { R.lib.mine = !R.lib.mine; A.render(); });
   act('lib-eq', function () { R.lib.eq = !R.lib.eq; A.render(); });
   act('detail-pick', function (b) {

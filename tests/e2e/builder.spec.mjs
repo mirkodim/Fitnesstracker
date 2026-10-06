@@ -334,6 +334,91 @@ test.describe('Neues Training', () => {
   });
 });
 
+test.describe('Training aus der Bibliothek zusammenstellen', () => {
+  const add = (page, name) => page.getByRole('button', { name: name + ' zum neuen Training hinzufügen' });
+  const added = (page, name) => page.getByRole('button', { name: name + ' aus dem neuen Training nehmen' });
+
+  test('Im Teil "Übungen": mit + Übungen sammeln, auf der Übungsseite hinzufügen, weiter zum Training und speichern', async ({ page, site }) => {
+    await openApp(page, site);
+    await tab(page, 'Erstellen').click();
+    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
+    await expect(page.locator('.draftbar')).toHaveCount(0);                          // noch nichts gesammelt
+    await page.locator('#lib-q').fill('Kniebeuge');
+    await add(page, 'Goblet-Kniebeuge').click();
+    await expect(added(page, 'Goblet-Kniebeuge')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.draftbar')).toContainText('Neues Training · 1 Übung');
+    await page.locator('#lib-q').fill('');
+    // aus dem Körperteil "Bauch" eine zweite, auf der Übungsseite eine dritte
+    await page.locator('.gt[data-g="bauch"]').click();
+    await add(page, 'Dead Bug').click();
+    await expect(page.locator('.draftbar')).toContainText('2 Übungen');
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await page.locator('[data-act="lib-all"]').click();
+    await page.locator('[data-act="lib-open"]', { hasText: 'Gesässbrücke' }).first().click();
+    await page.getByRole('button', { name: 'Zum neuen Training hinzufügen' }).click();
+    await expect(page.getByRole('button', { name: 'Aus dem neuen Training nehmen' })).toBeVisible();
+    await expect(page.locator('p.hint[role="status"]')).toContainText('Im Training: 3 Übungen');
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await expect(added(page, 'Gesässbrücke')).toBeVisible();
+    // eine wieder herausnehmen
+    await added(page, 'Dead Bug').click();
+    await expect(page.locator('.draftbar')).toContainText('2 Übungen');
+    await add(page, 'Dead Bug').click();
+    // weiter: das Training mit genau diesen Übungen
+    await page.locator('.draftbar').getByRole('button', { name: 'Weiter' }).click();
+    await expect(top(page)).toContainText('Dein Vorschlag');
+    await expect(top(page)).toContainText('3 Übungen');
+    expect(await rowNames(page)).toEqual(['Goblet-Kniebeuge', 'Gesässbrücke', 'Dead Bug']);
+    await expect(page.getByRole('button', { name: 'Anderen Vorschlag zeigen' })).toHaveCount(0);        // es gibt keinen Vorschlag, den man würfeln könnte
+    await weiter(page).click();
+    await expect(page.getByLabel('Name')).toHaveValue(/^(Beine|Gesäss|Bauch|Ganzkörper)/);
+    await page.getByLabel('Name').fill('Aus der Bibliothek');
+    await page.getByRole('button', { name: 'Nur speichern' }).click();
+    const s = await stored(page);
+    expect(s.trainings[0].name).toBe('Aus der Bibliothek');
+    expect(s.trainings[0].items.map((i) => i.ex).sort()).toEqual(['x-bridge', 'x-deadbug', 'x-goblet']);
+    // danach ist nichts mehr in Arbeit
+    await tab(page, 'Erstellen').click();
+    await expect(page.locator('.draftbar')).toHaveCount(0);
+  });
+
+  test('Beides geht: erst der Vorschlag, dann die ganze Bibliothek mit +, und die Auswahl nach Körperteil bleibt', async ({ page, site }) => {
+    await openApp(page, site);
+    await startAssistant(page, ['beine']);
+    await place(page, 'gym').click();
+    const rows = page.locator('.brow');
+    const n0 = await rows.count();
+    // 1. Weg: "Übung hinzufügen" zeigt die Auswahl für den Körperteil, ein Tipp fügt hinzu
+    await page.getByRole('button', { name: 'Übung hinzufügen' }).click();
+    await expect(page.locator('[data-act="pick-group"][data-g="beine"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-act="pick-add"]').first().click();
+    expect(await rows.count()).toBe(n0 + 1);
+    // 2. Weg: von dort in die ganze Bibliothek, mehrere hinzufügen, ohne zurückzugehen
+    await page.getByRole('button', { name: 'Übung hinzufügen' }).click();
+    await page.getByRole('button', { name: 'Alle Übungen durchblättern' }).click();
+    await expect(top(page).locator('h2.mt')).toHaveText('Alle Übungen');
+    await expect(page.locator('.draftbar')).toContainText(`${n0 + 1} Übungen`);
+    const inDraft = await page.locator('.row-add[aria-pressed="true"]').count();
+    expect(inDraft).toBe(n0 + 1);                                                    // schon enthaltene sind angehakt
+    await page.locator('section[aria-labelledby="all-h-arme"] .row-add').nth(0).click();
+    await page.locator('section[aria-labelledby="all-h-arme"] .row-add').nth(1).click();
+    await expect(page.locator('.draftbar')).toContainText(`${n0 + 3} Übungen`);
+    await page.locator('.draftbar').getByRole('button', { name: 'Weiter' }).click();
+    await expect(top(page)).toContainText('Dein Vorschlag');
+    expect(await rows.count()).toBe(n0 + 3);
+    // Verwerfen fragt nach
+    await page.goBack();
+    await page.locator('.draftbar').getByRole('button', { name: 'Verwerfen' }).click();
+    await expect(page.locator('.draftbar')).toContainText('verwerfen?');
+    await page.getByRole('button', { name: 'Behalten' }).click();
+    await expect(page.locator('.draftbar')).toContainText(`${n0 + 3} Übungen`);
+    await page.locator('.draftbar').getByRole('button', { name: 'Verwerfen' }).click();
+    await page.getByRole('button', { name: 'Verwerfen', exact: true }).last().click();
+    await expect(page.locator('.draftbar')).toHaveCount(0);
+    await expect(page.locator('.row-add[aria-pressed="true"]')).toHaveCount(0);
+  });
+});
+
 test.describe('Vorschläge der App', () => {
   test('Bereich wählen, Vorschläge ansehen: Filter, Vorschau, ohne Zeitangaben', async ({ page, site }) => {
     await openApp(page, site);
