@@ -737,6 +737,32 @@ x({ id: 'x-wallangel', name: 'Wand-Engel', gear: 'Körpergewicht, Wand', reg: 'r
   mistakes: ['Der untere Rücken wölbt sich von der Wand weg.', 'Die Schultern werden zu den Ohren gezogen.', 'Die Arme lösen sich von der Wand.', 'Zu schnell und mit Gewalt.'],
   feel: 'Oberer Rücken und Schultern. Eine sanfte Mobilisation, auch gut zum Aufwärmen. Ein Ziehen ist in Ordnung, Schmerz nicht.' });
 
+/* ===== Medizinball ===== */
+
+x({ id: 'x-slam', name: 'Medizinball-Slam', gear: 'Medizinball (ein Ball, der nicht springt)', reg: 'ganz schultern bauch', eq: 'mb', lvl: 2, pat: 'cardio',
+  sets: 3, reps: '8–12', rest: 60,
+  cues: ['Ball über den Kopf, dann mit ganzer Kraft auf den Boden schmettern.', 'Aus den Hüften in die Hocke, der Rücken bleibt gerade.'],
+  watch: ['Stehe hüftbreit und nimm den Ball mit beiden Händen vor die Brust.', 'Hebe ihn gestreckt über den Kopf und strecke dich dabei lang.', 'Schmettere den Ball mit Schwung auf den Boden vor deine Füsse und gehe dabei in die Hocke.', 'Nimm den Ball auf (Rücken gerade, Knie gebeugt) und stehe wieder auf.', 'Nimm einen Ball ohne Rückprall und einen Boden, der das aushält.'],
+  mistakes: ['Der Rücken wird beim Aufheben des Balls rund.', 'Nur mit den Armen werfen, ohne Beine und Rumpf.', 'Zu nah an den Füssen, der Ball prellt auf die Zehen.', 'Ein Ball, der zurückspringt.'],
+  feel: 'Ganzer Körper: Schultern, Bauch, Rücken und Beine. Der Puls steigt schnell. Bei Rückenproblemen mit leichtem Ball und kleiner Bewegung.',
+  easier: 'Einen leichteren Ball nehmen und den Ball nur absetzen statt zu werfen.' });
+
+x({ id: 'x-wallball', name: 'Wall Ball', gear: 'Medizinball und Wand', reg: 'oberschenkel gesaess schultern', eq: 'mb', lvl: 2, pat: 'squat',
+  sets: 3, reps: '8–12', rest: 60, knee: true,
+  cues: ['Tief in die Kniebeuge, dann aus den Beinen hoch und den Ball hoch an die Wand.', 'Den Ball fangen und gleich wieder in die Hocke.'],
+  watch: ['Stehe etwa eine Armlänge vor einer festen Wand, den Ball vor der Brust.', 'Gehe in die Kniebeuge, die Knie zeigen über die Zehen, der Rücken bleibt gerade.', 'Drücke dich kräftig hoch und wirf den Ball im Schwung hoch an die Wand.', 'Fange den Ball und gehe sofort weich in die nächste Kniebeuge.', 'Wähle ein Ziel an der Wand, etwa Kopfhöhe oder etwas höher.'],
+  mistakes: ['Die Knie fallen nach innen.', 'Der Ball wird nur mit den Armen geworfen.', 'Der Rücken wird rund.', 'Zu weit von der Wand, der Ball fällt schon vorher.'],
+  feel: 'Oberschenkel und Gesäss, dazu Schultern und Rumpf. Eine fliessende Übung, die den Puls hebt.',
+  easier: 'Ohne Wurf: nur Kniebeuge mit dem Ball vor der Brust.' });
+
+x({ id: 'x-mbcrunch', name: 'Crunch mit Medizinball', gear: 'Medizinball, auf der Matte', reg: 'bauch', eq: 'mb', lvl: 2, pat: 'crunch',
+  sets: 3, reps: '10–15', rest: 45,
+  cues: ['Ball mit gestreckten Armen Richtung Knie schieben.', 'Der untere Rücken bleibt am Boden.'],
+  watch: ['Lege dich auf den Rücken, die Füsse stehen am Boden, die Knie sind gebeugt.', 'Halte den Ball mit gestreckten Armen über der Brust.', 'Hebe die Schultern an und schiebe den Ball Richtung Knie.', 'Spanne den Bauch oben kurz an.', 'Rolle langsam wieder ab, ohne den Kopf ganz abzulegen.'],
+  mistakes: ['Mit Schwung aus den Armen statt aus dem Bauch.', 'Der Kopf wird nach vorn gezogen.', 'Zu hoch aufsetzen, der Rücken hebt ab.', 'Ein zu schwerer Ball.'],
+  feel: 'Die geraden Bauchmuskeln. Der Ball macht es etwas schwerer als der normale Crunch.',
+  easier: 'Ohne Ball oder mit einem leichten Ball.' });
+
 /* ==== new exercises below ==== */
 
 })();

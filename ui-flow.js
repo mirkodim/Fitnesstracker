@@ -146,7 +146,7 @@ function FlowUI(A) {
       '<div class="two"><button class="btn ghost sm" type="button" data-act="pv-edit">' + (t.builtin ? 'Als Kopie anpassen' : 'Bearbeiten') + '</button>' +
       (t.builtin ? '<span></span>' : '<button class="btn danger sm" type="button" data-act="pv-delete">Löschen</button>') + '</div></section>' +
       '<section aria-labelledby="pv-h"><h3 class="eyebrow" id="pv-h">Die Übungen</h3><div class="list">' + rows + '</div></section>';
-    return { head: topBar(t.name), foot: false, main: h };
+    return { head: topBar(t.builtin ? 'Vorschlag' : 'Mein Training'), foot: false, main: h };
   }
 
   /* ---------- the assistant: equipment, time, level ---------- */

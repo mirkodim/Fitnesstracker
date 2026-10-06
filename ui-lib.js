@@ -43,7 +43,7 @@ function LibUI(A) {
 
   function rootView() {
     var l = R.lib, s = S(), have = haveNow(), searching = !!l.q.trim();
-    var h = '<div class="fcol"><label class="sr" for="lib-q">Übung suchen</label><input id="lib-q" data-lq="1" type="search" enterkeyhint="search" autocomplete="off" placeholder="Übung suchen, z. B. Kniebeuge" value="' + esc(l.q) + '"></div>';
+    var h = '<div class="fcol"><label class="sr" for="lib-q">Übung suchen</label><input id="lib-q" data-lq="1" type="search" enterkeyhint="search" autocomplete="off" placeholder="Übung suchen" value="' + esc(l.q) + '"></div>';
     h += '<div class="chiprow" role="group" aria-label="Ausrüstung"><button type="button" class="rc" data-act="lib-eq" aria-expanded="' + !!l.eq + '">Meine Ausrüstung' + (s.prefs.equip ? ' (' + s.prefs.equip.length + ')' : '') + '</button>' +
       (s.prefs.equip ? '<button type="button" class="rc" data-act="lib-mine" aria-pressed="' + !!l.mine + '">Nur passende Übungen</button>' : '') + '</div>';
     if (l.eq) {

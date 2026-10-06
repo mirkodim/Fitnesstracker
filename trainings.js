@@ -99,6 +99,11 @@ var TEMPLATE_MAP = {};
     { ex: 'x-trxcurl', sets: 3 }, { ex: 'b-crunch', sets: 3 }
   ] });
 
+  tr({ id: 'p-medball', name: 'Medizinball Workout', sub: 'Kraft und Puls mit einem Ball', items: [
+    { ex: 'x-wallball', sets: 3 }, { ex: 'x-slam', sets: 3 }, { ex: 'x-medpass', sets: 3 }, { ex: 'x-mbcrunch', sets: 3 },
+    { ex: 'x-bridge', sets: 3 }, { ex: 'x-pushup-knee', sets: 3 }, { ex: 'x-birddog', sets: 3 }
+  ] });
+
   /* ----- Fitnessstudio ----- */
 
   tr({ id: 'p-beine-gym', name: 'Beine und Po im Fitnessstudio', sub: 'Beinpresse, Maschinen und Hantel', items: [

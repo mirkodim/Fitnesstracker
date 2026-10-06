@@ -1429,6 +1429,61 @@
       ] });
   })();
 
+  /* ===== Medizinball ===== */
+
+  /* Medizinball-Slam: the ball goes overhead and is slammed onto the floor in front of the feet */
+  (function () {
+    var A = [150, G], ball = { t: 'ball', at: 'wrist', dx: 0, dy: -6, r: 10 };
+    var floorBall = { t: 'ball', at: 'wrist', dx: 0, dy: 0, r: 10 };
+    var up = norm({ hip: [150, G - 68], th: 2, ankle: A, wrist: [170, 28], ha: -4 });
+    var mid = norm({ hip: [134, 108], th: 36, ankle: A, wrist: [175, 94], ha: 20 });
+    var slam = norm({ hip: [116, 138], th: 70, ankle: A, wrist: [180, 163], ha: 50 });
+    var bad = norm({ hip: [128, 112], th: 70, ankle: A, wrist: [186, 142], round: 12, ha: 85 });
+    add('x-slam', { reps: 3, hl: ['torso', 'upper', 'delt'], thumb: 0, sweep: true, props: [floorBall],
+      steps: [
+        { pose: up, ms: 900, hold: 300, label: 'Den Ball gestreckt über den Kopf heben, lang machen' },
+        { pose: mid, ms: 250, hold: 0, label: 'Den Ball mit Schwung nach unten ziehen' },
+        { pose: slam, ms: 250, hold: 400, label: 'Auf den Boden vor die Füsse schmettern, dabei in die Hocke' },
+        { pose: mid, ms: 700, hold: 0, label: 'Den Ball aufnehmen, der Rücken bleibt gerade' },
+        { pose: up, ms: 500, hold: 300, label: 'Aufstehen und den Ball wieder über den Kopf heben' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Rücken wird rund' }
+      ] });
+  })();
+
+  /* Wall Ball: squat with the ball at the chest, then drive up and throw it high at the wall */
+  (function () {
+    var A = [150, G], ball = { t: 'ball', at: 'wrist', dx: 8, dy: 0, r: 9 };
+    var hipB = [126, G - 38], shB = shOf(hipB, 25), hipT = [150, G - 68], shT = shOf(hipT, 2);
+    var bottom = norm({ hip: hipB, th: 25, ankle: A, wrist: [shB[0] + 18, shB[1] - 8], ha: 12 });
+    var stand = norm({ hip: hipT, th: 2, ankle: A, wrist: [shT[0] + 18, shT[1] - 8], ha: 2 });
+    var throwP = norm({ hip: hipT, th: 2, ankle: A, wrist: [shT[0] + 24, shT[1] - 41], ha: -6 });
+    var bad = norm({ hip: [120, G - 40], th: 55, ankle: A, wrist: [shOf([120, G - 40], 55)[0] + 14, shOf([120, G - 40], 55)[1] - 6], round: 12, ha: 40 });
+    add('x-wallball', { reps: 3, hl: ['thigh', 'glute', 'delt'], thumb: 0, sweep: true, props: [{ t: 'rail', x1: 244, y1: 8, x2: 244, y2: 178 }, ball],
+      steps: [
+        { pose: bottom, ms: 1100, hold: 300, label: 'Tief in die Kniebeuge, der Ball bleibt vor der Brust' },
+        { pose: stand, ms: 450, hold: 0, label: 'Kräftig aufstehen' },
+        { pose: throwP, ms: 350, hold: 400, label: 'Aus den Beinen den Ball hoch an die Wand werfen' },
+        { pose: stand, ms: 700, hold: 0, label: 'Den Ball fangen und weich in die Knie gehen' },
+        { pose: bottom, ms: 600, hold: 300, label: 'Tief in die Kniebeuge, der Ball bleibt vor der Brust' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Rücken wird rund' }
+      ] });
+  })();
+
+  /* Crunch mit Medizinball: the ball goes towards the knees */
+  (function () {
+    var H = [130, 172], A = [172, G], ball = { t: 'ball', at: 'wrist', dx: 2, dy: -8, r: 9 };
+    var down = norm({ hip: H, th: -90, ankle: A, wr: [2, -46], ha: -78, es: 1 });
+    var up = norm({ hip: H, th: -62, ankle: A, wr: [22, -43], ha: -48, es: 1 });
+    var bad = norm({ hip: H, th: -70, ankle: A, wr: [30, -36], ha: -8, hdx: 5, es: 1 });
+    add('x-mbcrunch', { reps: 3, hl: ['torso'], thumb: 1, sweep: true, props: [ball],
+      steps: [
+        { pose: down, ms: 1500, hold: 300, label: 'Langsam ablassen, der Ball bleibt über der Brust' },
+        { pose: up, ms: 1000, hold: 700, label: 'Die Schultern anheben und den Ball Richtung Knie schieben' },
+        { pose: down, ms: 1500, hold: 300, label: 'Langsam ablassen, der Ball bleibt über der Brust' },
+        { pose: bad, ms: 800, hold: 1200, bad: true, label: 'Falsch: Der Kopf wird nach vorn gezogen' }
+      ] });
+  })();
+
   /* ==== new animations below ==== */
 
 })(typeof module !== 'undefined' && module.exports ? require('./fig.js') : FIG);

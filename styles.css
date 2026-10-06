@@ -396,7 +396,8 @@ input.sr:focus-visible + .filebtn { outline: 3px solid var(--accent); outline-of
 /* ---------- start flow, exercise library, editor (version 2) ---------- */
 
 /* long titles in the header stay on one line */
-.mt-wrap .mt, .mt-wrap .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-wrap .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-wrap .mt { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.05; overflow-wrap: anywhere; }
 h3.eyebrow.sec { margin-top: 10px; }
 .card.go { background: var(--accent-soft); border-color: var(--accent); }
 .stack { display: flex; flex-direction: column; gap: 10px; }
