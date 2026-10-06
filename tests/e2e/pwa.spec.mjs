@@ -6,7 +6,7 @@ import { test, expect, openApp, waitControlled, EXE } from './fixtures.mjs';
 
 const png = (buf) => (buf.toString('latin1', 1, 4) === 'PNG' ? buf.readUInt32BE(16) + 'x' + buf.readUInt32BE(20) : null);
 
-test('Manifest ist gültig, die Icons sind erreichbar und haben die angegebene Größe', async ({ page, site }) => {
+test('Manifest ist gültig, die Icons sind erreichbar und haben die angegebene Grösse', async ({ page, site }) => {
   await openApp(page, site, { now: null });
   const href = await page.locator('link[rel="manifest"]').getAttribute('href');
   const res = await page.request.get(new URL(href, site.url).href);

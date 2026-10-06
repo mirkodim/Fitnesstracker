@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const FILES = ['index.html', 'styles.css', 'version.js', 'plan.js', 'fig.js', 'store.js', 'app.js', 'sw.js', 'manifest.webmanifest', '.nojekyll'];
+export const FILES = ['index.html', 'styles.css', 'version.js', 'plan.js', 'lib.js', 'trainings.js', 'fig.js', 'anims.js', 'builder.js', 'store.js', 'ui-flow.js', 'ui-lib.js', 'app.js', 'sw.js', 'manifest.webmanifest', '.nojekyll'];
 export const DIRS = ['icons', 'fonts'];
 
 function stamp(text, re, version, file) {

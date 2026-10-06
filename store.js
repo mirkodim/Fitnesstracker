@@ -1,17 +1,20 @@
 /* Store: state shape, validation, migration, backup parsing and the pure edit helpers.
    No DOM access, so it runs in the browser (global Store) and in Node (module.exports), where the tests use it directly.
-   Everything that comes from outside (localStorage, a pasted backup, a file) goes through migrate(), which never trusts its input. */
+   Everything that comes from outside (localStorage, a pasted backup, a file) goes through migrate(), which never trusts its input.
+   A training is identified by an id: "A" and "B" (the days of the first version), "p-..." (ready-made, trainings.js) or "u..." (made by the user). */
 var Store = (function (data) {
   'use strict';
 
-  var PLAN = data.PLAN, NUTR = data.NUTR;
+  var EX = data.EX, TEMPLATES = data.TEMPLATES, TEMPLATE_MAP = data.TEMPLATE_MAP, NUTR = data.NUTR;
+  var GROUPS = data.GROUPS, EQUIP = data.EQUIP, PRESETS = data.PRESETS;
   var KEY = 'strichliste.v1';
-  var SCHEMA = 2;
-  var NOTE_MAX = 300;
-  var ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+  var SCHEMA = 3;
+  var NOTE_MAX = 300, NAME_MAX = 60, MAX_TRAININGS = 80, MAX_ITEMS = 24;
+  var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/;
 
   /* ---------- small helpers ---------- */
   function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function keyOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function todayKey() { return keyOf(new Date()); }
@@ -30,6 +33,7 @@ var Store = (function (data) {
     return (isFinite(n) && n >= 0) ? n : null;
   }
   function posNum(v) { return (typeof v === 'number' && isFinite(v) && v > 0) ? v : null; }
+  function intIn(v, lo, hi) { var n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? Math.min(hi, Math.max(lo, Math.floor(n))) : null; }
   function fmt(v, u) {
     var r = u === 'kcal' ? Math.round(v) : (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10);
     return String(r).replace('.', ',');
@@ -37,12 +41,15 @@ var Store = (function (data) {
   function numStr(v) { return String(v).replace('.', ','); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function cleanKey(v) { return parseKey(v) ? v : ''; }
+  function validId(k) { return typeof k === 'string' && ID_RE.test(k); }
   function byDay(a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : 0); }
+  function getMap(map, id) { return own(map, id) ? map[id] : undefined; }
 
   /* ---------- state ---------- */
   function newState() {
     return {
-      schema: SCHEMA, day: 'A', sets: { A: {}, B: {} }, stamp: { A: '', B: '' }, logged: { A: '', B: '' }, weights: {}, plankSecs: 45,
+      schema: SCHEMA, cur: 'A', last: [], trainings: [], sets: {}, stamp: {}, logged: {}, weights: {}, holdSecs: {},
+      prefs: { equip: null, preset: '', level: 1, minutes: 45 },
       log: {}, food: {}, recent: [], goalP: null, weightKg: null
     };
   }
@@ -52,7 +59,7 @@ var Store = (function (data) {
     var out = {};
     if (!isObj(o)) return out;
     Object.keys(o).forEach(function (id) {
-      if (!ID_RE.test(id)) return;
+      if (!validId(id)) return;
       var n = typeof o[id] === 'number' ? o[id] : parseFloat(o[id]);
       if (isFinite(n) && n >= 1) out[id] = Math.min(99, Math.floor(n));
     });
@@ -67,18 +74,174 @@ var Store = (function (data) {
     if (!isObj(o)) return out;
     Object.keys(o).forEach(function (id) {
       var t = cleanWeightText(o[id]);
-      if (ID_RE.test(id) && t) out[id] = t;
+      if (validId(id) && t) out[id] = t;
     });
     return out;
   }
   function cleanNote(v) { return typeof v === 'string' ? v.slice(0, NOTE_MAX) : ''; }
+  function cleanName(v, fallback) { var t = typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, NAME_MAX) : ''; return t || fallback || ''; }
+  function mapOfKeys(src, clean) {
+    var out = {};
+    if (!isObj(src)) return out;
+    Object.keys(src).forEach(function (id) { if (validId(id)) { var v = clean(src[id]); if (v != null) out[id] = v; } });
+    return out;
+  }
 
-  /* A log entry is { day, sets: {exerciseId: n}, weights: {exerciseId: "60"}, note }.
+  /* ---------- trainings (the ones the user made) ---------- */
+  function cleanItem(it) {
+    if (!isObj(it) || typeof it.ex !== 'string' || !own(EX, it.ex)) return null;
+    var o = { ex: it.ex }, n;
+    if ((n = intIn(it.sets, 1, 10)) != null) o.sets = n;
+    if (typeof it.reps === 'string' && it.reps.trim()) o.reps = it.reps.trim().slice(0, 12);
+    if (it.rest != null && (n = intIn(it.rest, 0, 300)) != null) o.rest = n;
+    if (it.hold != null && (n = intIn(it.hold, 5, 600)) != null) o.hold = n;
+    return o;
+  }
+  function cleanItems(arr) {
+    var out = [], seen = {};
+    if (!Array.isArray(arr)) return out;
+    arr.forEach(function (it) {
+      var c = cleanItem(it);
+      if (c && !seen[c.ex] && out.length < MAX_ITEMS) { seen[c.ex] = true; out.push(c); }
+    });
+    return out;
+  }
+  function cleanGroups(a) {
+    var out = [];
+    if (!Array.isArray(a)) return out;
+    a.forEach(function (g) { if (GROUPS.some(function (x) { return x.id === g; }) && out.indexOf(g) < 0 && out.length < 4) out.push(g); });
+    return out;
+  }
+  function cleanTraining(t, used) {
+    if (!isObj(t)) return null;
+    var id = (validId(t.id) && !own(TEMPLATE_MAP, t.id) && !used[t.id]) ? t.id : 'u' + uid();
+    var out = { id: id, name: cleanName(t.name, 'Mein Training'), items: cleanItems(t.items), created: cleanKey(t.created) };
+    var g = cleanGroups(t.groups);
+    if (g.length) out.groups = g;
+    return out;
+  }
+  function cleanTrainings(src) {
+    var used = {}, out = [];
+    if (!Array.isArray(src)) return out;
+    src.forEach(function (t) {
+      var c = out.length < MAX_TRAININGS ? cleanTraining(t, used) : null;
+      if (c) { used[c.id] = true; out.push(c); }
+    });
+    return out;
+  }
+  function cleanPrefs(p) {
+    var out = newState().prefs;
+    if (!isObj(p)) return out;
+    if (Array.isArray(p.equip)) {
+      var seen = {};
+      out.equip = p.equip.filter(function (id) { var ok = EQUIP.some(function (e) { return e.id === id; }) && !seen[id]; seen[id] = true; return ok; });
+    }
+    if (PRESETS.some(function (x) { return x.id === p.preset; })) out.preset = p.preset;
+    var lv = intIn(p.level, 1, 3); if (lv != null) out.level = lv;
+    var mi = intIn(p.minutes, 5, 180); if (mi != null) out.minutes = mi;
+    return out;
+  }
+
+  /* A resolved exercise as the run view and the calendar use it: library entry plus what the training item changes. */
+  function exItem(it) {
+    var e = EX[it.ex];
+    var o = { id: e.id, name: e.name, gear: e.gear || '', sets: it.sets || e.sets, big: it.reps || e.reps, unit: e.unit, rest: it.rest != null ? it.rest : e.rest,
+      weight: !!e.weight, knee: !!e.knee, cues: e.cues, note: it.note || '', regions: e.regions };
+    if (e.timer) { o.timer = true; o.holds = e.holds; o.hold = it.hold || e.hold; o.sides = e.sides || 1; }
+    return o;
+  }
+  function findDef(state, id) {
+    if (own(TEMPLATE_MAP, id)) return TEMPLATE_MAP[id];
+    var a = state.trainings;
+    for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i];
+    return null;
+  }
+  function training(state, id) {
+    var d = findDef(state, id);
+    if (!d) return null;
+    return { id: d.id, name: d.name, sub: d.sub || '', builtin: own(TEMPLATE_MAP, d.id), origin: !!d.origin, kneeCheck: !!d.kneeCheck, groups: d.groups || [],
+      defItems: d.items, items: d.items.map(exItem) };
+  }
+  /* every training the user can pick: their own first (newest first), then the ready-made ones */
+  function allTrainings(state) {
+    var own1 = state.trainings.slice().reverse().map(function (t) { return training(state, t.id); });
+    return { own: own1, ready: TEMPLATES.map(function (t) { return training(state, t.id); }) };
+  }
+  function itemsOfDef(d) { return d.items.map(function (it) { var o = { ex: it.ex }; ['sets', 'reps', 'rest', 'hold'].forEach(function (k) { if (it[k] != null) o[k] = it[k]; }); return o; }); }
+  function addTraining(state, name, items, groups) {
+    var t = { id: 'u' + uid(), name: cleanName(name, 'Mein Training'), items: cleanItems(items), created: todayKey() };
+    var g = cleanGroups(groups); if (g.length) t.groups = g;
+    state.trainings.push(t);
+    return t;
+  }
+  function removeTraining(state, id) {
+    for (var i = 0; i < state.trainings.length; i++) {
+      if (state.trainings[i].id !== id) continue;
+      var t = state.trainings.splice(i, 1)[0];
+      var saved = { def: t, idx: i, sets: state.sets[id], stamp: state.stamp[id], logged: state.logged[id], cur: state.cur === id };
+      delete state.sets[id]; delete state.stamp[id]; delete state.logged[id];
+      state.last = state.last.filter(function (x) { return x !== id; });
+      if (state.cur === id) state.cur = 'A';
+      return saved;
+    }
+    return null;
+  }
+  function restoreTraining(state, saved) {
+    if (findDef(state, saved.def.id)) return false;
+    state.trainings.splice(Math.min(saved.idx, state.trainings.length), 0, saved.def);
+    if (saved.sets) state.sets[saved.def.id] = saved.sets;
+    if (saved.stamp) state.stamp[saved.def.id] = saved.stamp;
+    if (saved.logged) state.logged[saved.def.id] = saved.logged;
+    return true;
+  }
+  /* The user's own copy of any training (ready-made or their own) to change. */
+  function copyTraining(state, id, name) {
+    var d = findDef(state, id);
+    if (!d) return null;
+    return addTraining(state, name || (d.name + ' (Kopie)'), itemsOfDef(d), d.groups);
+  }
+  function touch(state, id) {
+    state.cur = id;
+    state.last = [id].concat(state.last.filter(function (x) { return x !== id; })).slice(0, 5);
+  }
+
+  /* ---------- the checklist of a training ---------- */
+  function setsOf(state, id) { return own(state.sets, id) ? state.sets[id] : (state.sets[id] = {}); }
+  /* A new day starts the checklists from scratch. Returns the ids of the trainings that were reset. */
+  function refreshDays(state, today) {
+    var out = [];
+    Object.keys(state.stamp).forEach(function (id) {
+      if (state.stamp[id] && state.stamp[id] !== today) {
+        state.sets[id] = {}; state.stamp[id] = ''; state.logged[id] = '';
+        out.push(id);
+      }
+    });
+    return out;
+  }
+
+  /* ---------- the calendar log ---------- */
+  /* An entry is { day: training id, title?, targets?: {exerciseId: planned sets}, sets: {exerciseId: n}, weights: {exerciseId: "60"}, note }.
+     title and targets are the snapshot of the training at that time, so a renamed or deleted training does not change what the calendar shows.
      Schema 1 stored only the letter: "A". It becomes an entry without details. */
+  function cleanTargets(o) {
+    var out = {};
+    if (!isObj(o)) return out;
+    Object.keys(o).forEach(function (id) {
+      if (!own(EX, id)) return;
+      var n = intIn(o[id], 1, 10);
+      if (n != null) out[id] = n;
+    });
+    return out;
+  }
   function cleanLogEntry(e) {
     if (e === 'A' || e === 'B') return { day: e, sets: {}, weights: {}, note: '' };
-    if (!isObj(e) || (e.day !== 'A' && e.day !== 'B')) return null;
-    return { day: e.day, sets: cleanSets(e.sets), weights: cleanWeights(e.weights), note: cleanNote(e.note) };
+    if (!isObj(e) || !validId(e.day)) return null;
+    var out = { day: e.day, sets: cleanSets(e.sets), weights: cleanWeights(e.weights), note: cleanNote(e.note) };
+    var title = cleanName(e.title, '');
+    if (title) out.title = title;
+    var tg = cleanTargets(e.targets);
+    if (Object.keys(tg).length) out.targets = tg;
+    return out;
   }
   function cleanLog(src) {
     var L = {};
@@ -95,6 +258,9 @@ var Store = (function (data) {
     return L;
   }
 
+  /* ---------- food ---------- */
+  function modeOf(m) { return m === 'por' ? 'por' : (m === 'ml' ? 'ml' : '100'); }
+  function unitOf(mode) { return mode === 'ml' ? 'ml' : 'g'; }
   function cleanEntry(e, used) {
     if (!isObj(e)) return null;
     var v = {};
@@ -102,7 +268,7 @@ var Store = (function (data) {
     var g = (typeof e.g === 'number' && isFinite(e.g) && e.g >= 0) ? e.g : null;
     var id = (typeof e.id === 'string' || typeof e.id === 'number') ? String(e.id).slice(0, 40) : '';
     if (!id || (used && used[id])) id = uid();
-    return { id: id, name: typeof e.name === 'string' ? e.name.slice(0, 80) : '', g: g, mode: e.mode === 'por' ? 'por' : '100', v: v };
+    return { id: id, name: typeof e.name === 'string' ? e.name.slice(0, 80) : '', g: g, mode: modeOf(e.mode), v: v };
   }
   function cleanFood(src) {
     var F = {};
@@ -131,17 +297,26 @@ var Store = (function (data) {
   /* ---------- migration ---------- */
   function schemaOf(raw) { return (isObj(raw) && typeof raw.schema === 'number' && raw.schema >= 1) ? Math.floor(raw.schema) : 1; }
 
-  /* Any object in, a complete and valid state of the current schema out. Unknown or broken parts are dropped, never thrown on. */
+  /* Any object in, a complete and valid state of the current schema out. Unknown or broken parts are dropped, never thrown on.
+     Schema 1 and 2 knew only the days "A" and "B" ("day", "plankSecs"); they become the trainings "A" and "B" ("cur", "holdSecs"). */
   function migrate(raw) {
     var s = newState();
     if (!isObj(raw)) return s;
-    if (raw.day === 'A' || raw.day === 'B') s.day = raw.day;
-    if (isObj(raw.sets)) { s.sets.A = cleanSets(raw.sets.A); s.sets.B = cleanSets(raw.sets.B); }
-    ['stamp', 'logged'].forEach(function (f) {
-      if (isObj(raw[f])) { s[f].A = cleanKey(raw[f].A); s[f].B = cleanKey(raw[f].B); }
-    });
+    s.trainings = cleanTrainings(raw.trainings);
+    var cur = raw.cur != null ? raw.cur : raw.day;
+    if (validId(cur) && (own(TEMPLATE_MAP, cur) || s.trainings.some(function (t) { return t.id === cur; }))) s.cur = cur;
+    s.sets = isObj(raw.sets) ? mapOfKeys(raw.sets, function (v) { var c = cleanSets(v); return Object.keys(c).length ? c : null; }) : {};
+    s.stamp = mapOfKeys(isObj(raw.stamp) ? raw.stamp : {}, function (v) { var c = cleanKey(v); return c || null; });
+    s.logged = mapOfKeys(isObj(raw.logged) ? raw.logged : {}, function (v) { var c = cleanKey(v); return c || null; });
     s.weights = cleanWeights(raw.weights);
-    if (raw.plankSecs === 45 || raw.plankSecs === 60) s.plankSecs = raw.plankSecs;
+    s.holdSecs = mapOfKeys(raw.holdSecs, function (v) { return intIn(v, 5, 600); });
+    if (raw.plankSecs === 45 || raw.plankSecs === 60) { if (!own(s.holdSecs, 'a-plank')) s.holdSecs['a-plank'] = raw.plankSecs; }
+    if (Array.isArray(raw.last)) {
+      raw.last.forEach(function (id) {
+        if (validId(id) && s.last.indexOf(id) < 0 && s.last.length < 5 && (own(TEMPLATE_MAP, id) || s.trainings.some(function (t) { return t.id === id; }))) s.last.push(id);
+      });
+    }
+    s.prefs = cleanPrefs(raw.prefs);
     s.log = cleanLog(raw.log);
     s.food = cleanFood(raw.food);
     s.recent = cleanRecent(raw.recent);
@@ -151,7 +326,7 @@ var Store = (function (data) {
   }
 
   /* ---------- backup text / file ---------- */
-  var KNOWN = ['log', 'food', 'recent', 'sets', 'weights', 'goalP', 'weightKg', 'plankSecs', 'day', 'stamp', 'logged'];
+  var KNOWN = ['log', 'food', 'recent', 'sets', 'weights', 'goalP', 'weightKg', 'plankSecs', 'day', 'stamp', 'logged', 'trainings', 'cur', 'holdSecs', 'prefs'];
   function looksLikeBackup(o) { return isObj(o) && KNOWN.some(function (k) { return k in o; }); }
 
   /* Accepts what "Daten kopieren" or "Als Datei sichern" produced, also from the old claude.ai version.
@@ -197,21 +372,9 @@ var Store = (function (data) {
     var t = 0, f = 0;
     Object.keys(state.log).forEach(function (k) { t += state.log[k].length; });
     Object.keys(state.food).forEach(function (k) { f += state.food[k].length; });
-    return { trainings: t, foods: f };
+    return { trainings: t, foods: f, plans: state.trainings.length };
   }
-  function isEmpty(state) { var c = counts(state); return c.trainings === 0 && c.foods === 0; }
-
-  /* A new day starts the checklists from scratch. Returns the days that were reset. */
-  function refreshDays(state, today) {
-    var out = [];
-    ['A', 'B'].forEach(function (k) {
-      if (state.stamp[k] && state.stamp[k] !== today) {
-        state.sets[k] = {}; state.stamp[k] = ''; state.logged[k] = '';
-        out.push(k);
-      }
-    });
-    return out;
-  }
+  function isEmpty(state) { var c = counts(state); return c.trainings === 0 && c.foods === 0 && c.plans === 0; }
 
   /* ---------- training log ---------- */
   function logEntry(state, key, day) {
@@ -219,19 +382,41 @@ var Store = (function (data) {
     for (var i = 0; i < a.length; i++) if (a[i].day === day) return a[i];
     return null;
   }
+  function targetsOf(items) { var t = {}; items.forEach(function (ex) { t[ex.id] = ex.sets; }); return t; }
+  /* The exercises an entry is about: its own snapshot if it has one, else the training it names (entries of the first version). */
+  function entryItems(state, entry) {
+    if (entry.targets) return Object.keys(entry.targets).map(function (id) { return exItem({ ex: id, sets: entry.targets[id] }); });
+    var t = training(state, entry.day);
+    if (t) return t.items;
+    return Object.keys(entry.sets).filter(function (id) { return own(EX, id); }).map(function (id) { return exItem({ ex: id, sets: Math.max(3, entry.sets[id]) }); });
+  }
+  function entryTitle(state, entry) {
+    if (entry.title) return entry.title;
+    var t = training(state, entry.day);
+    return t ? t.name : 'Training';
+  }
+  function entrySub(state, entry) {
+    var t = training(state, entry.day);
+    return t && t.sub ? t.sub : '';
+  }
   /* Snapshot of today's checklist: only exercises with at least one set, weights only where the exercise has a weight field. */
-  function snapshot(state, day) {
-    var sets = {}, weights = {};
-    PLAN[day].exercises.forEach(function (ex) {
-      var n = Math.min(state.sets[day][ex.id] || 0, ex.sets);
+  function snapshot(state, id) {
+    var t = training(state, id), sets = {}, weights = {}, done = getMap(state.sets, id) || {};
+    t.items.forEach(function (ex) {
+      var n = Math.min(done[ex.id] || 0, ex.sets);
       if (n > 0) sets[ex.id] = n;
       var w = cleanWeightText(state.weights[ex.id]);
       if (ex.weight && w) weights[ex.id] = w;
     });
-    return { day: day, sets: sets, weights: weights, note: '' };
+    return { day: id, title: t.name, targets: targetsOf(t.items), sets: sets, weights: weights, note: '' };
   }
-  function blankEntry(day) { return { day: day, sets: {}, weights: {}, note: '' }; }
-  /* A day type exists once per date. Adding to a taken slot is refused so nothing already stored gets overwritten. */
+  function blankEntry(state, id) {
+    var t = training(state, id);
+    var e = { day: id, sets: {}, weights: {}, note: '' };
+    if (t) { e.title = t.name; e.targets = targetsOf(t.items); }
+    return e;
+  }
+  /* A training exists once per date. Adding to a taken slot is refused so nothing already stored gets overwritten. */
   function addLog(state, key, entry, today) {
     if (!parseKey(key)) return { ok: false, reason: 'invalid' };
     if (key > today) return { ok: false, reason: 'future' };
@@ -242,13 +427,13 @@ var Store = (function (data) {
   }
   /* "Training in Kalender eintragen": a free slot gets the snapshot of today's checklist, a slot that only holds the bare letter
      (an entry from the old version or one added by hand) gets the details, a slot that already has details is left untouched. */
-  function logSession(state, key, day, today) {
+  function logSession(state, key, id, today) {
     if (!parseKey(key)) return { ok: false, reason: 'invalid' };
     if (key > today) return { ok: false, reason: 'future' };
-    var snap = snapshot(state, day), cur = logEntry(state, key, day);
+    var snap = snapshot(state, id), cur = logEntry(state, key, id);
     if (!cur) return addLog(state, key, snap, today);
-    if (entrySummary(cur).hasDetails) return { ok: false, reason: 'exists' };
-    cur.sets = snap.sets; cur.weights = snap.weights;
+    if (entrySummary(state, cur).hasDetails) return { ok: false, reason: 'exists' };
+    cur.sets = snap.sets; cur.weights = snap.weights; cur.title = snap.title; cur.targets = snap.targets;
     return { ok: true, filled: true };
   }
   function removeLog(state, key, day) {
@@ -293,15 +478,21 @@ var Store = (function (data) {
     if (t) entry.weights[exId] = t; else delete entry.weights[exId];
   }
   function setEntryNote(entry, text) { entry.note = cleanNote(text); }
-  function entrySummary(entry) {
+  function entrySummary(state, entry) {
     var done = 0, total = 0;
-    PLAN[entry.day].exercises.forEach(function (ex) { done += Math.min(entry.sets[ex.id] || 0, ex.sets); total += ex.sets; });
+    entryItems(state, entry).forEach(function (ex) { done += Math.min(entry.sets[ex.id] || 0, ex.sets); total += ex.sets; });
     return { done: done, total: total, hasDetails: done > 0 || Object.keys(entry.weights).length > 0 };
   }
   /* The session marker only counts while the entry it points to still exists. */
-  function loggedDate(state, day) {
-    var k = state.logged[day];
-    return (k && logEntry(state, k, day)) ? k : '';
+  function loggedDate(state, id) {
+    var k = getMap(state.logged, id);
+    return (k && logEntry(state, k, id)) ? k : '';
+  }
+  /* The letter or first letter shown on a calendar day for an entry. */
+  function tagOf(state, entry) {
+    if (entry.day === 'A' || entry.day === 'B') return entry.day;
+    var t = entryTitle(state, entry).replace(/[^A-Za-zÄÖÜäöü0-9]/g, '');
+    return t ? t.charAt(0).toUpperCase() : '•';
   }
 
   /* ---------- food ---------- */
@@ -331,7 +522,7 @@ var Store = (function (data) {
   }
 
   /* The form works on text; an entry on numbers. These two convert between them. */
-  function newDraft(mode) { return { name: '', g: '', mode: mode || '100', v: { kcal: '', p: '', f: '', c: '', s: '', b: '' }, more: false }; }
+  function newDraft(mode) { return { name: '', g: '', mode: modeOf(mode), v: { kcal: '', p: '', f: '', c: '', s: '', b: '' }, more: false }; }
   function draftFromEntry(e) {
     var d = newDraft(e.mode);
     d.name = e.name; d.g = e.g != null ? numStr(e.g) : '';
@@ -342,7 +533,7 @@ var Store = (function (data) {
   function entryFromDraft(d) {
     var v = {};
     NUTR.forEach(function (n) { var x = num(d.v[n.k]); if (x != null) v[n.k] = x; });
-    return { name: d.name.trim(), g: num(d.g), mode: d.mode === 'por' ? 'por' : '100', v: v };
+    return { name: d.name.trim(), g: num(d.g), mode: modeOf(d.mode), v: v };
   }
   function isBlankEntry(e) { return !e.name && e.g == null && !Object.keys(e.v).length; }
   function copyEntry(e) {
@@ -380,16 +571,21 @@ var Store = (function (data) {
   }
 
   return {
-    KEY: KEY, SCHEMA: SCHEMA, NOTE_MAX: NOTE_MAX,
-    isObj: isObj, pad: pad, keyOf: keyOf, todayKey: todayKey, parseKey: parseKey, addDays: addDays, num: num, fmt: fmt, numStr: numStr, uid: uid,
+    KEY: KEY, SCHEMA: SCHEMA, NOTE_MAX: NOTE_MAX, NAME_MAX: NAME_MAX,
+    isObj: isObj, own: own, pad: pad, keyOf: keyOf, todayKey: todayKey, parseKey: parseKey, addDays: addDays, num: num, fmt: fmt, numStr: numStr, uid: uid,
     newState: newState, migrate: migrate, schemaOf: schemaOf, parseBackup: parseBackup, toText: toText,
     load: load, save: save, backupBefore: backupBefore, counts: counts, isEmpty: isEmpty, refreshDays: refreshDays,
-    logEntry: logEntry, snapshot: snapshot, blankEntry: blankEntry, addLog: addLog, logSession: logSession, removeLog: removeLog, restoreLog: restoreLog, moveLog: moveLog,
+    training: training, allTrainings: allTrainings, addTraining: addTraining, removeTraining: removeTraining, restoreTraining: restoreTraining,
+    copyTraining: copyTraining, itemsOfDef: itemsOfDef, touch: touch, setsOf: setsOf, exItem: exItem, cleanItems: cleanItems, cleanName: cleanName, cleanGroups: cleanGroups,
+    logEntry: logEntry, entryItems: entryItems, entryTitle: entryTitle, entrySub: entrySub, tagOf: tagOf, snapshot: snapshot, blankEntry: blankEntry,
+    addLog: addLog, logSession: logSession, removeLog: removeLog, restoreLog: restoreLog, moveLog: moveLog,
     setEntrySets: setEntrySets, setEntryWeight: setEntryWeight, setEntryNote: setEntryNote, entrySummary: entrySummary, loggedDate: loggedDate,
-    entryTotals: entryTotals, dayTotals: dayTotals, partsOf: partsOf,
+    entryTotals: entryTotals, dayTotals: dayTotals, partsOf: partsOf, unitOf: unitOf, modeOf: modeOf,
     newDraft: newDraft, draftFromEntry: draftFromEntry, entryFromDraft: entryFromDraft, isBlankEntry: isBlankEntry, copyEntry: copyEntry,
     rememberRecent: rememberRecent, findFood: findFood, addFood: addFood, removeFood: removeFood, restoreFood: restoreFood
   };
-})(typeof module !== 'undefined' && module.exports ? require('./plan.js') : { PLAN: PLAN, NUTR: NUTR });
+})(typeof module !== 'undefined' && module.exports
+  ? Object.assign({}, require('./plan.js'), require('./lib.js'), require('./trainings.js'))
+  : { EX: EX, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP, NUTR: NUTR, GROUPS: GROUPS, EQUIP: EQUIP, PRESETS: PRESETS });
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Store;

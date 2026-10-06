@@ -1,4 +1,4 @@
-import { test, expect, openApp, stored, tab, waitControlled, ROOT } from './fixtures.mjs';
+import { test, expect, openApp, stored, tab, waitControlled, startFromList, ROOT } from './fixtures.mjs';
 import { startServer } from '../../tools/serve.mjs';
 import { build, FILES, DIRS } from '../../tools/build.mjs';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -15,9 +15,9 @@ test.beforeAll(async () => {
   const src = path.join(tmp, 'src2');
   for (const f of FILES) await cp(path.join(ROOT, f), path.join(src, f));
   for (const d of DIRS) await cp(path.join(ROOT, d), path.join(src, d), { recursive: true });
-  const plan = (await readFile(path.join(src, 'plan.js'), 'utf8')).replace("name: 'Box-Kniebeugen'", "name: 'Box-Kniebeugen NEU'");
-  expect(plan).toContain('Box-Kniebeugen NEU');
-  await writeFile(path.join(src, 'plan.js'), plan);
+  const lib = (await readFile(path.join(src, 'lib.js'), 'utf8')).replace("name: 'Box-Kniebeugen'", "name: 'Box-Kniebeugen NEU'");
+  expect(lib).toContain('Box-Kniebeugen NEU');
+  await writeFile(path.join(src, 'lib.js'), lib);
   await build({ version: 'upd-2', out: v2, from: src });
   await build({ version: 'upd-3', out: v3, from: src });
   await rm(path.join(v3, 'fig.js'));                      // a broken deployment: a file of the precache list is missing
@@ -40,6 +40,7 @@ test('Update: Leiste erscheint ruhig, nichts lädt von selbst neu, nach Tipp ist
   try {
     await start(page, server);
     await expect(page.locator('.foot .ver')).toContainText('Version upd-1');
+    await startFromList(page, 'A');
     await expect(page.locator('h2.name')).toHaveText('Box-Kniebeugen');
     await expect(bar(page)).toBeHidden();
     expect(await cacheKeys(page)).toEqual(['strichliste-upd-1']);
@@ -52,7 +53,7 @@ test('Update: Leiste erscheint ruhig, nichts lädt von selbst neu, nach Tipp ist
     await page.locator('#f-name').fill('Magerquark'); await page.locator('#f-g').fill('250'); await page.locator('#f-kcal').fill('67'); await page.locator('#f-p').fill('12');
     await page.getByRole('button', { name: 'Hinzufügen' }).click();
     await tab(page, 'Kalender').click();
-    await page.getByRole('button', { name: /Tag B eintragen/ }).click();
+    await page.getByRole('button', { name: /Tag A eintragen/ }).click();
     await tab(page, 'Training').click();
     const before = await stored(page);
     await page.evaluate(() => { window.__marker = 'noch-da'; });
@@ -70,9 +71,9 @@ test('Update: Leiste erscheint ruhig, nichts lädt von selbst neu, nach Tipp ist
 
     // der Cache der neuen Version ist bereit und enthält wirklich die neuen Dateien (nicht aus dem HTTP-Cache der alten)
     expect((await cacheKeys(page)).sort()).toEqual(['strichliste-upd-1', 'strichliste-upd-2']);
-    const newPlan = await page.evaluate(async () => (await (await caches.open('strichliste-upd-2')).match('plan.js')).text());
-    expect(newPlan).toContain('Box-Kniebeugen NEU');
-    expect(await page.evaluate(async () => (await (await caches.open('strichliste-upd-1')).match('plan.js')).text())).not.toContain('NEU');
+    const newLib = await page.evaluate(async () => (await (await caches.open('strichliste-upd-2')).match('lib.js')).text());
+    expect(newLib).toContain('Box-Kniebeugen NEU');
+    expect(await page.evaluate(async () => (await (await caches.open('strichliste-upd-1')).match('lib.js')).text())).not.toContain('NEU');
 
     // nichts lädt von selbst neu: weiter benutzen, warten, die alte Version bleibt aktiv
     await page.waitForTimeout(2500);
@@ -96,13 +97,13 @@ test('Update: Leiste erscheint ruhig, nichts lädt von selbst neu, nach Tipp ist
     // alle Daten sind erhalten (inklusive des Satzes, den wir nach der Meldung noch abgehakt haben)
     const after = await stored(page);
     expect(after.sets.A['a-box']).toBe(2);
-    expect({ ...after, sets: before.sets, stamp: before.stamp }).toEqual({ ...before, schema: 2 });
+    expect({ ...after, sets: before.sets, stamp: before.stamp }).toEqual(before);
     expect(after.weights['a-box']).toBe('42');
     await expect(page.locator('header.top')).toContainText('2 von 15 Sätzen');
     await tab(page, 'Essen').click();
     await expect(page.locator('.fe .nchip').first()).toHaveText('168 kcal');
     await tab(page, 'Kalender').click();
-    await expect(page.locator('.entry-head[data-day="B"]')).toBeVisible();
+    await expect(page.locator('.entry-head[data-day="A"]')).toBeVisible();
     expect(diag.errors).toEqual([]);
   } finally { await server.close(); }
 });
@@ -112,6 +113,7 @@ test('Update: während Plank und Pause bleibt die Leiste weg, danach erscheint s
   diag.own.push(server.origin);
   try {
     await start(page, server);
+    await startFromList(page, 'A');
     server.setRoot(v2);
     await swUpdate(page);
     await expect(bar(page)).toBeVisible();
@@ -133,7 +135,7 @@ test('Update: während Plank und Pause bleibt die Leiste weg, danach erscheint s
   } finally { await server.close(); }
 });
 
-test('Update: nach Schließen und Wiederöffnen der App ist die neue Version von selbst aktiv', async ({ browser, diag }) => {
+test('Update: nach Schliessen und Wiederöffnen der App ist die neue Version von selbst aktiv', async ({ browser, diag }) => {
   const server = await startServer({ root: v1, base: '/Fitnesstracker/' });
   const ctx = await browser.newContext();
   try {
@@ -142,7 +144,7 @@ test('Update: nach Schließen und Wiederöffnen der App ist die neue Version von
     server.setRoot(v2);
     await swUpdate(page);
     await expect(page.locator('#upd')).toBeVisible();
-    await page.close();                                            // App schließen
+    await page.close();                                            // App schliessen
     page = await ctx.newPage();                                     // App neu öffnen
     await expect.poll(async () => {
       await page.goto(server.url);
@@ -157,6 +159,7 @@ test('Update: eine kaputte Veröffentlichung (Datei fehlt) wird nicht angeboten,
   diag.own.push(server.origin);
   try {
     await start(page, server);
+    await startFromList(page, 'A');
     server.setRoot(v3);
     await swUpdate(page).catch(() => {});
     await page.waitForTimeout(1500);

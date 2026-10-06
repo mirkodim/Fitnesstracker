@@ -1,4 +1,4 @@
-import { test, expect, openApp, stored, tab, waitControlled } from './fixtures.mjs';
+import { test, expect, openApp, stored, tab, waitControlled, startFromList } from './fixtures.mjs';
 
 test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktioniert, die Daten bleiben', async ({ page, context, site, diag }) => {
   await openApp(page, site, { now: null });
@@ -21,7 +21,7 @@ test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktionie
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('nav.nav')).toBeVisible();
-  await expect(page.locator('h2.name')).toHaveText('Box-Kniebeugen');
+  await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
   expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
   // die Schriften kommen aus dem Cache
   const fontsOk = await page.evaluate(async () => {
@@ -31,6 +31,8 @@ test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktionie
   expect(fontsOk).toBe(true);
 
   // Training abhaken, Gewicht, Essen eintragen, Kalender nutzen: alles ohne Netz
+  await startFromList(page, 'A');
+  await expect(page.locator('h2.name')).toHaveText('Box-Kniebeugen');
   await page.getByLabel('Gewicht (kg)').fill('42,5');
   await page.getByRole('button', { name: 'Satz 1 geschafft' }).click();
   await page.getByRole('button', { name: 'Weiter', exact: true }).click();
@@ -46,6 +48,11 @@ test('Offline: nach einmaligem Laden startet die App ohne Netz, alles funktionie
   await page.getByRole('button', { name: 'Nächster Monat' }).click();
   await page.getByRole('button', { name: /Tag A eintragen/ }).click();
   await expect(page.locator('.entry-head[data-day="A"]')).toContainText('ohne Details');
+  // und eine Übung der Bibliothek samt Animation ansehen
+  await tab(page, 'Übungen').click();
+  await page.locator('#lib-q').fill('Kniebeuge');
+  await page.locator('#lib-res .row').first().click();
+  await expect(page.locator('#fig-g > *').first()).toBeAttached();
   // auch die Adresse mit Suchteil (wie von manchen Startern angehängt) liefert die App
   await page.goto(site.url + 'index.html?von=startbildschirm');
   await expect(page.locator('nav.nav')).toBeVisible();

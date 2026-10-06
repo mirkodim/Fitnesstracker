@@ -58,3 +58,15 @@ export async function waitControlled(page) {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 15_000 }).toBe(true);
 }
+
+/* Opens one of the ready-made or own trainings from "Meine Trainings" and starts it (the way a person would). */
+export async function startFromList(page, id) {
+  await page.locator('[data-act="flow-mine"]').click();
+  await page.locator('.tcard[data-id="' + id + '"]').click();
+  await page.getByRole('button', { name: 'Los geht’s' }).click();
+  await expect(page.locator('header.top .prog')).toContainText('Sätzen');
+}
+
+/* Every German word with a sharp s would be a mistake: the app uses the Swiss "ss". Looks at what is on screen right now. */
+export const noSharpS = (page) => page.evaluate(() => document.body.innerText.includes('ß') ? document.body.innerText.split('\n').filter((l) => l.includes('ß')) : []);
+
