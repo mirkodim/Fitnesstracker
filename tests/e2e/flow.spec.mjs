@@ -1,7 +1,8 @@
-import { test, expect, openApp, stored, tab, TODAY } from './fixtures.mjs';
+import { test, expect, openApp, stored, tab, startFromList, noSharpS, TODAY } from './fixtures.mjs';
 
 const done = (page, n) => page.getByRole('button', { name: 'Satz ' + n + ' geschafft', exact: true });
 const next = (page) => page.getByRole('button', { name: 'Weiter', exact: true });
+const top = (page) => page.locator('header.top');
 
 /* ticks off `n` sets of the current exercise; every set but the very last of the day shows the pause card first */
 async function sets(page, n, { skipLast = true } = {}) {
@@ -27,8 +28,9 @@ async function plank(page, secs = 45) {
 test.describe('Training', () => {
   test('Tag A komplett: Strichliste, Pause mit +30 s und Rückgängig, Gewicht, Plank, Fertig, Kalender', async ({ page, site }) => {
     await openApp(page, site);
-    const head = page.locator('header.top');
-    await expect(head.getByRole('button', { name: /Tag A/ })).toHaveAttribute('aria-pressed', 'true');
+    await startFromList(page, 'A');
+    const head = top(page);
+    await expect(head).toContainText('Tag A');
     await expect(head).toContainText('0 von 15 Sätzen');
     await expect(head).toContainText('0 von 5 Übungen');
 
@@ -81,7 +83,7 @@ test.describe('Training', () => {
     await expect(page.locator('h2.name')).toHaveText('Plank');
     await page.getByRole('button', { name: '60 s' }).click();
     await expect(page.locator('.rx')).toContainText('3 × 60 s');
-    expect((await stored(page)).plankSecs).toBe(60);
+    expect((await stored(page)).holdSecs['a-plank']).toBe(60);
     await plank(page, 60);
     await expect(page.locator('#rest-title')).toHaveText('Pause');
     await next(page).click();
@@ -106,8 +108,10 @@ test.describe('Training', () => {
     await expect(page.locator('.note', { hasText: 'Eingetragen:' })).toHaveText('Eingetragen: Tag A am Montag, 5. Oktober 2026.');
 
     const s = await stored(page);
-    expect(s.schema).toBe(2);
-    expect(s.log[TODAY]).toEqual([{ day: 'A', sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 }, weights: { 'a-hip': '60' }, note: '' }]);
+    expect(s.schema).toBe(3);
+    expect(s.log[TODAY]).toHaveLength(1);
+    expect(s.log[TODAY][0]).toMatchObject({ day: 'A', title: 'Tag A', sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 }, weights: { 'a-hip': '60' }, note: '' });
+    expect(s.log[TODAY][0].targets).toEqual({ 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 });
 
     await page.getByRole('button', { name: 'Kalender ansehen' }).click();
     await expect(page.locator('h2.mt')).toHaveText('Oktober 2026');
@@ -115,10 +119,11 @@ test.describe('Training', () => {
     await expect(page.locator('button.cd.today .tg')).toHaveText('A');
   });
 
-  test('Tag B komplett, Wechsel zwischen den Tagen und Zurücksetzen', async ({ page, site }) => {
+  test('Tag B komplett, Wechsel zwischen den Trainings und Zurücksetzen', async ({ page, site }) => {
     await openApp(page, site);
-    await page.locator('header.top').getByRole('button', { name: /Tag B/ }).click();
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+    await startFromList(page, 'B');
+    await expect(top(page)).toContainText('Tag B');
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
     const names = ['Rumänisches Kreuzheben', 'TRX-Rudern', 'TRX-Ausfallschritte rückwärts', 'Bizeps-Curls', 'TRX-Crunches'];
     for (let i = 0; i < names.length; i++) {
       await expect(page.locator('h2.name')).toHaveText(names[i]);
@@ -127,32 +132,35 @@ test.describe('Training', () => {
       await sets(page, 3, { skipLast: i < names.length - 1 });
     }
     await expect(page.locator('h2.name')).toHaveText('Fertig für heute');
-    await expect(page.getByRole('button', { name: 'Tag A ansehen' })).toBeVisible();
-    // Tag A ist unberührt, die Haken von Tag B bleiben beim Wechsel erhalten
-    await page.getByRole('button', { name: 'Tag A ansehen' }).click();
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
-    await page.locator('header.top').getByRole('button', { name: /Tag B/ }).click();
+    // Tag A ist unberührt, die Haken von Tag B bleiben erhalten: zurück zur Startseite, Tag A starten
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    await startFromList(page, 'A');
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await startFromList(page, 'B');
     await expect(page.locator('h2.name')).toHaveText('Fertig für heute');
     // ein einzelner Satz lässt sich per Tipp auf die Strichliste wieder zurücknehmen
     await page.getByRole('button', { name: 'Neu starten' }).click();
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
     await done(page, 1).click();
     await next(page).click();
     await page.getByRole('button', { name: 'Satz 1 zurücknehmen' }).click();
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
     // Zurücksetzen mit Rückfrage
     await done(page, 1).click();
     await next(page).click();
     await page.getByRole('button', { name: 'Tag B zurücksetzen' }).click();
     await page.getByRole('button', { name: 'Abbrechen' }).click();
-    await expect(page.locator('header.top')).toContainText('1 von 15 Sätzen');
+    await expect(top(page)).toContainText('1 von 15 Sätzen');
     await page.getByRole('button', { name: 'Tag B zurücksetzen' }).click();
     await page.getByRole('button', { name: 'Löschen' }).click();
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
   });
 
   test('Übung antippen springt hin; Haken verfallen am nächsten Tag', async ({ page, site }) => {
     await openApp(page, site);
+    await startFromList(page, 'A');
     await page.locator('.list').getByRole('button', { name: /TRX-Trizepsstrecken/ }).click();
     await expect(page.locator('h2.name')).toHaveText('TRX-Trizepsstrecken');
     await done(page, 1).click();
@@ -161,8 +169,27 @@ test.describe('Training', () => {
     // am nächsten Tag beginnt das Training von vorn, Kalender und Essen bleiben
     await page.clock.setSystemTime(new Date('2026-10-06T08:00:00'));
     await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
-    await expect(page.locator('header.top')).toContainText('0 von 15 Sätzen');
-    expect((await stored(page)).sets.A).toEqual({});
+    await expect(top(page)).toContainText('0 von 15 Sätzen');
+    expect((await stored(page)).sets.A ?? {}).toEqual({});
+  });
+
+  test('Startseite: angefangenes Training wird angeboten, nach der Rückkehr geht es weiter', async ({ page, site }) => {
+    await openApp(page, site);
+    await startFromList(page, 'A');
+    await done(page, 1).click();
+    await next(page).click();
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    await expect(page.locator('.card.go')).toContainText('Du bist mittendrin');
+    await expect(page.locator('.card.go')).toContainText('Tag A');
+    await expect(page.locator('.card.go')).toContainText('1 von 15');
+    await page.getByRole('button', { name: 'Weitermachen' }).click();
+    await expect(top(page)).toContainText('1 von 15 Sätzen');
+    await expect(done(page, 2)).toBeVisible();
+    // App neu laden: das angefangene Training ist wieder da
+    await page.reload();
+    await expect(page.locator('nav.nav')).toBeVisible();
+    await expect(top(page)).toContainText('1 von 15 Sätzen');
   });
 });
 
@@ -181,7 +208,7 @@ test.describe('Kalender', () => {
   test('Eintrag aufklappen, Sätze ändern, Gewicht, Notiz, Datum verschieben, löschen und zurückholen', async ({ page, site }) => {
     await openApp(page, site, { state: seed() });
     await tab(page, 'Kalender').click();
-    await expect(day(page, '2026-10-01')).toHaveAttribute('aria-label', /Training A und B/);
+    await expect(day(page, '2026-10-01')).toHaveAttribute('aria-label', /Training: Tag A und Tag B/);
     await day(page, '2026-10-01').click();
     await expect(page.locator('.card h3.name')).toHaveText('Donnerstag, 1. Oktober 2026');
     const entryA = page.locator('.entry', { has: page.locator('.entry-head[data-day="A"]') });
@@ -221,7 +248,9 @@ test.describe('Kalender', () => {
     // gleicher Typ am Zieltag: abgelehnt, nichts geht verloren
     await tab(page, 'Kalender').click();
     await day(page, '2026-10-04').click();
-    await page.getByRole('button', { name: 'Tag A eintragen' }).click();
+    await page.getByRole('button', { name: 'Training eintragen' }).click();
+    await page.locator('#cal-pick').selectOption('A');
+    await page.getByRole('button', { name: 'Eintragen', exact: true }).click();
     await expect(page.locator('.entry-head[data-day="A"]')).toContainText('ohne Details');
     await day(page, '2026-10-01').click();
     await page.locator('.entry-head[data-day="A"]').click();
@@ -240,7 +269,7 @@ test.describe('Kalender', () => {
     expect(s.log['2026-10-01'].map((e) => e.day)).toEqual(['B']);
     await day(page, '2026-10-01').click();
     await expect(page.locator('.entry-head')).toHaveCount(1);
-    await expect(day(page, '2026-10-01')).toHaveAttribute('aria-label', /Training B$/);
+    await expect(day(page, '2026-10-01')).toHaveAttribute('aria-label', /Training: Tag B$/);
     // löschen und zurückholen
     await day(page, '2026-10-03').click();
     await page.locator('.entry-head[data-day="A"]').click();
@@ -256,7 +285,7 @@ test.describe('Kalender', () => {
     await openApp(page, site, { state: seed() });
     await tab(page, 'Kalender').click();
     await expect(page.locator('.top .prog')).toContainText('2 Trainings in diesem Monat');
-    await expect(page.locator('.top .prog')).toContainText('Tag A: 1 · Tag B: 1');
+    await expect(page.locator('.top .prog')).toContainText(/an 1 Tag/);
     await day(page, '2026-10-01').click();
     await page.locator('.entry-head[data-day="B"]').click();
     await expect(page.locator('.entry-body .hint')).toContainText('keine Sätze gespeichert');

@@ -9,7 +9,7 @@ const phone = (name, width, height, colorScheme, testMatch) => ({
   testMatch,
   use: { viewport: { width, height }, colorScheme, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }
 });
-const MATRIX = ['smoke', 'flow', 'layout'].map((n) => `**/${n}.spec.mjs`);
+const MATRIX = ['smoke', 'flow', 'builder', 'library', 'layout'].map((n) => `**/${n}.spec.mjs`);
 const SINGLE = ['pwa', 'offline', 'update', 'backup', 'anim'].map((n) => `**/${n}.spec.mjs`);
 
 export default defineConfig({

@@ -87,7 +87,7 @@ function LibUI(A) {
       '<p class="rx"><b>' + (ex.timer ? ex.sets + ' × ' + ex.hold + ' s' : ex.sets + ' × ' + ex.reps) + '</b><span>' + esc(ex.timer ? (ex.sides > 1 ? 'pro Seite halten' : 'halten') : ex.unit) + ' empfohlen</span></p>' +
       '<div class="demo-body">' + A.demoBodyHTML(ex, extra) + '</div>';
     if (ex.knee) h += '<div class="note">' + KNEE_NOTE + '</div>';
-    if (R.tab === 'train' && R.flow === 'pick' && R.draft && R.pickCtx) {
+    if (R.tab === 'train' && R.flow === 'pick' && R.bd && R.pickCtx) {
       h += '<button class="btn" type="button" data-act="detail-pick" data-ex="' + ex.id + '">' + (R.pickCtx.mode === 'swap' ? 'Dafür tauschen' : 'Zum Training hinzufügen') + '</button>';
     }
     return { head: head(ex.name, regionsText(ex), true), main: h + '</section>' };
@@ -99,7 +99,7 @@ function LibUI(A) {
   act('lib-mine', function () { R.lib.mine = !R.lib.mine; A.render(); });
   act('lib-eq', function () { R.lib.eq = !R.lib.eq; A.render(); });
   act('detail-pick', function (b) {
-    var id = b.getAttribute('data-ex'), c = R.pickCtx, d = R.draft;
+    var id = b.getAttribute('data-ex'), c = R.pickCtx, d = R.bd;
     if (!EX[id] || !c || !d) return;
     var i;
     if (c.mode === 'swap') {

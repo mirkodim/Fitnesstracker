@@ -15,7 +15,7 @@ function FlowUI(A) {
 
   R.exf = { sel: true, eq: false };         // filters of the list of existing trainings
   R.wiz = null;                            // the assistant: { groups, equip, preset, minutes, level, seed, quick }
-  R.draft = null;                          // the training being made or changed: { mode, id, name, items, groups, equip, minutes, level, seed, note }
+  R.bd = null;                          // the training being made or changed: { mode, id, name, items, groups, equip, minutes, level, seed, note }
   R.bOpen = null;                          // the open row in the editor (exercise id)
   R.pickCtx = null;                        // { mode: 'add' | 'swap', ex, g, mine }
   R.trUndo = null;                         // a just deleted own training, for "Rückgängig"
@@ -216,7 +216,7 @@ function FlowUI(A) {
     return h;
   }
   function buildView() {
-    var d = R.draft, n = d.items.length, sec = Builder.estimate(d.items), edit = d.mode === 'edit', h = '';
+    var d = R.bd, n = d.items.length, sec = Builder.estimate(d.items), edit = d.mode === 'edit', h = '';
     if (!n) {
       h += '<section class="card"><p class="empty">' + (d.empty ? 'Dazu finde ich mit dieser Ausrüstung leider nichts. Geh einen Schritt zurück und wähle mehr Ausrüstung oder einen anderen Bereich.' : 'Noch keine Übung im Training. Füge unten eine hinzu.') + '</p></section>';
     } else {
@@ -239,7 +239,7 @@ function FlowUI(A) {
 
   /* ---------- picking an exercise (add or swap) ---------- */
   function pickList() {
-    var c = R.pickCtx, d = R.draft, have = d.equip ? Builder.haveSet(d.equip) : null, taken = d.items.map(function (it) { return it.ex; }), list;
+    var c = R.pickCtx, d = R.bd, have = d.equip ? Builder.haveSet(d.equip) : null, taken = d.items.map(function (it) { return it.ex; }), list;
     if (c.mode === 'swap') {
       list = Builder.alternatives(c.ex, { equip: d.equip || EQUIP.map(function (e) { return e.id; }), level: d.level || 3, taken: taken }).slice(0, 12);
     } else {
@@ -249,13 +249,13 @@ function FlowUI(A) {
     return list;
   }
   function pickRow(ex) {
-    var d = R.draft, have = d.equip ? Builder.haveSet(d.equip) : null, miss = have ? Builder.missing(ex, have) : [];
+    var d = R.bd, have = d.equip ? Builder.haveSet(d.equip) : null, miss = have ? Builder.missing(ex, have) : [];
     var meta = ex.regions.map(function (r) { return LEAVES[r]; }).join(', ') + ' · ' + LVL[ex.lvl] + (miss.length ? ' · braucht: ' + miss.join(', ') : '');
     return '<div class="prow"><button type="button" class="prow-main" data-act="pick-add" data-ex="' + ex.id + '">' + A.thumbHTML(ex.id) + '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + esc(meta) + '</small></span></button>' +
       '<button type="button" class="prow-i" data-act="pick-view" data-ex="' + ex.id + '" aria-label="' + esc(ex.name) + ' ansehen">' + A.icons.EYE + '</button></div>';
   }
   function pickView() {
-    var c = R.pickCtx, d = R.draft, h = '', list = pickList();
+    var c = R.pickCtx, d = R.bd, h = '', list = pickList();
     if (c.mode === 'add') {
       h += '<div class="chiprow" role="group" aria-label="Bereich">' + GROUPS.map(function (g) {
         return '<button type="button" class="rc" data-act="pick-group" data-g="' + g.id + '" aria-pressed="' + (c.g === g.id) + '">' + g.label + '</button>';
@@ -270,11 +270,11 @@ function FlowUI(A) {
 
   /* ---------- name and save ---------- */
   function suggestName() {
-    var d = R.draft, g = d.groups && d.groups.length ? joinNice(labelsOf(d.groups)).replace(/, /g, ' & ').replace(' und ', ' & ') : 'Training';
+    var d = R.bd, g = d.groups && d.groups.length ? joinNice(labelsOf(d.groups)).replace(/, /g, ' & ').replace(' und ', ' & ') : 'Training';
     return Store.cleanName(g + ' · ' + Builder.minutesText(Builder.estimate(d.items)).replace('ca. ', ''), 'Mein Training');
   }
   function nameView() {
-    var d = R.draft;
+    var d = R.bd;
     if (!d.name) d.name = suggestName();
     return { head: topBar('Speichern'), foot: false,
       main: '<section class="card"><div><h2 class="name">Wie soll dein Training heissen?</h2><p class="hint">Du findest es danach unter „Meine Trainings“.</p></div>' +
@@ -294,9 +294,9 @@ function FlowUI(A) {
     if (f === 'w-equip') return wizEquipView();
     if (f === 'w-time') return wizTimeView();
     if (f === 'w-level') return wizLevelView();
-    if (f === 'build' && R.draft) return buildView();
-    if (f === 'pick' && R.draft && R.pickCtx) return pickView();
-    if (f === 'name' && R.draft) return nameView();
+    if (f === 'build' && R.bd) return buildView();
+    if (f === 'pick' && R.bd && R.pickCtx) return pickView();
+    if (f === 'name' && R.bd) return nameView();
     return homeView();
   };
 
@@ -304,7 +304,7 @@ function FlowUI(A) {
   function makeDraft() {
     var w = R.wiz, s = S();
     var res = Builder.suggest({ groups: w.groups, equip: w.equip, minutes: w.minutes, level: w.level, seed: w.seed });
-    R.draft = { mode: 'new', id: null, name: '', items: res.items, groups: w.groups.slice(), equip: w.equip.slice(), minutes: w.minutes, level: w.level, note: '', empty: !res.items.length };
+    R.bd = { mode: 'new', id: null, name: '', items: res.items, groups: w.groups.slice(), equip: w.equip.slice(), minutes: w.minutes, level: w.level, note: '', empty: !res.items.length };
     R.bOpen = null;
     if (!w.quick) { s.prefs.equip = w.equip.slice(); s.prefs.preset = w.preset; s.prefs.level = w.level; s.prefs.minutes = w.minutes; }
     else { s.prefs.equip = w.equip.slice(); s.prefs.preset = w.preset; }
@@ -356,9 +356,9 @@ function FlowUI(A) {
   act('pv-edit', function () {
     var s = S(), t = Store.training(s, R.pv);
     if (!t) return;
-    R.draft = { mode: t.builtin ? 'copy' : 'edit', id: t.builtin ? null : t.id, name: t.builtin ? '' : t.name, items: Store.itemsOfDef({ items: t.defItems }),
+    R.bd = { mode: t.builtin ? 'copy' : 'edit', id: t.builtin ? null : t.id, name: t.builtin ? '' : t.name, items: Store.itemsOfDef({ items: t.defItems }),
       groups: t.builtin ? groupsOfItems(t.defItems) : (t.groups.length ? t.groups.slice() : groupsOfItems(t.defItems)), equip: s.prefs.equip ? s.prefs.equip.slice() : null, level: s.prefs.level || 3, note: '' };
-    if (t.builtin) R.draft.name = Store.cleanName(t.name + ' (angepasst)', 'Mein Training');
+    if (t.builtin) R.bd.name = Store.cleanName(t.name + ' (angepasst)', 'Mein Training');
     R.bOpen = null;
     A.go({ flow: 'build' });
   });
@@ -367,7 +367,7 @@ function FlowUI(A) {
     if (!t) return;
     var res = Builder.adapt(Store.itemsOfDef({ items: t.defItems }), { equip: equipOf(s.prefs), level: s.prefs.level || 3 });
     var note = 'Angepasst an deine Ausrüstung: ' + res.replaced.length + (res.replaced.length === 1 ? ' Übung ersetzt' : ' Übungen ersetzt') + (res.dropped.length ? ', ' + res.dropped.length + (res.dropped.length === 1 ? ' entfernt' : ' entfernt') : '') + '.';
-    R.draft = { mode: 'copy', id: null, name: Store.cleanName(t.name + ' (angepasst)', 'Mein Training'), items: res.items, groups: groupsOfItems(t.defItems), equip: equipOf(s.prefs).slice(), level: s.prefs.level || 3, note: note };
+    R.bd = { mode: 'copy', id: null, name: Store.cleanName(t.name + ' (angepasst)', 'Mein Training'), items: res.items, groups: groupsOfItems(t.defItems), equip: equipOf(s.prefs).slice(), level: s.prefs.level || 3, note: note };
     R.bOpen = null;
     A.go({ flow: 'build' });
   });
@@ -399,8 +399,8 @@ function FlowUI(A) {
   act('wiz-level', function (b) { R.wiz.level = parseInt(b.getAttribute('data-l'), 10); makeDraft(); A.go({ flow: 'build' }); });
 
   /* editor */
-  function itemOf(id) { var a = R.draft.items; for (var i = 0; i < a.length; i++) if (a[i].ex === id) return a[i]; return null; }
-  function indexOfItem(id) { var a = R.draft.items; for (var i = 0; i < a.length; i++) if (a[i].ex === id) return i; return -1; }
+  function itemOf(id) { var a = R.bd.items; for (var i = 0; i < a.length; i++) if (a[i].ex === id) return a[i]; return null; }
+  function indexOfItem(id) { var a = R.bd.items; for (var i = 0; i < a.length; i++) if (a[i].ex === id) return i; return -1; }
   act('b-open', function (b) { var id = b.getAttribute('data-ex'); R.bOpen = R.bOpen === id ? null : id; A.render(); });
   function bump(b, field, lo, hi, base) {
     var it = itemOf(b.getAttribute('data-ex'));
@@ -416,20 +416,20 @@ function FlowUI(A) {
   act('b-reps', function (b) { var it = itemOf(b.getAttribute('data-ex')); if (it) { it.reps = b.getAttribute('data-r'); A.render(); } });
   act('b-hold', function (b) { var it = itemOf(b.getAttribute('data-ex')); if (it) { it.hold = parseInt(b.getAttribute('data-s'), 10); A.render(); } });
   function move(b, d) {
-    var a = R.draft.items, i = indexOfItem(b.getAttribute('data-ex')), j = i + d;
+    var a = R.bd.items, i = indexOfItem(b.getAttribute('data-ex')), j = i + d;
     if (i < 0 || j < 0 || j >= a.length) return;
     var t = a[i]; a[i] = a[j]; a[j] = t;
     A.render();
   }
   act('b-up', function (b) { move(b, -1); });
   act('b-down', function (b) { move(b, 1); });
-  act('b-del', function (b) { var i = indexOfItem(b.getAttribute('data-ex')); if (i >= 0) { R.draft.items.splice(i, 1); R.bOpen = null; A.render(); } });
+  act('b-del', function (b) { var i = indexOfItem(b.getAttribute('data-ex')); if (i >= 0) { R.bd.items.splice(i, 1); R.bOpen = null; A.render(); } });
   act('b-view', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
   act('b-swap', function (b) { R.pickCtx = { mode: 'swap', ex: b.getAttribute('data-ex'), g: null, mine: true }; A.go({ flow: 'pick' }); });
   act('b-add', function () {
-    var g = (R.draft.groups && R.draft.groups[0]) || 'beine';
+    var g = (R.bd.groups && R.bd.groups[0]) || 'beine';
     if (g === 'ganz') g = 'beine';
-    R.pickCtx = { mode: 'add', ex: null, g: g, mine: !!R.draft.equip };
+    R.pickCtx = { mode: 'add', ex: null, g: g, mine: !!R.bd.equip };
     A.go({ flow: 'pick' });
   });
   act('b-reroll', function () {
@@ -437,7 +437,7 @@ function FlowUI(A) {
     w.seed = (w.seed || 1) + 1; makeDraft(); A.render();
   });
   function saveDraft() {
-    var d = R.draft, s = S(), t;
+    var d = R.bd, s = S(), t;
     if (!d.items.length) return;
     if (d.mode === 'edit') {
       t = null;
@@ -448,11 +448,11 @@ function FlowUI(A) {
       t = Store.addTraining(s, d.name, d.items, d.groups);
     }
     A.save();
-    R.draft = null; R.wiz = null;
+    R.bd = null; R.wiz = null;
     return t;
   }
   act('b-next', function () {
-    var d = R.draft;
+    var d = R.bd;
     if (!d.items.length) return;
     if (d.mode === 'edit') {
       var name = document.getElementById('t-name');
@@ -462,7 +462,7 @@ function FlowUI(A) {
     } else A.go({ flow: 'name' });
   });
   act('name-save', function (b) {
-    var d = R.draft;
+    var d = R.bd;
     if (!d || !d.items.length) return;
     var input = document.getElementById('t-name');
     if (input) d.name = input.value;
@@ -472,14 +472,14 @@ function FlowUI(A) {
     if (start) A.startTraining(t.id, true);
     else { R.exf = { sel: false, eq: false }; A.resetTo({ tab: 'train', flow: 'preview', pv: t.id }); }
   });
-  A.inputs.tname = function (t) { if (R.draft) R.draft.name = t.value; };
+  A.inputs.tname = function (t) { if (R.bd) R.bd.name = t.value; };
 
   /* picking */
   act('pick-group', function (b) { R.pickCtx.g = b.getAttribute('data-g'); A.render(); });
   act('pick-mine', function () { R.pickCtx.mine = !R.pickCtx.mine; A.render(); });
   act('pick-view', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
   act('pick-add', function (b) {
-    var id = b.getAttribute('data-ex'), c = R.pickCtx, d = R.draft;
+    var id = b.getAttribute('data-ex'), c = R.pickCtx, d = R.bd;
     if (!EX[id]) return;
     if (c.mode === 'swap') {
       var i = indexOfItem(c.ex);
