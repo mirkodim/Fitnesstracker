@@ -4,6 +4,8 @@
 (function (FIG) {
   var G = FIG.G, D2R = FIG.D2R, norm = FIG.norm, normF = FIG.normF, lineHip = FIG.lineHip, tiltHip = FIG.tiltHip, leanOf = FIG.leanOf,
     bendBody = FIG.bendBody, floorBody = FIG.floorBody, body = FIG.body, add = FIG.add, ik = FIG.ik;
+  function shOf(hip, th) { return [hip[0] + 46 * Math.sin(th * D2R), hip[1] - 46 * Math.cos(th * D2R)]; }       // shoulder of a body with this hip and torso angle
+  function reach(sh, deg, l) { return [sh[0] + l * Math.sin(deg * D2R), sh[1] + l * Math.cos(deg * D2R)]; }    // hand at this arm angle (0 = straight down, 90 = forward)
 
   /* Box-Kniebeugen */
   (function () {
@@ -698,6 +700,270 @@
         { pose: wide, ms: 1300, hold: 800, label: 'Die Arme auseinander ziehen, die Schulterblätter zusammen' },
         { pose: start, ms: 1200, hold: 300, label: 'Das Band mit beiden Händen vor der Brust halten' },
         { pose: shrug, ms: 800, hold: 1200, bad: true, label: 'Falsch: Die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
+  /* ===== Brust ===== */
+
+  /* Liegestütze auf den Knien: the body pivots about the knees, the hands stay put */
+  (function () {
+    var K = [100, 172], hand = [171.5, 171], ank = [K[0] - 23.1, K[1] - 27.6];
+    function kb(a, extra) {
+      var u = [Math.cos(a * D2R), -Math.sin(a * D2R)];
+      return norm(Object.assign({ hip: [K[0] + 36 * u[0], K[1] + 36 * u[1]], sh: [K[0] + 82 * u[0], K[1] + 82 * u[1]], ankle: ank, fa: 200, wrist: hand }, extra || {}));
+    }
+    var up = kb(37), dn = kb(11);
+    var bad = norm({ hip: [K[0] + 36 * Math.cos(55 * D2R), K[1] - 36 * Math.sin(55 * D2R)], sh: [K[0] + 36 * Math.cos(55 * D2R) + 46 * Math.cos(20 * D2R), K[1] - 36 * Math.sin(55 * D2R) - 46 * Math.sin(20 * D2R)], ankle: ank, fa: 200, wrist: hand });
+    add('x-pushup-knee', { reps: 2, hl: ['torso', 'upper', 'fore'], thumb: 0, props: [],
+      steps: [
+        { pose: up, ms: 900, hold: 500, label: 'Kräftig hochdrücken, vom Kopf bis zu den Knien eine Linie' },
+        { pose: dn, ms: 1500, hold: 400, label: 'Brust Richtung Boden, Ellbogen schräg nach hinten' },
+        { pose: up, ms: 900, hold: 300, label: 'Kräftig hochdrücken, vom Kopf bis zu den Knien eine Linie' },
+        { pose: bad, ms: 800, hold: 1100, bad: true, label: 'Falsch: Das Gesäss ragt nach oben' }
+      ] });
+  })();
+
+  /* Liegestütze mit erhöhten Händen: hands on a bench, straight body from the feet */
+  (function () {
+    var A = [56, G - 12], W = [153, 128];
+    var up = norm({ ankle: A, lean: 48, fa: 70, wrist: W });
+    var dn = norm({ ankle: A, lean: 66, fa: 70, wrist: W });
+    var b = bendBody(A, [A[0] + 116 * Math.sin(48 * D2R), A[1] - 116 * Math.cos(48 * D2R)], 1);      // the hip drops below the line, the lengths stay exact
+    var sag = norm({ ankle: A, lean: b.lean, torso: b.torso, fa: 70, wrist: W });
+    add('x-pushup-incl', { reps: 2, hl: ['torso', 'upper', 'fore'], thumb: 0, props: [{ t: 'box', x: 135, y: 130, w: 42, h: 48 }],
+      steps: [
+        { pose: up, ms: 900, hold: 500, label: 'Kräftig hochdrücken, der Körper bleibt eine Linie' },
+        { pose: dn, ms: 1500, hold: 400, label: 'Brust zur Kante senken, Ellbogen schräg nach hinten' },
+        { pose: up, ms: 900, hold: 300, label: 'Kräftig hochdrücken, der Körper bleibt eine Linie' },
+        { pose: sag, ms: 800, hold: 1100, bad: true, label: 'Falsch: Der Bauch hängt durch' }
+      ] });
+  })();
+
+  /* Bankdrücken mit der Langhantel: flat bench, the bar goes from the chest straight up */
+  (function () {
+    var S = [80, 141], A = [168, G];
+    var pose = function (wrist, extra) { return norm(Object.assign({ sh: S, th: -90, ankle: A, wrist: wrist, ha: -70 }, extra || {})); };
+    var up = pose([88, 94]), dn = pose([95, 132]), bad = pose([95, 128], { th: -110, round: -8 });
+    add('x-bench', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 60, y: 144.5, w: 100, h: 33.5 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 9 }],
+      steps: [
+        { pose: up, ms: 1100, hold: 500, label: 'Kräftig hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Die Stange kontrolliert zur Brustmitte senken' },
+        { pose: up, ms: 1100, hold: 300, label: 'Kräftig hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Das Gesäss hebt ab, Hohlkreuz' }
+      ] });
+  })();
+
+  /* Kurzhantel-Bankdrücken (incline): the back rests on a tilted pad, the dumbbells go straight up */
+  (function () {
+    var S = [86, 108], A = [172, G];
+    var pose = function (wrist) { return norm({ sh: S, th: -60, ankle: A, wrist: wrist, ha: -50 }); };
+    var up = pose([88, 62]), dn = pose([98, 106]), bad = pose([116, 72]);
+    add('x-dbpress', { reps: 3, hl: ['torso', 'upper'], thumb: 0, sweep: true,
+      props: [{ t: 'rail', x1: 73.8, y1: 109, x2: 122.3, y2: 137.1 }, { t: 'box', x: 108, y: 135.5, w: 44, h: 42.5 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 6 }],
+      steps: [
+        { pose: up, ms: 1100, hold: 500, label: 'Die Hanteln hochdrücken, über der Schulter treffen sie sich fast' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Langsam senken, bis die Ellbogen knapp unter Brusthöhe sind' },
+        { pose: up, ms: 1100, hold: 300, label: 'Die Hanteln hochdrücken, über der Schulter treffen sie sich fast' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Hanteln wandern nach vorn, die Schultern werden belastet' }
+      ] });
+  })();
+
+  /* Brustpresse: seated against the pad, the handles go straight forward from the chest */
+  (function () {
+    var H = [100, 145], A = [150, G], PV = [190, 100];
+    var start = norm({ hip: H, th: -5, ankle: A, wrist: [108, 108], ha: -4 });
+    var press = norm({ hip: H, th: -5, ankle: A, wrist: [144, 100], ha: -4 });
+    var bad = norm({ hip: H, th: 15, ankle: A, wrist: [150, 100], ha: 25 });
+    add('x-chestpress', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 78, y: 147, w: 40, h: 31 }, { t: 'rail', x1: 90, y1: 150, x2: 87, y2: 80 }, { t: 'rail', x1: PV[0], y1: 60, x2: PV[0], y2: 178 },
+        { t: 'pulley', x: PV[0], y: PV[1] }, { t: 'strap', anchor: PV, at: 'wrist' }],
+      steps: [
+        { pose: start, ms: 1500, hold: 400, label: 'Kontrolliert zurückkommen lassen, die Ellbogen etwas hinter dem Körper' },
+        { pose: press, ms: 1100, hold: 500, label: 'Gleichmässig nach vorn drücken, nicht ganz durchstrecken' },
+        { pose: start, ms: 1500, hold: 300, label: 'Kontrolliert zurückkommen lassen, die Ellbogen etwas hinter dem Körper' },
+        { pose: bad, ms: 800, hold: 1200, bad: true, label: 'Falsch: Der Rücken löst sich vom Polster, die Schultern rollen nach vorn' }
+      ] });
+  })();
+
+  /* Kabel-Fly von oben (front view): the hands come together in front of the body */
+  (function () {
+    var wide = normF({ arms: [100, 115] });
+    var mid = normF({ arms: [50, 50] });
+    var closed = normF({ arms: [-20, -20] });
+    var shrug = normF({ arms: [-20, -20], sh: 9 });
+    add('x-cablefly', { view: 'f', reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'pulley', x: 62, y: 14 }, { t: 'pulley', x: 258, y: 14 }, { t: 'strap', anchor: [62, 14], at: 'wrL' }, { t: 'strap', anchor: [258, 14], at: 'wrR' }],
+      steps: [
+        { pose: wide, ms: 1500, hold: 400, label: 'Langsam öffnen, die Arme bleiben leicht gebeugt' },
+        { pose: mid, ms: 600, hold: 0, label: 'Die Hände in einem weiten Bogen nach unten führen' },
+        { pose: closed, ms: 600, hold: 700, label: 'Vor dem Körper zusammenführen, die Brust anspannen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam wieder öffnen' },
+        { pose: wide, ms: 700, hold: 300, label: 'Langsam öffnen, die Arme bleiben leicht gebeugt' },
+        { pose: shrug, ms: 800, hold: 1200, bad: true, label: 'Falsch: Die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
+  /* Dips an der Bank: hands on the edge behind, the body goes down in front of the bench */
+  (function () {
+    var A = [150, G], W = [96, 128];
+    var up = norm({ sh: [98, 80], th: -6, ankle: A, wrist: W, ha: -4 });
+    var dn = norm({ sh: [98, 105], th: -6, ankle: A, wrist: W, ha: -4 });
+    var bad = norm({ sh: [100, 118], th: -6, ankle: A, wrist: W, ha: -2 });
+    add('x-dips', { reps: 3, hl: ['upper', 'torso'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 40, y: 130, w: 60, h: 48 }],
+      steps: [
+        { pose: up, ms: 1000, hold: 400, label: 'Hochdrücken, die Ellbogen nicht hart durchstrecken' },
+        { pose: dn, ms: 1500, hold: 400, label: 'Die Ellbogen nach hinten beugen, bis sie etwa 90 Grad haben' },
+        { pose: up, ms: 1000, hold: 300, label: 'Hochdrücken, die Ellbogen nicht hart durchstrecken' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu tief, die Schultern rutschen unter die Ellbogen' }
+      ] });
+  })();
+
+  /* Medizinball-Brustpass: the ball goes from the chest to the wall */
+  (function () {
+    var A = [150, G], ball = { t: 'ball', at: 'wrist', dx: 9, dy: 0, r: 10 };
+    var chest = norm({ hip: [146, G - 66], th: 8, ankle: A, wrist: [168, 76], ha: 4 });
+    var pass = norm({ hip: [146, G - 66], th: 8, ankle: A, wrist: [200, 64], ha: 4 });
+    var bad = norm({ hip: [140, G - 64], th: 35, ankle: A, wrist: [184, 100], round: 10, ha: 40 });
+    add('x-medpass', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'rail', x1: 236, y1: 10, x2: 236, y2: 178 }, ball],
+      steps: [
+        { pose: chest, ms: 1200, hold: 400, label: 'Den Ball weich fangen und vor die Brust nehmen' },
+        { pose: pass, ms: 450, hold: 400, label: 'Beine und Arme gleichzeitig strecken, den Ball kräftig an die Wand werfen' },
+        { pose: chest, ms: 1200, hold: 300, label: 'Den Ball weich fangen und vor die Brust nehmen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Rücken wird rund, der Ball geht nach unten' }
+      ] });
+  })();
+
+  /* ===== Schultern ===== */
+
+  /* Schulterdrücken stehend mit Kurzhanteln */
+  (function () {
+    var A = [150, G], plate = { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 6 };
+    var low = norm({ hip: [150, G - 68], th: 2, ankle: A, wrist: [167, 48], ha: 2 });
+    var high = norm({ hip: [150, G - 68], th: 2, ankle: A, wrist: [156, 14], ha: 2 });
+    var bad = norm({ hip: [152, G - 68], th: -16, ankle: A, wrist: [155, 16], ha: -10 });
+    add('x-ohp', { reps: 3, hl: ['delt', 'upper'], thumb: 1, sweep: true, props: [plate],
+      steps: [
+        { pose: low, ms: 1500, hold: 400, label: 'Langsam zu den Schultern senken' },
+        { pose: high, ms: 1100, hold: 600, label: 'Gerade nach oben drücken, bis die Arme gestreckt sind' },
+        { pose: low, ms: 1500, hold: 300, label: 'Langsam zu den Schultern senken' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Ins Hohlkreuz gelehnt' }
+      ] });
+  })();
+
+  /* Seitheben (front view) */
+  (function () {
+    var plates = [{ t: 'plate', at: 'wrL', dx: 0, dy: 0, r: 5 }, { t: 'plate', at: 'wrR', dx: 0, dy: 0, r: 5 }];
+    var low = normF({ arms: [10, 10] });
+    var high = normF({ arms: [86, 86] });
+    var bad = normF({ arms: [125, 125], sh: 9 });
+    add('x-lateral', { view: 'f', reps: 3, hl: ['delt', 'upper'], thumb: 1, props: plates,
+      steps: [
+        { pose: low, ms: 1700, hold: 400, label: 'Langsam ablassen, etwa 3 Sekunden' },
+        { pose: high, ms: 1200, hold: 500, label: 'Die Arme seitlich bis auf Schulterhöhe heben, die Ellbogen führen' },
+        { pose: low, ms: 1700, hold: 300, label: 'Langsam ablassen, etwa 3 Sekunden' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu hoch, die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
+  /* Frontheben: the straight arm goes from the thigh to shoulder height */
+  (function () {
+    var A = [150, G], hip = [150, G - 70], sh = shOf(hip, 2);
+    var plate = { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 6 };
+    var down = norm({ hip: hip, th: 2, ankle: A, wrist: reach(sh, 3, 48.5), ha: 2 });
+    var mid = norm({ hip: hip, th: 2, ankle: A, wrist: reach(sh, 48, 48.5), ha: 2 });
+    var up = norm({ hip: hip, th: 2, ankle: A, wrist: reach(sh, 90, 48.5), ha: 2 });
+    var hipB = [156, G - 68], shB = shOf(hipB, -16);
+    var bad = norm({ hip: hipB, th: -16, ankle: A, wrist: reach(shB, 110, 48.5), ha: -10 });
+    add('x-front', { reps: 3, hl: ['delt', 'upper'], thumb: 2, sweep: true, props: [plate],
+      steps: [
+        { pose: down, ms: 1300, hold: 400, label: 'Langsam ablassen, der Arm bleibt gestreckt' },
+        { pose: mid, ms: 500, hold: 0, label: 'Den Arm gestreckt nach vorn anheben' },
+        { pose: up, ms: 500, hold: 600, label: 'Bis auf Schulterhöhe heben und kurz halten' },
+        { pose: mid, ms: 800, hold: 0, label: 'Langsam ablassen, der Arm bleibt gestreckt' },
+        { pose: down, ms: 600, hold: 300, label: 'Langsam ablassen, der Arm bleibt gestreckt' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit Schwung aus dem Rücken, der Arm zu hoch' }
+      ] });
+  })();
+
+  /* Pike-Liegestütze: hands and feet on the floor, the hips high, the head sinks between the hands */
+  (function () {
+    var A = [90, G - 12], hand = [165, 172];
+    function pike(sh, hd) {
+      var hip = ik(A, sh, 71.8, 46, -1);
+      return norm({ hip: hip, sh: sh, ankle: A, fa: 70, wrist: hand, ha: hd });
+    }
+    var up = pike([150, 126], 135), dn = pike([150, 150], 150), bad = pike([170, 150], 150);
+    add('x-pike', { reps: 2, hl: ['delt', 'upper'], thumb: 0, sweep: true, props: [],
+      steps: [
+        { pose: up, ms: 1000, hold: 500, label: 'Kräftig hochdrücken, die Hüfte bleibt hoch' },
+        { pose: dn, ms: 1600, hold: 400, label: 'Den Kopf zwischen den Händen Richtung Boden senken' },
+        { pose: up, ms: 1000, hold: 300, label: 'Kräftig hochdrücken, die Hüfte bleibt hoch' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Hüfte sinkt, es wird ein gewöhnlicher Liegestütz' }
+      ] });
+  })();
+
+  /* ===== Nacken ===== */
+
+  /* Kinn einziehen: the head slides straight back */
+  (function () {
+    var A = [150, G], hip = [150, G - 70];
+    var fwd = norm({ hip: hip, th: 2, ankle: A, wr: [2, 47], ha: 8, hdx: 8 });
+    var tuck = norm({ hip: hip, th: 2, ankle: A, wr: [2, 47], ha: 8, hdx: -4 });
+    var bad = norm({ hip: hip, th: 2, ankle: A, wr: [2, 47], ha: -32, hdx: 0 });
+    add('x-chintuck', { reps: 4, hl: ['head'], thumb: 1, props: [],
+      steps: [
+        { pose: fwd, ms: 1200, hold: 300, label: 'Den Kopf locker wieder nach vorn kommen lassen' },
+        { pose: tuck, ms: 1400, hold: 1200, label: 'Das Kinn waagerecht nach hinten schieben, der Blick bleibt vorn' },
+        { pose: fwd, ms: 1200, hold: 300, label: 'Den Kopf locker wieder nach vorn kommen lassen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Kopf wird in den Nacken gelegt' }
+      ] });
+  })();
+
+  /* Nacken mit der Hand: the head pushes against the hand and stays where it is */
+  (function () {
+    var A = [150, G], hip = [150, G - 70];
+    var rest = norm({ hip: hip, th: 2, ankle: A, wrist: [153.6, 105], ha: 3, es: 1 });
+    var push = norm({ hip: hip, th: 2, ankle: A, wrist: [162, 47], ha: 3, es: 1 });
+    var bad = norm({ hip: hip, th: 2, ankle: A, wrist: [160, 48], ha: -28, hdx: -4, es: 1 });
+    add('x-neckiso', { reps: 2, hl: ['head'], thumb: 1, props: [],
+      steps: [
+        { pose: rest, ms: 1000, hold: 300, label: 'Aufrecht stehen, die Schultern locker' },
+        { pose: push, ms: 1000, hold: 1800, label: 'Die Hand an die Stirn legen, den Kopf dagegen drücken, ohne dass er sich bewegt' },
+        { pose: bad, ms: 800, hold: 1200, bad: true, label: 'Falsch: Der Kopf kippt weg' }
+      ] });
+  })();
+
+  /* Schulterheben (front view) */
+  (function () {
+    var plates = [{ t: 'plate', at: 'wrL', dx: 0, dy: 0, r: 5 }, { t: 'plate', at: 'wrR', dx: 0, dy: 0, r: 5 }];
+    var low = normF({ arms: [3, 3] });
+    var high = normF({ arms: [3, 3], sh: 11 });
+    var bad = normF({ arms: [3, 3], sh: 11, lean: 7, hd: 12 });
+    add('x-shrug', { view: 'f', reps: 3, hl: ['trap'], thumb: 1, props: plates,
+      steps: [
+        { pose: low, ms: 1500, hold: 300, label: 'Die Schultern langsam wieder absenken' },
+        { pose: high, ms: 900, hold: 900, label: 'Die Schultern gerade nach oben ziehen und kurz halten' },
+        { pose: low, ms: 1500, hold: 300, label: 'Die Schultern langsam wieder absenken' },
+        { pose: bad, ms: 800, hold: 1200, bad: true, label: 'Falsch: Der Körper kippt zur Seite, der Kopf geht mit' }
+      ] });
+  })();
+
+  /* Nacken dehnen (front view): the ear goes towards the shoulder, the hand rests on the side of the head, first to one side, then to the other */
+  (function () {
+    var rest = normF({ arms: [5, 5] });
+    var one = normF({ armL: [5, 5], armR: [120, -100], hd: 40 });
+    var other = normF({ armR: [5, 5], armL: [120, -100], hd: -40 });
+    var bad = normF({ armL: [5, 5], armR: [120, -100], hd: 40, sh: 10 });
+    add('x-neckstretch', { view: 'f', reps: 2, hl: ['head'], thumb: 1, props: [],
+      steps: [
+        { pose: one, ms: 1600, hold: 1500, label: 'Das Ohr sanft zur Schulter neigen, die Hand liegt nur locker am Kopf' },
+        { pose: rest, ms: 1200, hold: 300, label: 'Zurück in die Mitte' },
+        { pose: other, ms: 1600, hold: 1500, label: 'Zur anderen Seite wechseln, die Schulter bleibt unten' },
+        { pose: rest, ms: 1200, hold: 300, label: 'Zurück in die Mitte' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Schulter geht mit nach oben' }
       ] });
   })();
 

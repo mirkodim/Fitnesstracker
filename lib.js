@@ -389,6 +389,133 @@ x({ id: 'x-pullapart', name: 'Band auseinanderziehen', gear: 'Widerstandsband', 
   feel: 'Hintere Schulter und oberer Rücken.',
   harder: 'Ein stärkeres Band oder die Arme diagonal nach oben (Y-Form) ziehen.' });
 
+/* ===== Brust ===== */
+
+x({ id: 'x-pushup-knee', name: 'Liegestütze auf den Knien', gear: 'Körpergewicht, auf der Matte', reg: 'brust schultern oberarme', eq: '', lvl: 1, pat: 'push',
+  sets: 3, reps: '6–12', rest: 60,
+  cues: ['Von den Knien bis zum Kopf eine gerade Linie.', 'Die Brust fast bis zum Boden, die Ellbogen schräg nach hinten.'],
+  watch: ['Knie auf der Matte, die Hände etwas breiter als die Schultern unter den Schultern aufstützen.', 'Spanne Bauch und Gesäss an, vom Kopf bis zu den Knien ist der Körper eine Linie.', 'Beuge die Ellbogen schräg nach hinten (etwa 45 Grad zum Körper) und senke die Brust fast bis zum Boden.', 'Drücke dich kräftig nach oben, ohne die Ellbogen ganz durchzudrücken.', 'Atme beim Hinuntergehen ein und beim Hochdrücken aus.'],
+  mistakes: ['Das Gesäss ragt nach oben.', 'Der Bauch hängt durch (Hohlkreuz).', 'Die Ellbogen zeigen weit zur Seite.', 'Nur ein kleines Stück nach unten gehen.'],
+  feel: 'Brust, vordere Schulter und Trizeps, dazu der Bauch, der den Körper stabil hält.',
+  harder: 'Zu normalen Liegestützen auf den Zehen wechseln.' });
+
+x({ id: 'x-pushup-incl', name: 'Liegestütze mit erhöhten Händen', gear: 'Bank, Tisch oder Kiste', reg: 'brust schultern oberarme', eq: 'bank|box', lvl: 1, pat: 'push',
+  sets: 3, reps: '8–12', rest: 60,
+  cues: ['Je höher die Hände, desto leichter.', 'Der Körper bleibt eine gerade Linie von den Fersen bis zum Kopf.'],
+  watch: ['Stütze die Hände auf eine stabile Erhöhung (Bank, Tisch, Kiste), etwas breiter als die Schultern.', 'Gehe mit den Füssen so weit zurück, dass der Körper eine schräge, gerade Linie bildet.', 'Spanne Bauch und Gesäss an und beuge die Ellbogen schräg nach hinten.', 'Senke die Brust kontrolliert zur Kante, dann drücke dich kräftig weg.', 'Mit der Zeit eine tiefere Erhöhung wählen, bis du am Boden angekommen bist.'],
+  mistakes: ['Der Körper hängt in der Mitte durch.', 'Das Gesäss ragt nach oben.', 'Der Kopf geht nach vorn statt die Brust.', 'Die Unterlage ist wacklig oder rutscht weg.'],
+  feel: 'Brust, vordere Schulter und Trizeps.' });
+
+x({ id: 'x-bench', name: 'Bankdrücken mit der Langhantel', gear: 'Langhantel und Bank', reg: 'brust schultern oberarme', eq: 'lh bank', lvl: 3, pat: 'bench',
+  sets: 3, reps: '5–8', rest: 120, weight: true,
+  cues: ['Schulterblätter zusammen und fest auf die Bank, Füsse am Boden.', 'Die Stange zur Brustmitte senken und wieder wegdrücken.'],
+  watch: ['Lege dich so hin, dass die Augen unter der Stange sind, die Füsse stehen fest am Boden.', 'Ziehe die Schulterblätter zusammen und nach unten, die Brust ist leicht gehoben.', 'Greife die Stange etwas breiter als die Schultern, das Handgelenk liegt gerade über dem Unterarm.', 'Senke die Stange kontrolliert zur Brustmitte, die Unterarme bleiben senkrecht.', 'Drücke die Stange kräftig nach oben, bis die Arme fast gestreckt sind.'],
+  mistakes: ['Das Gesäss hebt von der Bank ab.', 'Die Stange prallt von der Brust ab.', 'Die Ellbogen zeigen im rechten Winkel zur Seite.', 'Ohne Partner an die Grenze gehen. Besser ein Gewicht wählen, das du sicher schaffst, oder in einem Rack mit Sicherungen üben.'],
+  feel: 'Brust, vordere Schulter und Trizeps.',
+  easier: 'Mit Kurzhanteln oder erhöhten Liegestützen beginnen.' });
+
+x({ id: 'x-dbpress', name: 'Bankdrücken mit Kurzhanteln', gear: 'Kurzhanteln und Bank', reg: 'brust schultern oberarme', eq: 'kh bank', lvl: 2, pat: 'bench',
+  sets: 3, reps: '8–12', rest: 90, weight: true,
+  cues: ['Schulterblätter zusammen, Hanteln über der Brust.', 'Die Ellbogen schräg zum Körper, nicht ganz zur Seite.'],
+  watch: ['Setze dich mit den Hanteln auf die Oberschenkel und lege dich zurück, die Hanteln kommen auf Brusthöhe.', 'Die Füsse stehen fest am Boden, die Schulterblätter sind zusammengezogen.', 'Drücke beide Hanteln gleichzeitig nach oben, bis die Arme fast gestreckt sind.', 'Senke sie langsam wieder ab, bis die Ellbogen knapp unter Brusthöhe sind.', 'Die Handgelenke bleiben gerade, die Hanteln bewegen sich ruhig.'],
+  mistakes: ['Die Hanteln schwanken, weil sie zu schwer sind.', 'Die Ellbogen sinken zu tief und belasten die Schulter.', 'Das Gesäss hebt ab.', 'Die Hanteln werden oben zusammengeschlagen.'],
+  feel: 'Brust, vordere Schulter und Trizeps. Jede Seite arbeitet für sich.',
+  easier: 'Mit leichteren Hanteln oder als Liegestütze mit erhöhten Händen.' });
+
+x({ id: 'x-chestpress', name: 'Brustpresse an der Maschine', gear: 'Brustpresse', reg: 'brust oberarme', eq: 'ma', lvl: 1, pat: 'bench',
+  sets: 3, reps: '10–12', rest: 75, weight: true,
+  cues: ['Aufrecht sitzen, der Rücken liegt am Polster.', 'Gleichmässig nach vorn drücken, nicht ganz durchstrecken.'],
+  watch: ['Stelle den Sitz so ein, dass die Griffe auf Brusthöhe sind.', 'Setze dich aufrecht, Rücken und Kopf liegen am Polster, die Füsse stehen am Boden.', 'Drücke die Griffe gleichmässig nach vorn, bis die Arme fast gestreckt sind.', 'Lasse sie kontrolliert wieder zurückkommen, ohne dass das Gewicht aufsetzt.', 'Atme beim Drücken aus.'],
+  mistakes: ['Der Sitz ist zu hoch oder zu tief, die Schultern werden hochgezogen.', 'Die Ellbogen werden hart durchgedrückt.', 'Die Schultern rollen nach vorn.', 'Das Gewicht schlägt am Anschlag auf.'],
+  feel: 'Brust, vordere Schulter und Trizeps.' });
+
+x({ id: 'x-cablefly', name: 'Kabel-Fly von oben', gear: 'Kabelzug', reg: 'brust schultern', eq: 'kz', lvl: 2, pat: 'fly',
+  sets: 3, reps: '10–15', rest: 60, weight: true,
+  cues: ['Die Arme leicht gebeugt, die Hände kommen vor dem Körper zusammen.', 'Die Bewegung kommt aus der Brust, nicht aus den Armen.'],
+  watch: ['Stelle beide Kabel oben ein und stelle dich mittig, einen Fuss etwas vor den anderen.', 'Greife die Griffe, beuge die Arme leicht und lehne dich ein wenig nach vorn.', 'Führe die Hände in einem weiten Bogen nach unten und vorn zusammen, als würdest du jemanden umarmen.', 'Drücke die Brust kurz zusammen und lasse die Arme langsam wieder auseinander.', 'Die Ellbogen bleiben immer leicht gebeugt und auf gleicher Höhe.'],
+  mistakes: ['Die Arme strecken und beugen sich, es wird zu einem Drücken.', 'Mit dem Oberkörper schwingen.', 'Zu schwer, die Schultern ziehen nach vorn.', 'Die Arme gehen hinter die Schulter-Linie zurück.'],
+  feel: 'Die Brust, besonders an der Innenseite. Die vordere Schulter hilft mit.' });
+
+x({ id: 'x-dips', name: 'Dips an der Bank', gear: 'Bank, Kiste oder stabiler Stuhl', reg: 'oberarme brust', eq: 'bank|box', lvl: 2, pat: 'dip',
+  sets: 3, reps: '8–12', rest: 60,
+  cues: ['Die Hände stützen hinter dir auf der Kante, der Rücken bleibt nah an der Bank.', 'Nur so tief, bis die Ellbogen etwa 90 Grad haben.'],
+  watch: ['Setze dich an die Kante, die Hände neben der Hüfte, die Finger zeigen nach vorn.', 'Rutsche mit dem Gesäss nach vorn, die Beine sind gebeugt und die Füsse stehen am Boden.', 'Beuge die Ellbogen nach hinten und senke den Körper, bis die Ellbogen etwa 90 Grad haben.', 'Der Rücken bleibt nah an der Bank, die Schultern bleiben unten.', 'Drücke dich wieder hoch, ohne die Ellbogen hart durchzudrücken.'],
+  mistakes: ['Zu tief, die Schultern rutschen unter die Ellbogen.', 'Die Schultern wandern zu den Ohren.', 'Der Körper driftet weit von der Bank weg.', 'Die Ellbogen zeigen zur Seite statt nach hinten.'],
+  feel: 'Hinterseite der Oberarme (Trizeps), dazu Brust und vordere Schulter.',
+  easier: 'Die Füsse näher an die Bank stellen und die Knie stärker beugen.',
+  harder: 'Die Beine strecken oder ein Bein anheben.' });
+
+x({ id: 'x-medpass', name: 'Medizinball-Brustpass an die Wand', gear: 'Medizinball und Wand', reg: 'brust schultern oberarme', eq: 'mb', lvl: 2, pat: 'push',
+  sets: 3, reps: '10–12', rest: 60,
+  cues: ['Aus den Beinen mit Schwung, Arme strecken, Ball an die Wand.', 'Den Ball fangen und weich zur Brust zurücknehmen.'],
+  watch: ['Stelle dich etwa zwei Meter vor eine stabile Wand, die Füsse hüftbreit, die Knie leicht gebeugt.', 'Halte den Ball mit beiden Händen vor der Brust, die Ellbogen zeigen nach unten.', 'Strecke Beine und Arme gleichzeitig und wirf den Ball kräftig auf Brusthöhe gegen die Wand.', 'Fange den Ball weich mit gebeugten Armen und nimm ihn wieder zur Brust.', 'Wiederhole ohne Pause, aber kontrolliert.'],
+  mistakes: ['Der Ball wird zu hoch oder zu tief geworfen.', 'Der Rücken wird rund.', 'Die Arme fangen den Ball steif, die Handgelenke werden belastet.', 'Die Wand ist nicht fest oder zu nah.'],
+  feel: 'Brust, Schultern und Trizeps, dazu Beine und Rumpf. Eine Übung für schnelle, kräftige Bewegungen.',
+  easier: 'Einen leichteren Ball nehmen oder den Ball nur drücken statt werfen.' });
+
+/* ===== Schultern ===== */
+
+x({ id: 'x-ohp', name: 'Schulterdrücken mit Kurzhanteln', gear: 'Kurzhanteln', reg: 'schultern oberarme', eq: 'kh', lvl: 2, pat: 'ohp',
+  sets: 3, reps: '8–12', rest: 75, weight: true,
+  cues: ['Stehen, Bauch und Gesäss fest, die Rippen bleiben unten.', 'Über den Kopf drücken, ohne ins Hohlkreuz zu fallen.'],
+  watch: ['Stehe hüftbreit, die Hanteln auf Schulterhöhe, die Handflächen zeigen nach vorn oder zueinander.', 'Spanne Bauch und Gesäss an, der Blick geht geradeaus.', 'Drücke die Hanteln gerade nach oben, bis die Arme gestreckt sind.', 'Der Kopf geht kurz nach vorn durch die Arme, wenn die Hanteln oben sind.', 'Senke die Hanteln kontrolliert wieder zu den Schultern.'],
+  mistakes: ['Ins Hohlkreuz lehnen.', 'Mit den Beinen schwingen, sie sollen nur stabil stehen.', 'Die Hanteln weit vor dem Körper führen.', 'Die Schultern zu den Ohren ziehen.'],
+  feel: 'Die Schultern, dazu der Trizeps und der Rumpf, der dich stabil hält.',
+  easier: 'Im Sitzen mit Rückenlehne.',
+  harder: 'Abwechselnd mit einem Arm oder im Halbkniestand.' });
+
+x({ id: 'x-lateral', name: 'Seitheben', gear: 'Kurzhanteln', reg: 'schultern', eq: 'kh', lvl: 1, pat: 'raise',
+  sets: 3, reps: '10–15', rest: 45, weight: true,
+  cues: ['Leichte Gewichte, die Arme leicht gebeugt seitlich bis Schulterhöhe heben.', 'Die Schultern bleiben unten, der Rücken ruhig.'],
+  watch: ['Stehe aufrecht, in jeder Hand eine leichte Hantel neben dem Körper.', 'Beuge die Ellbogen leicht und halte sie in dieser Haltung.', 'Hebe die Arme seitlich an, bis sie etwa auf Schulterhöhe sind. Die Ellbogen führen die Bewegung an.', 'Halte oben kurz an und senke die Arme langsam in etwa 3 Sekunden.', 'Atme beim Heben aus.'],
+  mistakes: ['Zu schwere Gewichte, der Oberkörper schwingt mit.', 'Die Schultern werden hochgezogen.', 'Die Arme gehen höher als die Schultern.', 'Die Hände führen, die Ellbogen hängen nach.'],
+  feel: 'Die Seite der Schultern. Wähle ein Gewicht, bei dem die Haltung sauber bleibt.' });
+
+x({ id: 'x-front', name: 'Frontheben', gear: 'Kurzhantel oder Scheibe', reg: 'schultern brust', eq: 'kh', lvl: 1, pat: 'raise',
+  sets: 3, reps: '10–12', rest: 45, weight: true,
+  cues: ['Die Arme mit leicht gebeugten Ellbogen nach vorn bis Schulterhöhe heben.', 'Der Oberkörper bleibt ruhig, kein Schwung.'],
+  watch: ['Stehe aufrecht, die Hanteln hängen vor den Oberschenkeln.', 'Spanne Bauch und Gesäss an.', 'Hebe einen Arm (oder beide) gestreckt nach vorn, bis die Hand auf Schulterhöhe ist.', 'Halte kurz und senke die Hantel langsam wieder ab.', 'Der Rücken bleibt gerade, die Schultern bleiben unten.'],
+  mistakes: ['Mit dem Oberkörper nach hinten schwingen.', 'Die Hantel über Schulterhöhe heben.', 'Ein Hohlkreuz machen.', 'Zu schwere Gewichte.'],
+  feel: 'Die Vorderseite der Schultern, ein wenig auch die Brust.' });
+
+x({ id: 'x-pike', name: 'Pike-Liegestütze', gear: 'Körpergewicht, auf der Matte', reg: 'schultern oberarme', eq: '', lvl: 3, pat: 'ohp',
+  sets: 3, reps: '5–10', rest: 75,
+  cues: ['Die Hüfte hoch, der Körper bildet ein umgekehrtes V.', 'Der Kopf sinkt zwischen die Hände, die Ellbogen zeigen nach hinten.'],
+  watch: ['Stütze die Hände etwa schulterbreit auf, gehe mit den Füssen näher heran und schiebe die Hüfte nach oben.', 'Die Beine sind fast gestreckt, der Rücken ist gerade, der Kopf ist zwischen den Armen.', 'Beuge die Ellbogen und senke den Kopf kontrolliert Richtung Boden.', 'Drücke dich kräftig hoch, bis die Arme gestreckt sind.', 'Die Hüfte bleibt hoch während der ganzen Bewegung.'],
+  mistakes: ['Die Hüfte sinkt ab, es wird ein normaler Liegestütz.', 'Die Ellbogen zeigen weit zur Seite.', 'Der Kopf kippt nach vorn und der Nacken wird belastet.', 'Die Hände sind zu weit vorn oder zu eng.'],
+  feel: 'Die Schultern und der Trizeps, dazu der obere Rücken. Ein Einstieg in den Handstand-Liegestütz.',
+  easier: 'Die Hände auf eine Erhöhung stellen oder erst nur in der Pike-Position halten.' });
+
+/* ===== Nacken ===== */
+
+x({ id: 'x-chintuck', name: 'Kinn einziehen', gear: 'Körpergewicht, im Stehen oder Sitzen', reg: 'nacken', eq: '', lvl: 1, pat: 'neck',
+  sets: 2, reps: '10', rest: 20,
+  cues: ['Das Kinn gerade nach hinten schieben, als wolltest du ein Doppelkinn machen.', 'Der Blick bleibt geradeaus, der Kopf nickt nicht.'],
+  watch: ['Stehe oder sitze aufrecht, die Schultern sind entspannt.', 'Schiebe das Kinn waagerecht nach hinten, der Blick geht weiter nach vorn.', 'Halte 3 bis 5 Sekunden, du spürst die tiefen Nackenmuskeln.', 'Lasse den Kopf wieder locker nach vorn kommen.', 'Wiederhole mehrmals in Ruhe, gerne während des Tages.'],
+  mistakes: ['Der Kopf wird in den Nacken gelegt.', 'Das Kinn senkt sich zur Brust (Nicken).', 'Die Schultern werden hochgezogen.', 'Mit Gewalt statt locker.'],
+  feel: 'Eine sanfte Aktivierung der tiefen Nackenmuskeln. Gut gegen Verspannungen nach langem Sitzen.' });
+
+x({ id: 'x-neckiso', name: 'Nacken mit der Hand (isometrisch)', gear: 'Eine Hand', reg: 'nacken', eq: '', lvl: 1, pat: 'neck', timer: true, holds: [10, 15, 20],
+  sets: 3, rest: 30,
+  cues: ['Die Hand an die Stirn legen und den Kopf dagegen drücken, ohne dass er sich bewegt.', 'Langsam steigern und gleichmässig weiteratmen.'],
+  watch: ['Stehe oder sitze aufrecht, lege die Hand an die Stirn.', 'Drücke den Kopf langsam gegen die Hand, die Hand hält dagegen. Der Kopf bewegt sich nicht.', 'Steigere den Druck in etwa 2 Sekunden und halte ihn bis zum Ende der Zeit.', 'Lasse langsam los. Atme weiter, die Schultern bleiben entspannt.', 'Wechsle die Richtung: seitlich links, seitlich rechts, Hinterkopf.'],
+  mistakes: ['Zu viel Druck, es entsteht Schmerz.', 'Die Luft wird angehalten.', 'Die Schultern werden hochgezogen.', 'Der Kopf kippt weg.'],
+  feel: 'Die Nackenmuskeln arbeiten, ohne dass sich der Kopf bewegt. Bei Nackenschmerzen oder Schwindel nicht ausführen und mit der Ärztin, dem Arzt oder der Physiotherapie klären.' });
+
+x({ id: 'x-shrug', name: 'Schulterheben', gear: 'Kurzhanteln', reg: 'nacken schultern', eq: 'kh', lvl: 1, pat: 'shrug',
+  sets: 3, reps: '10–15', rest: 45, weight: true,
+  cues: ['Die Schultern gerade nach oben zu den Ohren ziehen und kurz halten.', 'Nicht kreisen, nicht nach vorn rollen.'],
+  watch: ['Stehe aufrecht, in jeder Hand eine Hantel neben dem Körper, die Arme hängen gestreckt.', 'Ziehe die Schultern gerade nach oben, als wolltest du sie zu den Ohren bringen.', 'Halte oben 1 bis 2 Sekunden.', 'Senke die Schultern langsam wieder ab, die Arme bleiben gestreckt.', 'Der Kopf bleibt gerade, der Blick geht geradeaus.'],
+  mistakes: ['Die Schultern kreisen.', 'Der Kopf wird nach vorn gestreckt.', 'Die Ellbogen beugen sich.', 'Zu schwer, dann entsteht Schwung.'],
+  feel: 'Der obere Teil des Rückens zwischen Nacken und Schulter (Trapezmuskel).' });
+
+x({ id: 'x-neckstretch', name: 'Nacken dehnen', gear: 'Körpergewicht, im Sitzen oder Stehen', reg: 'nacken', eq: '', lvl: 1, pat: 'stretch', timer: true, holds: [20, 30, 45], sides: 2,
+  sets: 2, rest: 15,
+  cues: ['Das Ohr sanft Richtung Schulter neigen, die andere Schulter bleibt unten.', 'Nur so weit, dass es angenehm zieht, nicht schmerzt.'],
+  watch: ['Sitze oder stehe aufrecht, die Schultern sind locker.', 'Neige den Kopf langsam zur Seite, als wolltest du das Ohr auf die Schulter legen.', 'Die andere Schulter bleibt unten, du spürst ein Ziehen an der Seite des Halses.', 'Atme ruhig und lasse den Kopf nur durch sein eigenes Gewicht sinken.', 'Danach die Seite wechseln.'],
+  mistakes: ['Mit der Hand am Kopf ziehen.', 'Die Schulter geht nach oben.', 'Der Kopf dreht nach vorn oder hinten.', 'Wippen oder federn.'],
+  feel: 'Ein sanftes Ziehen an der Seite des Halses. Bei Schmerz, Kribbeln oder Schwindel sofort stoppen.' });
+
 /* ==== new exercises below ==== */
 
 })();
