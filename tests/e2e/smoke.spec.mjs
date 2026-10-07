@@ -40,11 +40,11 @@ test('Version steht im Fussbereich und stimmt mit dem Build überein', async ({ 
 test('Alle vier Reiter lassen sich öffnen', async ({ page, site }) => {
   await openApp(page, site);
   await tab(page, 'Erstellen').click();
+  await expect(page.locator('h2.mt')).toHaveText('Übungen');                                   // zuerst die Übungen
+  await expect(page.locator('#lib-q')).toBeVisible();
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
   await expect(page.locator('h2.mt')).toHaveText('Neues Training');
   await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
-  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
-  await expect(page.locator('h2.mt')).toHaveText('Übungen');
-  await expect(page.locator('#lib-q')).toBeVisible();
   await tab(page, 'Kalender').click();
   await expect(page.locator('h2.mt')).toHaveText('Oktober 2026');
   await tab(page, 'Essen').click();

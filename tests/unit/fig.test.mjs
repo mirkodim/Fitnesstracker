@@ -10,7 +10,7 @@ const { LIB } = require('../../lib.js');
 const IDS = Object.keys(FIG.ANIM);
 const NEW_IDS = IDS.filter((id) => id.startsWith('x-'));      // the ten of the first version are kept exactly as they were (see the comparison with the reference)
 
-const LB = 46, LT = 36, LS = 36, LU = 26, LF = 24, HR = 9, G = 174;
+const LB = 46, LT = 36, LS = 36, LU = 26, LF = 24, HR = 9, G = 174, D2R = FIG.D2R;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 function segDist(p, a, b) {
   const abx = b[0] - a[0], aby = b[1] - a[1];
@@ -245,9 +245,12 @@ test('Alle Animationen: nichts ist NaN, die Segmentlängen bleiben in jedem Bild
       for (const k of Object.keys(j)) if (Array.isArray(j[k])) assert.ok(j[k].every(Number.isFinite), id + ' ' + k);
       if (A.view === 'f') {
         assert.ok(Math.abs(dist(j.P, j.C) - LB) < 1e-6, id + ' Rumpf');
-        for (const [a, b, l] of [['hipL', 'knL', LT], ['knL', 'anL', LS], ['hipR', 'knR', LT], ['knR', 'anR', LS], ['shL', 'elL', LU], ['elL', 'wrL', LF], ['shR', 'elR', LU], ['elR', 'wrR', LF]]) {
+        // a limb that points at the viewer (seated thighs, a forearm held forward) is drawn shorter by the factors ts, cs, us, fs of the pose
+        const q = f.q;
+        for (const [a, b, l] of [['hipL', 'knL', LT * q.ts], ['knL', 'anL', LS * q.cs], ['hipR', 'knR', LT * q.ts], ['knR', 'anR', LS * q.cs], ['shL', 'elL', LU * q.us], ['elL', 'wrL', LF * q.fs], ['shR', 'elR', LU * q.us], ['elR', 'wrR', LF * q.fs]]) {
           assert.ok(Math.abs(dist(j[a], j[b]) - l) < 1e-6, id + ' ' + a + '-' + b);
         }
+        for (const k of ['us', 'fs', 'ts', 'cs']) assert.ok(q[k] >= 0.05 && q[k] <= 1, id + ' ' + k + ' ist ' + q[k]);
       } else {
         const where = id + ' Schritt ' + (f.step + 1);
         assert.ok(Math.abs(dist(j.hip, j.knee) - LT) < 1e-6 && Math.abs(dist(j.knee, j.ankle) - LS) < 1e-6, where + ' Bein');
@@ -271,7 +274,7 @@ test('Alle Animationen: nichts liegt unter dem Boden, die Standfüsse bleiben st
       }
       assert.ok(j.head[1] + HR <= 178 + 1.5, where + ': Kopf unter dem Boden');
       for (const p of A.props) if (HELD[p.t] && p.at && p.t !== 'pad') {
-        const c = [j[p.at][0] + (p.dx || 0), j[p.at][1] + (p.dy || 0)];
+        const c = FIG.propPt(j, p);
         assert.ok(c[1] + heldR(p) <= 178 - 1 + 1e-6, where + ': ' + p.t + ' berührt den Boden');
       }
     }
@@ -286,7 +289,7 @@ test('Alle Animationen: alles liegt im Bild (320 x 190) und ist zentriert', () =
     for (const f of allFrames(id, 14)) {
       for (const k of Object.keys(f.j)) if (Array.isArray(f.j[k]) && f.j[k].length === 2 && k !== 'head') take(f.j[k][0], f.j[k][1], 3.5);
       take(f.j.head[0], f.j.head[1], HR + 1.75);
-      for (const p of A.props) if (HELD[p.t] && p.at) { const c = [f.j[p.at][0] + (p.dx || 0), f.j[p.at][1] + (p.dy || 0)]; take(c[0], c[1], heldR(p) + 1.5); if (p.t === 'bell') take(c[0], c[1] - 2 * heldR(p), 2); }
+      for (const p of A.props) if (HELD[p.t] && p.at) { const c = FIG.propPt(f.j, p); take(c[0], c[1], heldR(p) + 1.5); if (p.t === 'bell') take(c[0], c[1] - 2 * heldR(p), 2); }
     }
     for (const p of A.props) {
       if (p.t === 'box') { take(p.x, p.y, 0); take(p.x + p.w, p.y + p.h, 0); }
@@ -312,4 +315,377 @@ test('Vorschaubilder: gültiges SVG mit Zahlen, für jede Übung', () => {
   for (const g of ['beine', 'gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) {
     assert.doesNotMatch(FIG.icon(g), /NaN|undefined/, g);
   }
+});
+
+
+/* ---------- the three corrected animations ---------- */
+const armLen = (j) => dist(j.sh, j.elbow) + dist(j.elbow, j.wrist);
+const bend = (j) => armLen(j) - dist(j.sh, j.wrist);              // 0 = a straight arm
+
+test('x-swing: die Arme sind in jedem einzelnen Bild gestreckt, auch zwischen den Posen', () => {
+  const A = FIG.ANIM['x-swing'];
+  let n = 0;
+  for (const f of allFrames('x-swing', 12)) {
+    if (f.bad) continue;
+    assert.ok(bend(f.j) < 0.02, 'Arm gebeugt (' + bend(f.j).toFixed(3) + ') in Schritt ' + (f.step + 1));
+    n++;
+  }
+  assert.ok(n > 800, 'viele geprüfte Bilder: ' + n);
+  // der Ellbogen zeigt dabei in Armrichtung: Schulter, Ellbogen, Handgelenk liegen auf einer Linie
+  for (const s of A.steps.filter((x) => !x.bad)) {
+    const j = FIG.solve(s.pose);
+    const cross = Math.abs((j.elbow[0] - j.sh[0]) * (j.wrist[1] - j.sh[1]) - (j.elbow[1] - j.sh[1]) * (j.wrist[0] - j.sh[0])) / dist(j.sh, j.wrist);
+    assert.ok(cross < 0.01, 'Arm liegt auf einer Linie');
+  }
+});
+
+test('x-swing: eine fliessende Bewegung (viele kurze Schritte ohne Abbremsen), die Kugel hängt an den Händen', () => {
+  const A = FIG.ANIM['x-swing'];
+  const good = A.steps.filter((s) => !s.bad), bad = A.steps.filter((s) => s.bad);
+  assert.ok(good.length >= 48 && bad.length === 1, 'drei Schwünge am Stück und ein falscher');
+  assert.ok(good.every((s) => s.flow === true && s.hold === 0 && s.ms <= 100), 'ohne Halten und ohne Abbremsen, jeder Schritt kurz');
+  assert.equal(A.reps, 1);
+  // die Hand beschreibt eine glatte Bahn: die Geschwindigkeit ändert sich von Schritt zu Schritt nie um mehr als 30 Prozent der Spitze
+  const w = good.map((s) => FIG.solve(s.pose).wrist);
+  const sp = w.map((p, i) => dist(p, w[(i + 1) % w.length]));
+  const peak = Math.max(...sp);
+  for (let i = 0; i < sp.length; i++) {
+    const a = sp[i], b = sp[(i + 1) % sp.length];
+    assert.ok(Math.abs(a - b) <= 0.3 * peak, 'Geschwindigkeitssprung bei Schritt ' + i + ': ' + a.toFixed(1) + ' -> ' + b.toFixed(1) + ' (Spitze ' + peak.toFixed(1) + ')');
+  }
+  assert.ok(Math.min(...sp) < 0.35 * peak, 'an den Umkehrpunkten wird die Kugel langsam, in der Mitte schnell');
+  // Unten zwischen den Beinen, oben auf Brusthöhe waagerecht nach vorn
+  const bottom = FIG.solve(good[0].pose), top = FIG.solve(good[12].pose);
+  assert.ok(bottom.wrist[1] > bottom.hip[1] && bottom.wrist[0] < bottom.sh[0], 'unten hängen die Arme nach hinten unten zwischen die Beine');
+  assert.ok(top.wrist[0] > top.sh[0] + 45 && Math.abs(top.wrist[1] - top.sh[1]) < 14, 'oben zeigen die Arme waagerecht nach vorn');
+  assert.ok(top.hip[1] < bottom.hip[1] - 4 && Math.abs(top.th) < 5 && bottom.th > 55, 'die Hüfte streckt sich oben, der Oberkörper richtet sich auf');
+  const bell = A.props.find((p) => p.t === 'bell');
+  assert.ok(bell.at === 'wrist' && bell.along > 8, 'die Kugel hängt an den Händen');
+  for (const s of A.steps) {
+    const j = FIG.solve(s.pose), c = FIG.propPt(j, bell);
+    assert.ok(Math.abs(dist(c, j.wrist) - bell.along) < 1e-9, 'Kugel liegt in Verlängerung des Arms');
+  }
+  // die Kugel liegt in Armrichtung hinter der Hand: Griff zur Hand hin
+  assert.match(FIG.frame('x-swing', good[12].pose, false), /<path class="bh" d="M[-\d. ]+ C/);
+});
+
+test('x-dbpress: flach auf der Bank wie das Bankdrücken mit der Langhantel, keine Schrägbank, keine Kiste', () => {
+  const D = FIG.ANIM['x-dbpress'], B = FIG.ANIM['x-bench'];
+  assert.deepEqual(D.props.filter((p) => p.t !== 'plate'), B.props.filter((p) => p.t !== 'plate'), 'dieselbe Bank');
+  assert.ok(D.props.every((p) => p.t === 'box' || p.t === 'plate'), 'nur Bank und Hanteln, kein schräges Polster');
+  D.steps.forEach((s, i) => assert.deepEqual(s.pose, B.steps[i].pose, 'Schritt ' + (i + 1) + ' wie bei der Langhantel'));
+  for (const s of D.steps) {
+    const j = FIG.solve(s.pose);
+    assert.ok(Math.abs(j.sh[1] + 3.5 - 144.5) < 1.2 || s.bad, 'die Schulter liegt auf der Bank');
+    if (!s.bad) assert.ok(j.hip[1] < 146 && Math.abs(j.th + 90) < 0.5, 'der Körper liegt waagerecht');
+  }
+  const up = FIG.solve(D.steps[0].pose), dn = FIG.solve(D.steps[1].pose);
+  assert.ok(up.wrist[1] < up.sh[1] - 40 && Math.abs(up.wrist[0] - up.sh[0]) < 12, 'oben stehen die Hanteln über der Schulter');
+  assert.ok(dn.wrist[1] > up.wrist[1] + 25, 'unten sind sie an der Brust');
+});
+
+test('x-chestpress: man sitzt in der Maschine und drückt die Griffe waagerecht von der Brust weg (kein Stock, kein Seil)', () => {
+  const A = FIG.ANIM['x-chestpress'];
+  assert.ok(!A.props.some((p) => p.t === 'strap' || p.t === 'pulley'), 'kein Seilzug');
+  // Rahmen um die Person: ein Pfosten hinten, ein Balken oben, ein Pfosten vorn
+  const rails = A.props.filter((p) => p.t === 'rail');
+  const vertical = rails.filter((p) => p.x1 === p.x2), top = rails.filter((p) => p.y1 === p.y2 && p.y1 < 80);
+  assert.ok(vertical.length >= 2 && top.length >= 1, 'Rahmen');
+  assert.ok(A.props.filter((p) => p.t === 'box').length >= 2, 'Sitz und Gewichtsblock');
+  const grip = A.props.find((p) => p.t === 'pad' && p.at === 'wrist');
+  assert.ok(grip && grip.ang === 90, 'senkrechter Griff an der Hand');
+  const good = A.steps.filter((s) => !s.bad), js = good.map((s) => FIG.solve(s.pose));
+  const rest = js.map((j) => j.wrist[1]);
+  assert.ok(Math.max(...rest) - Math.min(...rest) < 0.01, 'die Griffe bleiben auf einer Höhe: sie bewegen sich waagerecht');
+  const start = js[0], press = js[1];
+  assert.ok(press.wrist[0] > start.wrist[0] + 25, 'die Griffe gehen weit nach vorn');
+  assert.ok(dist(press.sh, press.wrist) > 45 && dist(press.sh, press.wrist) < 49.99, 'fast, aber nicht ganz gestreckt');
+  assert.ok(start.elbow[0] < start.sh[0] + 1 && start.elbow[1] > start.sh[1] + 15, 'am Anfang liegen die Ellbogen hinter dem Körper unter der Schulter');
+  // sitzen: Hüfte auf dem Sitz, Rücken am Polster, Füsse am Boden
+  const seat = A.props.find((p) => p.t === 'box' && p.y > 140), back = rails.find((p) => p.x1 > 80 && p.x1 < 100 && p.y1 > 140);
+  assert.ok(start.hip[0] > seat.x && start.hip[0] < seat.x + seat.w && Math.abs(start.hip[1] + 5 - seat.y) < 1.5, 'Hüfte sitzt auf dem Sitz');
+  assert.ok(start.sh[0] > back.x2 && start.sh[0] - back.x2 < 12, 'Schulter liegt am Rückenpolster');
+  assert.ok(Math.abs(start.ankle[1] - G) < 1e-9, 'Füsse am Boden');
+  // falsch: der Rücken löst sich vom Polster
+  const bad = FIG.solve(A.steps.find((s) => s.bad).pose);
+  assert.ok(bad.sh[0] > start.sh[0] + 8, 'der Oberkörper kippt nach vorn');
+  // der Rahmen ist breiter als die Bewegung: die Griffe stossen nirgends an
+  assert.ok(Math.max(press.wrist[0], bad.wrist[0]) < Math.max(...vertical.map((p) => p.x1)) - 20);
+});
+
+
+/* ---------- the machines of fitness and rehab centres ---------- */
+const MACHINE_IDS = ['x-adduct', 'x-abduct', 'x-pecdeck', 'x-revfly', 'x-latmach', 'x-extrot', 'x-shpress', 'x-curlmach', 'x-trimach', 'x-crunchmach', 'x-machinerow', 'x-assistpull',
+  'x-facepull', 'x-straightarm', 'x-hyper', 'x-hack', 'x-smith', 'x-calfpress', 'x-calfmach', 'x-glutekick', 'x-lumbar', 'x-inclinedb', 'x-captain', 'x-woodchop',
+  'x-legcurlseat', 'x-cablehip', 'x-tke', 'x-balance'];
+const solveOf = (id, pose) => (FIG.ANIM[id].view === 'f' ? FIG.solveF(pose) : FIG.solve(pose));
+const stepsOf = (id, bad) => FIG.ANIM[id].steps.filter((s) => !!s.bad === !!bad);
+const keyJ = (id) => stepsOf(id, false).map((s) => solveOf(id, s.pose));
+const badJ = (id) => solveOf(id, stepsOf(id, true)[0].pose);
+const goodFrames = (id, n = 16) => allFrames(id, n).filter((f) => !f.bad).map((f) => f.j);
+const sweepOf = (list, key) => Math.max(...list.flatMap((a) => list.map((b) => dist(a[key], b[key]))));
+const near = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol;
+
+test('Maschinen: jede der 28 neuen Übungen bewegt sich sichtbar, hat einen Falsch-Schritt und eine Beschriftung für jede Phase', () => {
+  assert.equal(new Set(MACHINE_IDS).size, MACHINE_IDS.length);
+  for (const id of MACHINE_IDS) {
+    const A = FIG.ANIM[id];
+    assert.ok(A, id);
+    assert.equal(A.steps.filter((s) => s.bad).length, 1, id + ': genau ein Falsch-Schritt');
+    assert.ok(A.steps[A.steps.length - 1].bad, id + ': der Falsch-Schritt steht am Ende der Schleife');
+    const good = goodFrames(id);
+    const keys = A.view === 'f' ? ['wrL', 'wrR', 'knL', 'knR', 'anL', 'anR', 'elL', 'elR', 'C'] : ['wrist', 'ankle', 'ankle2', 'knee', 'sh', 'hip', 'elbow', 'toe'];
+    const moved = Math.max(...keys.filter((k) => good[0][k]).map((k) => sweepOf(good, k)));
+    assert.ok(moved >= 10, id + ' bewegt sich zu wenig: ' + moved.toFixed(1) + ' px');
+    const labels = A.steps.map((s) => s.label);
+    assert.ok(labels.every((l) => l.length >= 12 && l.length <= 90), id + ': Beschriftungen kurz genug fürs Handy');
+  }
+  const libIds = new Set(LIB.map((e) => e.id));
+  for (const id of MACHINE_IDS) assert.ok(libIds.has(id), id + ' steht in der Bibliothek');
+});
+
+test('Maschinen: Beinanzieher und Beinspreizer von vorn: das Becken bleibt auf dem Sitz, die Füsse am Boden, nur die Knie öffnen und schliessen sich', () => {
+  const kneeGap = (j) => Math.abs(j.knR[0] - j.knL[0]);
+  for (const id of ['x-adduct', 'x-abduct']) {
+    const fr = goodFrames(id);
+    for (const j of fr) {
+      assert.ok(near(j.P[1], 138, 1e-9) && near(j.P[0], 160, 1e-9), id + ': das Becken bleibt auf dem Sitz');
+      assert.ok(near(j.anL[1], G, 1e-9) && near(j.anR[1], G, 1e-9), id + ': beide Füsse am Boden');
+      assert.ok(near(j.anL[0], j.knL[0], 1e-9) && near(j.anR[0], j.knR[0], 1e-9), id + ': die Unterschenkel hängen senkrecht');
+      assert.ok(near(j.knL[1], j.P[1], 1e-9), id + ': die Oberschenkel liegen waagrecht auf dem Sitz');
+    }
+    const gaps = fr.map(kneeGap);
+    assert.ok(Math.max(...gaps) > 68 && Math.min(...gaps) < 30, id + ': Knieabstand von ' + Math.min(...gaps).toFixed(0) + ' bis ' + Math.max(...gaps).toFixed(0));
+    const bad = badJ(id);
+    assert.ok(bad.P[1] < 135, id + ': im Falsch-Schritt hebt das Becken ab');
+  }
+  const ad = FIG.ANIM['x-adduct'], ab = FIG.ANIM['x-abduct'];
+  const gap = (id, i) => kneeGap(solveOf(id, FIG.ANIM[id].steps[i].pose));
+  assert.ok(gap('x-adduct', 0) > gap('x-adduct', 1) + 40, 'Beinanzieher: es beginnt offen und endet zusammen');
+  assert.ok(gap('x-abduct', 1) > gap('x-abduct', 0) + 40, 'Beinspreizer: es beginnt zusammen und endet offen');
+  // die Polster liegen beim Anzieher innen an den Knien, beim Spreizer aussen
+  const side = (A, name) => A.props.find((p) => p.t === 'pad' && p.at === name).dx;
+  assert.ok(side(ad, 'knL') > 0 && side(ad, 'knR') < 0, 'Beinanzieher: Polster innen');
+  assert.ok(side(ab, 'knL') < 0 && side(ab, 'knR') > 0, 'Beinspreizer: Polster aussen');
+  for (const A of [ad, ab]) assert.ok(A.props.some((p) => p.t === 'box' && p.y > 140) && A.props.some((p) => p.t === 'box' && p.y < 100), 'Sitz und Rückenlehne');
+});
+
+test('Maschinen: Butterfly und Reverse Butterfly: die Arme schwingen zwischen weit offen und vor dem Körper', () => {
+  const pec = keyJ('x-pecdeck'), elbowGap = (j) => Math.abs(j.elR[0] - j.elL[0]);
+  assert.ok(elbowGap(pec[0]) > 80 && elbowGap(pec[2]) < 46, 'Butterfly: Ellbogen weit offen -> vor der Brust zusammen');
+  for (const j of goodFrames('x-pecdeck')) {
+    assert.ok(near(j.elL[1], j.shL[1], 1e-9) && near(j.elR[1], j.shR[1], 1e-9), 'Ellbogen auf Schulterhöhe');
+    assert.ok(near(j.wrL[0], j.elL[0], 1e-9) && j.wrL[1] < j.elL[1] - 23, 'Unterarme senkrecht nach oben');
+  }
+  const rev = keyJ('x-revfly'), handGap = (j) => Math.abs(j.wrR[0] - j.wrL[0]);
+  assert.ok(handGap(rev[0]) < 70 && handGap(rev[2]) > 120, 'Reverse Butterfly: Hände vorn nah beieinander -> seitlich weit offen');
+  for (const j of goodFrames('x-revfly')) {
+    assert.ok(near(j.wrL[1], j.shL[1], 1e-9) && near(j.wrR[1], j.shR[1], 1e-9), 'die Arme bleiben auf Schulterhöhe');
+    assert.ok(j.P[1] === 138, 'sitzend');
+  }
+  assert.ok(badJ('x-pecdeck').shL[1] < pec[0].shL[1] - 8 && badJ('x-revfly').shL[1] < rev[0].shL[1] - 8, 'Falsch: die Schultern ziehen hoch');
+});
+
+test('Maschinen: Seitheben an der Maschine (von vorn) und Aussenrotation: die richtigen Gelenke bewegen sich', () => {
+  const lat = keyJ('x-latmach'), low = lat[0], high = lat[2];
+  const deg = (j, s, e) => Math.atan2(Math.abs(j[e][0] - j[s][0]), j[e][1] - j[s][1]) * 180 / Math.PI;
+  assert.ok(deg(low, 'shL', 'elL') < 20 && deg(high, 'shL', 'elL') > 80 && deg(high, 'shL', 'elL') < 95, 'Oberarm: fast senkrecht -> waagrecht, nicht höher');
+  assert.ok(deg(badJ('x-latmach'), 'shL', 'elL') > 105, 'Falsch: zu hoch');
+  for (const j of goodFrames('x-latmach')) assert.ok(dist(j.elL, j.wrL) <= 0.16 * LF + 1e-9 + 24 * 0 || dist(j.elL, j.wrL) < 4, 'der Unterarm zeigt zum Betrachter (kurz)');
+  // Aussenrotation: der Oberarm bleibt am Körper, der Unterarm zeigt erst quer über den Bauch, dann nach vorn, dann nach aussen
+  const er = keyJ('x-extrot');
+  for (const j of goodFrames('x-extrot')) {
+    assert.ok(Math.abs(j.elR[0] - j.shR[0]) < 4 && j.elR[1] - j.shR[1] > 24, 'der Ellbogen bleibt unter der Schulter am Körper');
+    assert.ok(Math.abs(j.wrR[1] - j.elR[1]) <= 3, 'der Unterarm bleibt waagrecht (beim Umschlagen für einen Augenblick höchstens 3 px)');
+  }
+  assert.ok(er[0].wrR[0] < er[0].elR[0] - 20, 'Start: der Unterarm zeigt nach innen, quer vor den Bauch');
+  assert.ok(er[3].wrR[0] > er[3].elR[0] + 12, 'Ende: der Unterarm zeigt nach aussen');
+  const lens = goodFrames('x-extrot', 24).map((j) => dist(j.elR, j.wrR));
+  assert.ok(Math.min(...lens) < 4, 'beim Drehen zeigt der Unterarm kurz zum Betrachter');
+  assert.ok(badJ('x-extrot').elR[0] - badJ('x-extrot').shR[0] > 15, 'Falsch: der Ellbogen löst sich vom Körper');
+  // das Band läuft von links an die Hand
+  const A = FIG.ANIM['x-extrot'];
+  assert.ok(A.props.some((p) => p.t === 'strap' && p.band && p.at === 'wrR' && p.anchor[0] < 120), 'Band links');
+});
+
+test('Maschinen: Schulterpresse, Bizepscurl und Trizepsmaschine: Rumpf und Sitz bleiben, nur die Arme arbeiten', () => {
+  // Schulterpresse
+  const sp = goodFrames('x-shpress'), spKeys = keyJ('x-shpress');
+  for (const j of sp) assert.ok(near(j.hip[0], 100) && near(j.hip[1], 145), 'Schulterpresse: sitzend, die Hüfte bleibt');
+  assert.ok(spKeys[0].wrist[1] > spKeys[2].wrist[1] + 28, 'die Griffe steigen um mindestens 28 px');
+  assert.ok(spKeys[0].elbow[1] > spKeys[0].wrist[1], 'unten: der Ellbogen unter der Hand');
+  assert.ok(dist(spKeys[2].sh, spKeys[2].wrist) > 45 && dist(spKeys[2].sh, spKeys[2].wrist) < 49.99, 'oben: Arme fast gestreckt');
+  assert.ok(Math.abs(spKeys[2].wrist[0] - spKeys[2].sh[0]) < 12, 'die Griffe gehen senkrecht über die Schulter');
+  assert.ok(badJ('x-shpress').sh[0] > spKeys[0].sh[0] + 8, 'Falsch: der Rücken löst sich vom Polster');
+  // Bizepscurl: der Ellbogen liegt fest auf dem Polster, die Hand dreht sich um ihn
+  const cm = goodFrames('x-curlmach', 24);
+  for (const j of cm) assert.ok(dist(j.elbow, cm[0].elbow) < 0.02, 'Curlmaschine: der Ellbogen bleibt fest auf dem Polster');
+  const ang = (j) => { let a = Math.atan2(j.wrist[0] - j.elbow[0], j.wrist[1] - j.elbow[1]) * 180 / Math.PI; return a < -90 ? a + 360 : a; };
+  assert.ok(Math.max(...cm.map((j) => dist(j.wrist, j.sh))) > 49.9, 'unten sind die Arme gestreckt');
+  assert.ok(Math.max(...cm.map(ang)) - Math.min(...cm.map(ang)) > 150, 'der Unterarm dreht sich um mehr als 150 Grad um den Ellbogen');
+  const keys = keyJ('x-curlmach');
+  assert.ok(dist(keys[2].wrist, keys[2].sh) < 22, 'oben: die Hand ist nah an der Schulter');
+  // Trizepsmaschine: Ellbogen am Körper, die Arme strecken sich nach unten
+  const tm = goodFrames('x-trimach'), tk = keyJ('x-trimach');
+  for (const j of tm) assert.ok(Math.abs(j.elbow[0] - j.sh[0]) < 15 && j.elbow[1] > j.sh[1] + 10, 'Trizepsmaschine: die Ellbogen bleiben am Körper');
+  assert.ok(tk[2].wrist[1] > tk[0].wrist[1] + 18 && dist(tk[2].sh, tk[2].wrist) > 47, 'die Arme strecken sich nach unten');
+});
+
+test('Maschinen: Bauchmaschine, Rudern, Klimmzugmaschine: Hüfte, Griffe und Polster bleiben, wo die Maschine sie hält', () => {
+  // Bauchmaschine: die Hüfte bleibt auf dem Sitz, der Oberkörper rollt nach vorn
+  const cr = keyJ('x-crunchmach'), crf = goodFrames('x-crunchmach');
+  for (const j of crf) assert.ok(near(j.hip[0], 100) && near(j.hip[1], 145), 'Bauchmaschine: die Hüfte bleibt');
+  assert.ok(cr[0].th < 0 && cr[2].th > 28, 'Oberkörper von aufrecht nach vorn gerollt');
+  assert.ok(FIG.ANIM['x-crunchmach'].steps[2].pose.round >= 5, 'der Rücken rundet sich');
+  const bad = FIG.ANIM['x-crunchmach'].steps[5].pose;
+  assert.ok(bad.ha - bad.th > 25, 'Falsch: der Kopf wird vorgezogen, nicht der Bauch benutzt');
+  // Rudermaschine: der Oberkörper bleibt am Polster, die Hände gleiten waagrecht, die Ellbogen gehen hinter den Körper
+  const rw = keyJ('x-machinerow'), rwf = goodFrames('x-machinerow');
+  for (const j of rwf) { assert.ok(near(j.hip[0], 94) && near(j.sh[0], rwf[0].sh[0]), 'Rudermaschine: der Oberkörper bleibt am Polster'); assert.ok(near(j.wrist[1], rwf[0].wrist[1], 1e-6), 'die Hände gleiten waagrecht'); }
+  assert.ok(rw[0].wrist[0] - rw[2].wrist[0] > 40, 'die Hände gehen mehr als 40 px zurück');
+  assert.ok(rw[2].elbow[0] < rw[2].sh[0] - 3, 'am Ende liegen die Ellbogen hinter dem Körper');
+  assert.ok(badJ('x-machinerow').sh[0] < rw[0].sh[0] - 10, 'Falsch: der Oberkörper schaukelt nach hinten');
+  // Klimmzugmaschine: die Griffe stehen fest, der Körper steigt auf dem Polster, das Kinn kommt auf Griffhöhe
+  const ap = goodFrames('x-assistpull'), apk = keyJ('x-assistpull');
+  for (const j of ap) assert.ok(dist(j.wrist, ap[0].wrist) < 1e-9, 'Klimmzugmaschine: die Griffe bleiben stehen');
+  assert.ok(apk[0].hip[1] - apk[2].hip[1] > 38, 'der Körper steigt um mehr als 38 px');
+  assert.ok(Math.abs((apk[2].head[1] + HR) - apk[2].wrist[1]) < 8, 'oben: das Kinn ist auf Höhe der Griffe');
+  assert.ok(near(apk[0].knee[0], apk[0].hip[0], 1e-9) && apk[0].knee[1] > apk[0].hip[1] + 30 && near(apk[0].ankle[1], apk[0].knee[1], 1e-9), 'kniend: Oberschenkel senkrecht, Schienbein waagrecht hinter dem Knie');
+  const pad = FIG.ANIM['x-assistpull'].props.find((p) => p.t === 'pad' && p.at === 'knee');
+  assert.ok(pad && FIG.ANIM['x-assistpull'].props.some((p) => p.t === 'strap' && p.at === 'knee'), 'Polster mit Säule am Knie, es steigt mit');
+  const half = badJ('x-assistpull');
+  assert.ok(half.hip[1] > apk[2].hip[1] + 10, 'Falsch: nur halb hochgezogen');
+});
+
+test('Maschinen: Face Pull und gestreckter Armzug am Kabel', () => {
+  const fp = keyJ('x-facepull');
+  assert.ok(dist(fp[0].sh, fp[0].wrist) > 45, 'Face Pull: Start mit fast gestreckten Armen');
+  assert.ok(dist(fp[2].wrist, fp[2].head) < 22, 'Face Pull: am Ende sind die Hände neben dem Kopf');
+  const P = FIG.ANIM['x-facepull'].props.find((p) => p.t === 'pulley');
+  assert.ok(Math.abs(P.y - fp[0].head[1]) < 14, 'der Seilzug hängt auf Kopfhöhe');
+  assert.ok(badJ('x-facepull').sh[0] < fp[0].sh[0] - 8, 'Falsch: der Oberkörper lehnt zurück');
+  // gestreckter Armzug: in jedem Bild gestreckte Arme, von über der Schulter bis zu den Oberschenkeln
+  for (const f of allFrames('x-straightarm', 12)) if (!f.bad) assert.ok(bend(f.j) < 0.02, 'gestreckter Armzug: der Arm bleibt gestreckt');
+  const sa = keyJ('x-straightarm');
+  assert.ok(sa[0].wrist[1] < sa[0].sh[1] - 25, 'oben: die Hände über der Schulter');
+  assert.ok(sa[2].wrist[1] > sa[2].hip[1] - 8 && sa[2].wrist[1] < sa[2].hip[1] + 14, 'unten: die Hände am Oberschenkel');
+  assert.ok(bend(badJ('x-straightarm')) > 5, 'Falsch: die Ellbogen beugen sich');
+});
+
+test('Maschinen: Rückenstrecker auf der 45°-Bank und an der Maschine', () => {
+  const hy = keyJ('x-hyper'), hf = goodFrames('x-hyper');
+  for (const j of hf) {
+    assert.ok(dist(j.hip, hf[0].hip) < 1e-9 && dist(j.ankle, hf[0].ankle) < 1e-9, 'Bank: Hüfte und Fersen bleiben fest');
+    assert.ok(Math.abs(dist(j.hip, j.ankle) - 71.985) < 0.01, 'die Beine sind gestreckt');
+  }
+  const top = hy[2], cross = ((top.sh[0] - top.hip[0]) * (top.ankle[1] - top.hip[1]) - (top.sh[1] - top.hip[1]) * (top.ankle[0] - top.hip[0])) / LB;
+  assert.ok(Math.abs(cross) < 0.01, 'oben: Beine und Oberkörper bilden eine Linie');
+  assert.ok(hy[0].sh[1] - hy[0].hip[1] > 40 && hy[0].sh[0] - hy[0].hip[0] < 12, 'unten: der Oberkörper hängt fast senkrecht nach unten');
+  const over = badJ('x-hyper');
+  assert.ok(over.sh[0] - over.hip[0] > 40 && over.sh[1] - over.hip[1] < 15, 'Falsch: überstreckt, der Oberkörper steht fast waagrecht (über der Linie)');
+  assert.ok(FIG.ANIM['x-hyper'].steps[5].pose.round < 0, 'Falsch: Hohlkreuz');
+  // Rückenmaschine: das Becken ist fixiert, der Oberkörper geht von vorgebeugt bis aufrecht
+  const lu = keyJ('x-lumbar'), lf = goodFrames('x-lumbar');
+  for (const j of lf) assert.ok(near(j.hip[0], 100) && near(j.hip[1], 145), 'Rückenmaschine: das Becken bleibt fixiert');
+  assert.ok(lu[0].th > 25 && lu[2].th < -2 && lu[2].th > -8, 'von vorgebeugt bis aufrecht');
+  assert.ok(badJ('x-lumbar').th < -20, 'Falsch: zu weit nach hinten');
+});
+
+test('Maschinen: Hackenschmidt und Multipresse: die Last bewegt sich auf der Schiene', () => {
+  // Hackenschmidt: Hüfte auf einer Geraden mit 25 Grad Neigung, der Oberkörper bleibt flach am Polster (parallel zur Schiene)
+  const hk = goodFrames('x-hack', 20), dir = [Math.sin(25 * D2R), Math.cos(25 * D2R)];
+  const top = hk[0].hip;
+  for (const j of hk) {
+    const v = [j.hip[0] - top[0], j.hip[1] - top[1]], cross = v[0] * dir[1] - v[1] * dir[0];
+    assert.ok(Math.abs(cross) < 1e-6, 'Hackenschmidt: die Hüfte gleitet auf der Schiene');
+    assert.ok(near(j.th, -25, 1e-6) && dist(j.ankle, hk[0].ankle) < 1e-9, 'der Rücken liegt flach am Polster, die Füsse bleiben stehen');
+  }
+  const hkk = keyJ('x-hack'), bot = hkk[2], hip = bot.hip, kneeAng = (j) => Math.acos((LT * LT + LS * LS - dist(j.hip, j.ankle) ** 2) / (2 * LT * LS)) * 180 / Math.PI;
+  assert.ok(kneeAng(bot) > 70 && kneeAng(bot) < 100 && (180 - kneeAng(hkk[0])) < 12 + 60 && kneeAng(hkk[0]) > 140, 'Knie: oben fast gestreckt, unten etwa im rechten Winkel');
+  assert.ok(hip[1] - hkk[0].hip[1] > 18, 'die Hüfte sinkt');
+  const hb = FIG.ANIM['x-hack'].steps[5].pose;
+  assert.ok(hb.round > 5 && hb.th > -25, 'Falsch: das Becken rollt ein, der Rücken wird rund');
+  // Multipresse: die Stange gleitet senkrecht, also bleibt die Schulter in jedem Bild auf derselben Senkrechten; die Füsse stehen vor der Stange
+  const sm = allFrames('x-smith', 16);
+  for (const f of sm) assert.ok(near(f.j.sh[0], sm[0].j.sh[0], 1e-6), 'Multipresse: die Schulter (die Stange) bleibt auf einer Senkrechten, auch im Falsch-Schritt');
+  const smk = keyJ('x-smith');
+  assert.ok(smk[0].ankle[0] > smk[0].sh[0] + 15, 'die Füsse stehen vor der Stange');
+  assert.ok(smk[2].sh[1] - smk[0].sh[1] > 40, 'die Stange sinkt mindestens 40 px');
+  assert.ok(near(smk[2].ankle[1], G, 1e-9) && kneeAng(smk[2]) < 110, 'unten tief gebeugt, die Füsse bleiben am Boden');
+  assert.ok(badJ('x-smith').th > 45, 'Falsch: der Oberkörper klappt nach vorn');
+  const rails = FIG.ANIM['x-smith'].props.filter((p) => p.t === 'rail' && p.x1 === p.x2);
+  assert.equal(rails.length, 2, 'zwei senkrechte Führungsschienen');
+});
+
+test('Maschinen: Wadenheben an der Beinpresse und an der Maschine', () => {
+  const cp = keyJ('x-calfpress');
+  for (const f of goodFrames('x-calfpress')) assert.ok(dist(f.ankle, cp[0].ankle) < 1e-9 && dist(f.hip, cp[0].hip) < 1e-9, 'Beinpresse: Hüfte und Fussgelenk bleiben, nur der Fuss dreht sich');
+  const fa = (s) => FIG.ANIM['x-calfpress'].steps[s].pose.fa;
+  assert.ok(fa(1) - fa(0) >= 40, 'der Fuss dreht sich um mindestens 40 Grad auf die Zehen');
+  assert.ok(dist(cp[0].toe, cp[1].toe) > 9, 'die Platte wandert mindestens 9 px');
+  assert.ok(dist(cp[0].hip, cp[0].ankle) > 69 && dist(cp[0].hip, cp[0].ankle) < 71.5, 'die Beine bleiben fast gestreckt, aber nicht durchgedrückt');
+  assert.ok(dist(badJ('x-calfpress').hip, badJ('x-calfpress').ankle) < 66, 'Falsch: die Knie beugen sich mit');
+  const cm = keyJ('x-calfmach');
+  assert.ok(cm[0].ankle[1] - cm[1].ankle[1] > 9, 'Wadenmaschine: die Fersen heben sich um mindestens 9 px');
+  const A = FIG.ANIM['x-calfmach'];
+  assert.ok(A.props.some((p) => p.t === 'pad' && p.at === 'sh') && A.props.some((p) => p.t === 'strap' && p.at === 'sh'), 'Polster auf den Schultern mit Hebel');
+  assert.ok(near(cm[1].ankle[1] + 10, G, 1e-9) && cm[1].toe[1] > cm[1].ankle[1], 'oben auf den Zehenspitzen');
+});
+
+test('Maschinen: Gesäss-Rückstoss, Beinbeuger sitzend, Hüftabduktion am Kabel, Kniestrecken, Einbeinstand', () => {
+  // Rückstoss: Standbein und Hüfte bleiben, das Arbeitsbein geht von unter der Hüfte nach hinten
+  const gk = keyJ('x-glutekick'), gf = goodFrames('x-glutekick');
+  for (const j of gf) assert.ok(dist(j.hip, gf[0].hip) < 1e-9 && dist(j.ankle, gf[0].ankle) < 1e-9, 'Rückstoss: Hüfte und Standbein bleiben');
+  assert.ok(gk[0].ankle2[0] >= gk[0].hip[0] && gk[2].ankle2[0] < gk[2].hip[0] - 40, 'das Bein geht nach hinten');
+  const gb = badJ('x-glutekick');
+  assert.ok(gb.ankle2[1] < gk[2].ankle2[1] - 10 && FIG.ANIM['x-glutekick'].steps[5].pose.round < 0, 'Falsch: Hohlkreuz, Bein hochgeschleudert');
+  assert.ok(FIG.ANIM['x-glutekick'].props.some((p) => p.t === 'pad' && p.at === 'ankle2'), 'Fussplatte am Arbeitsbein');
+  // Beinbeuger sitzend: Hüfte fix, die Ferse geht von vorn nach hinten unter den Sitz
+  const lc = keyJ('x-legcurlseat'), lf = goodFrames('x-legcurlseat');
+  for (const j of lf) assert.ok(dist(j.hip, lf[0].hip) < 1e-9, 'Beinbeuger: die Hüfte bleibt fest');
+  assert.ok(lc[0].ankle[0] > lc[0].hip[0] + 60 && lc[2].ankle[0] < lc[2].hip[0] + 20 && lc[2].ankle[1] > lc[2].hip[1] + 28, 'Ferse: nach vorn gestreckt -> unter den Sitz gezogen');
+  assert.ok(FIG.ANIM['x-legcurlseat'].props.some((p) => p.t === 'pad' && p.at === 'knee'), 'Polster über den Oberschenkeln');
+  // Hüftabduktion: das Standbein bleibt, das Arbeitsbein geht seitlich weg, Kabel am Knöchel von unten
+  const ch = keyJ('x-cablehip'), cf = goodFrames('x-cablehip');
+  for (const j of cf) assert.ok(near(j.anL[0], cf[0].anL[0], 1e-9) && near(j.anL[1], G, 1e-9), 'Hüftabduktion: das Standbein bleibt stehen');
+  assert.ok(ch[1].anR[0] - ch[1].hipR[0] > ch[0].anR[0] - ch[0].hipR[0] + 25, 'das Arbeitsbein geht mindestens 25 px nach aussen');
+  const cs = FIG.ANIM['x-cablehip'].props.find((p) => p.t === 'strap');
+  assert.ok(cs.at === 'anR' && cs.anchor[1] > 150 && cs.anchor[0] < ch[0].anL[0], 'das Kabel kommt von unten und von der Seite des Standbeins');
+  // Kniestrecken mit Band: das Fussgelenk bleibt, das Knie streckt sich gegen den Zug nach vorn
+  const tk = keyJ('x-tke'), tf = goodFrames('x-tke');
+  for (const j of tf) assert.ok(dist(j.ankle, tf[0].ankle) < 1e-9, 'Kniestrecken: der Fuss bleibt stehen');
+  assert.ok(dist(tk[0].hip, tk[0].ankle) < 66 && dist(tk[1].hip, tk[1].ankle) > 71.4, 'das Knie geht von gebeugt bis fast gestreckt');
+  const band = FIG.ANIM['x-tke'].props.find((p) => p.t === 'strap');
+  assert.ok(band.band && band.at === 'knee' && band.anchor[0] > tk[0].knee[0] + 50 && Math.abs(band.anchor[1] - tk[0].knee[1]) < 12, 'das Band zieht von vorn auf Kniehöhe an die Kniekehle');
+  // Einbeinstand: ein Bein steht fest, das andere Knie auf Hüfthöhe
+  const bl = keyJ('x-balance');
+  assert.ok(near(bl[0].ankle[1], G, 1e-9) && dist(bl[0].ankle, bl[1].ankle) < 1e-9, 'Einbeinstand: das Standbein bleibt');
+  assert.ok(Math.abs(bl[1].knee2[1] - bl[1].hip[1]) < 3 && bl[1].knee2[0] > bl[1].hip[0] + 30, 'das andere Knie auf Hüfthöhe');
+  assert.ok(FIG.ANIM['x-balance'].reps >= 2, 'ein Haltebild');
+});
+
+test('Maschinen: Schrägbankdrücken, Beinheben im Stütz, Holzhacker am Kabelzug', () => {
+  // Schrägbank: 30 Grad Neigung, die Schulter bleibt auf der Lehne, die Hanteln gehen senkrecht hoch
+  const ib = allFrames('x-inclinedb', 12), ik = keyJ('x-inclinedb');
+  for (const f of ib) assert.ok(dist(f.j.sh, ib[0].j.sh) < 1e-9, 'Schrägbank: die Schulter bleibt auf der Lehne');
+  for (const j of ik) assert.ok(near(Math.atan2(j.sh[0] - j.hip[0], -(j.sh[1] - j.hip[1])) * 180 / Math.PI, -60, 1e-6), 'die Rückenlehne steht auf 30 Grad (Oberkörper 60 Grad aus der Senkrechten)');
+  assert.ok(ik[0].wrist[1] < ik[0].sh[1] - 40 && Math.abs(ik[0].wrist[0] - ik[0].sh[0]) < 14 && ik[1].wrist[1] > ik[0].wrist[1] + 30, 'Hanteln: oben über der Schulter, unten an der oberen Brust');
+  assert.ok(badJ('x-inclinedb').hip[1] < ik[0].hip[1] - 8, 'Falsch: das Gesäss hebt ab');
+  const bench = FIG.ANIM['x-inclinedb'].props.find((p) => p.t === 'poly');
+  assert.ok(bench && bench.pts.length === 4 && FIG.ANIM['x-inclinedb'].props.some((p) => p.t === 'box'), 'Lehne und Sitz');
+  // Beinheben im Stütz: Schulter und Hüfte hängen fest, die Beine gehen von hängend nach oben
+  const cp = keyJ('x-captain'), cf = goodFrames('x-captain');
+  for (const j of cf) assert.ok(dist(j.sh, cf[0].sh) < 1e-9 && dist(j.hip, cf[0].hip) < 1e-9, 'Captain\'s Chair: Schulter und Hüfte bleiben');
+  assert.ok(near(cp[0].ankle[0], cp[0].hip[0], 1) && cp[0].ankle[1] > cp[0].hip[1] + 70, 'unten hängen die Beine gestreckt');
+  assert.ok(cp[0].ankle[1] - cp[2].ankle[1] > 40, 'oben sind die Knie am Bauch');
+  assert.ok(cp[0].elbow[1] > cp[0].sh[1] + 20 && Math.abs(cp[0].wrist[1] - cp[0].elbow[1]) < 3, 'die Unterarme liegen waagrecht auf den Auflagen');
+  assert.ok(badJ('x-captain').hip[0] > cp[0].hip[0] + 4 && badJ('x-captain').th < -8, 'Falsch: der Körper schaukelt');
+  // Holzhacker (von vorn): die Hände wandern von oben seitlich nach unten zur anderen Seite, der Rumpf neigt sich mit
+  const wc = keyJ('x-woodchop'), wf = goodFrames('x-woodchop');
+  for (const j of wf) assert.ok(Math.abs(dist(j.wrL, j.wrR) - dist(wc[0].wrL, wc[0].wrR)) < 3, 'beide Hände halten dasselbe Seil');
+  assert.ok(wc[0].wrL[0] < wc[0].P[0] - 40 && wc[0].wrL[1] < wc[0].shL[1] - 25, 'oben: die Hände hoch auf der Kabelseite');
+  assert.ok(wc[2].wrR[0] > wc[2].P[0] + 40 && wc[2].wrR[1] > wc[2].shR[1] + 25, 'unten: die Hände tief auf der anderen Seite');
+  assert.ok(FIG.ANIM['x-woodchop'].steps[0].pose.lean < 0 && FIG.ANIM['x-woodchop'].steps[2].pose.lean > 0, 'der Rumpf neigt sich mit');
+  const wb = FIG.ANIM['x-woodchop'].steps[5].pose;
+  assert.ok(Math.abs(wb.lean) > 20, 'Falsch: der Oberkörper knickt seitlich ein');
 });

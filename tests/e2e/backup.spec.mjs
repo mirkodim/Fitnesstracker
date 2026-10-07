@@ -22,7 +22,7 @@ test('Altformat aus der claude.ai-Version: einfügen, wiederherstellen, alles is
   await expect(page.locator('#bk-msg')).toHaveText('Wiederhergestellt: 5 Trainings und 4 Essenseinträge.');
 
   const s = await stored(page);
-  expect(s.schema).toBe(3);
+  expect(s.schema).toBe(4);
   expect(s.cur).toBe('B');
   expect(s.holdSecs['a-plank']).toBe(60);
   expect(s.plankSecs).toBeUndefined();
@@ -91,7 +91,7 @@ test('Roundtrip: Als Datei sichern, App leeren, aus Datei wiederherstellen', asy
   const file = path.join(ROOT, 'tests', 'out', 'sicherung.json');
   await download.saveAs(file);
   const exported = JSON.parse(readFileSync(file, 'utf8'));
-  expect(exported.schema).toBe(3);
+  expect(exported.schema).toBe(4);
   expect(exported.log[TODAY][0].note).toBe('Läuft gut „ä ö ü ß“');
   expect(exported.food['2026-05-12']).toHaveLength(3);
   await expect(page.locator('#bk-msg')).toContainText('Datei gespeichert');

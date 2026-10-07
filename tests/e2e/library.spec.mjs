@@ -2,10 +2,9 @@ import { test, expect, openApp, stored, tab, noSharpS } from './fixtures.mjs';
 
 const top = (page) => page.locator('header.top');
 const search = (page) => page.locator('#lib-q');
-/* the exercise library is the part "Übungen" of the tab "Erstellen" */
+/* the exercise library is the part "Übungen" of the tab "Erstellen", the one that opens first */
 async function openLibrary(page) {
   await tab(page, 'Erstellen').click();
-  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
   await expect(search(page)).toBeVisible();
 }
 
@@ -14,8 +13,8 @@ test.describe('Übungen', () => {
     await openApp(page, site);
     await openLibrary(page);
     const total = await page.evaluate(() => LIB.length);
-    expect(total).toBeGreaterThanOrEqual(80);
-    await expect(top(page)).toContainText(total + ' Übungen mit Animation');
+    expect(total).toBeGreaterThanOrEqual(118);
+    await expect(top(page)).toContainText('Mit + ein Training bauen');
     await expect(page.getByRole('button', { name: 'Alle Übungen' })).toContainText(total + ' Übungen zum Durchblättern, nach Körperteil sortiert');
     // neun Bereiche, jede Kachel zeigt die richtige Anzahl
     const groups = await page.evaluate(() => GROUPS.map((g) => [g.id, g.label, Builder.listGroup(g.id).length]));
@@ -66,8 +65,9 @@ test.describe('Übungen', () => {
     await expect(page.locator('#fig-g > *').first()).toBeAttached();
     for (const h of ['Darauf achten', 'Häufige Fehler', 'Hier spürst du es']) await expect(page.getByRole('heading', { name: h })).toBeVisible();
     await expect(page.locator('#fig-cap')).toHaveText('Tippe auf das Bild, um die Bewegung abzuspielen.');
-    // in der Bibliothek gibt es keinen Knopf zum Hinzufügen
-    await expect(page.getByRole('button', { name: /Zum Training hinzufügen|Dafür tauschen/ })).toHaveCount(0);
+    // jede Übung lässt sich dem neuen Training hinzufügen, auch von ihrer Seite aus; getauscht wird hier nichts
+    await expect(page.getByRole('button', { name: 'Zum neuen Training hinzufügen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Dafür tauschen/ })).toHaveCount(0);
     // zurück: Liste, dann Kacheln
     await page.getByRole('button', { name: 'Zurück' }).first().click();
     await expect(top(page)).toContainText('Beine');
@@ -118,53 +118,64 @@ test.describe('Übungen', () => {
     await expect(allBtn).toBeVisible();
   });
 
-  test('Alle Übungen mit Ausrüstung: nur passende, jede einmal, Abschnitte ohne Treffer fehlen', async ({ page, site }) => {
-    await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });
+  test('Keine Ausrüstungs-Optionen: jede Übung ist da und sagt unter ihrem Namen, was sie braucht, nichts ist ausgegraut', async ({ page, site }) => {
+    await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });          // auch wer "ohne Ausrüstung" gewählt hat, bekommt keinen Filter und keine Frage
     await openLibrary(page);
-    await page.getByRole('button', { name: 'Alle Übungen' }).click();
-    await expect(page.locator('.row.dim').first()).toBeVisible();              // ohne Filter stehen auch die Übungen mit fehlendem Gerät da
+    await expect(page.getByRole('button', { name: /Nur passende|Meine Ausrüstung|Ausrüstung/ })).toHaveCount(0);
+    await expect(page.getByText(/Passende Übungen|Passt zu meiner|fehlt dir/)).toHaveCount(0);
     const n = await page.evaluate(() => LIB.length);
-    expect(await page.locator('[data-act="lib-open"]').count()).toBe(n);
-    await page.getByRole('button', { name: 'Nur passende Übungen' }).click();
-    const free = await page.evaluate(() => LIB.filter((e) => Builder.eqOK(e, Builder.haveSet([]))).length);
-    expect(await page.locator('[data-act="lib-open"]').count()).toBe(free);
+    // Kacheln zählen alle Übungen des Bereichs
+    const groups = await page.evaluate(() => GROUPS.map((g) => [g.id, LIB.filter((e) => Builder.inGroup(e, g.id)).length]));
+    for (const [id, c] of groups) await expect(page.locator('.gt[data-g="' + id + '"] small')).toHaveText(String(c));
+    await page.getByRole('button', { name: 'Alle Übungen' }).click();
     await expect(page.locator('.row.dim')).toHaveCount(0);
-    await expect(top(page)).toContainText(free + ' Übungen');
+    expect(await page.locator('[data-act="lib-open"]').count()).toBe(n);
+    // unter jedem Namen steht die Stufe und was gebraucht wird
+    const smalls = await page.locator('[data-act="lib-open"] .rn small').allInnerTexts();
+    expect(smalls.every((t) => /^(Einsteiger|Geübt|Fortgeschritten) · .{3,}$/.test(t))).toBe(true);
+    expect(smalls.some((t) => t.endsWith('Nur Körpergewicht'))).toBe(true);
+    expect(smalls.some((t) => t.includes('Maschinen'))).toBe(true);
+    await expect(top(page)).toContainText(n + ' Übungen');
+    // die Sprungleiste hat einen Knopf je Abschnitt
     const sections = await page.locator('h3.sec').count();
-    expect(sections).toBeGreaterThanOrEqual(7);
+    expect(sections).toBe(9);
     await expect(page.getByRole('group', { name: 'Zu einem Körperteil springen' }).getByRole('button')).toHaveCount(sections);
-    // der Filter gilt auch nach dem Zurückgehen
+    // zurück: dieselbe Seite, ohne Filter
     await page.getByRole('button', { name: 'Zurück' }).first().click();
-    await expect(page.getByRole('button', { name: 'Nur passende Übungen' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.gt[data-g="arme"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Nur passende/ })).toHaveCount(0);
   });
 
-  test('Ausrüstung: nur passende Übungen, "fehlt dir" bei den anderen', async ({ page, site }) => {
-    await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });
+  test('Die neuen Maschinen aus Fitness- und Reha-Zentren sind zu finden, mit Bild und Hinweisen', async ({ page, site }) => {
+    await openApp(page, site);
     await openLibrary(page);
-    const free = await page.evaluate(() => GROUPS.map((g) => [g.id, Builder.listGroup(g.id, Builder.haveSet([])).length]));
-    await expect(page.getByRole('button', { name: /Meine Ausrüstung \(0\)/ })).toBeVisible();
-    // ohne Filter: alle Übungen, die anderen sind markiert
-    await page.locator('.gt[data-g="arme"]').click();
-    await expect(page.locator('.row', { hasText: 'fehlt dir' }).first()).toBeVisible();
+    const hits = page.locator('#lib-res .row');
+    await search(page).fill('Maschine');
+    expect(await hits.count()).toBeGreaterThanOrEqual(20);
+    // Suche über den Gerätenamen
+    await search(page).fill('Pec Deck');
+    await expect(hits.filter({ hasText: 'Butterfly an der Maschine' })).toHaveCount(1);
+    await search(page).fill('Hackenschmidt');
+    await expect(hits).toHaveCount(1);
+    await hits.first().locator('[data-act="lib-open"]').click();
+    await expect(page.locator('h2.name')).toHaveText('Hackenschmidt-Kniebeuge');
+    await expect(page.locator('.need')).toContainText('Maschinen');
+    await expect(page.locator('.note', { hasText: 'Knie:' })).toBeVisible();
+    await expect(page.locator('#fig-g > *').first()).toBeAttached();
+    await expect(page.getByRole('heading', { name: 'Darauf achten' })).toBeVisible();
     await page.getByRole('button', { name: 'Zurück' }).first().click();
-    // mit Filter: Kacheln und Liste zeigen nur noch, was ohne Geräte geht
-    await page.getByRole('button', { name: 'Nur passende Übungen' }).click();
-    for (const [id, n] of free) await expect(page.locator('.gt[data-g="' + id + '"] small')).toHaveText(String(n));
-    await page.locator('.gt[data-g="arme"]').click();
-    await expect(page.locator('.row', { hasText: 'fehlt dir' })).toHaveCount(0);
-    const nArms = free.find((x) => x[0] === 'arme')[1];
-    expect(nArms).toBeGreaterThanOrEqual(2);
-    await expect(top(page)).toContainText(/\d+ Übungen/);
-    await page.getByRole('button', { name: 'Zurück' }).first().click();
-    // Ausrüstung ändern: mit Kurzhanteln und Bank kommen Übungen dazu
-    await page.getByRole('button', { name: /Meine Ausrüstung/ }).click();
-    await page.getByRole('button', { name: 'Kurzhanteln' }).click();
-    await page.getByRole('button', { name: 'Bank', exact: true }).click();
-    await page.getByRole('button', { name: 'Fertig' }).click();
-    expect((await stored(page)).prefs.equip.sort()).toEqual(['bank', 'kh']);
-    const more = await page.evaluate(() => Builder.listGroup('arme', Builder.haveSet(['kh', 'bank'])).length);
-    expect(more).toBeGreaterThan(nArms);
-    await expect(page.locator('.gt[data-g="arme"] small')).toHaveText(String(more));
+    // Reha: Aussenrotation mit Band, Kniestrecken, Einbeinstand mit Haltezeit
+    for (const [q, name] of [['Aussenrotation', 'Aussenrotation mit Band'], ['Kniestrecken', 'Kniestrecken mit Band'], ['Einbeinstand', 'Einbeinstand']]) {
+      await search(page).fill(q);
+      await hits.filter({ hasText: name }).first().locator('[data-act="lib-open"]').click();
+      await expect(page.locator('h2.name')).toHaveText(name);
+      await expect(page.locator('#fig-g > *').first()).toBeAttached();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+    }
+    await search(page).fill('Einbeinstand');
+    await hits.first().locator('[data-act="lib-open"]').click();
+    await expect(page.locator('.rx')).toContainText('3 × 30 s');
+    await expect(page.locator('.rx')).toContainText('pro Seite halten');
   });
 
   test('Die Seiten der Übungen enthalten keine Platzhalter und kein scharfes S', async ({ page, site }) => {

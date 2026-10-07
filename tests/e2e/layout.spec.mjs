@@ -49,14 +49,15 @@ const seed = () => ({
   goalP: 100, weightKg: 62
 });
 const tile = (page, g) => page.locator('.gt[data-g="' + g + '"]');
-const weiter = (page) => page.getByRole('button', { name: 'Weiter', exact: true });
 const place = (page, p) => page.locator('[data-act="wiz-place"][data-p="' + p + '"]');
 
 test('Meine Trainings, Erstellen und Assistent: jeder Schritt passt auf den Bildschirm', async ({ page, site }, info) => {
   await openApp(page, site, { state: seed() });
   await check(page, 'meine trainings', info);
   await tab(page, 'Erstellen').click();
-  await check(page, 'erstellen', info);
+  await check(page, 'erstellen uebungen', info);
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+  await check(page, 'erstellen training', info);
   for (const g of ['beine', 'gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) await tile(page, g).click();
   await check(page, 'erstellen alles gewaehlt', info);
   for (const g of ['gesaess', 'arme', 'ruecken', 'bauch', 'brust', 'schultern', 'nacken', 'ganz']) await tile(page, g).click();
@@ -80,9 +81,10 @@ test('Meine Trainings, Erstellen und Assistent: jeder Schritt passt auf den Bild
   const name = await page.locator('.brow').last().locator('.brow-head b').innerText();
   await page.locator('.brow').last().getByRole('button', { name: name + ' entfernen' }).click();
   await check(page, 'vorschlag uebung entfernt', info);
-  await weiter(page).click();
-  await check(page, 'name', info);
-  await page.getByLabel('Name').fill('Ein ziemlich langer Name fuer das Training, der umbrechen muss');
+  await page.getByLabel('Name des Trainings').scrollIntoViewIfNeeded();
+  await check(page, 'vorschlag name unten', info);
+  await page.getByLabel('Name des Trainings').fill('Ein ziemlich langer Name fuer das Training, der umbrechen muss');
+  await check(page, 'vorschlag langer name', info);
   await page.getByRole('button', { name: 'Speichern und starten' }).click();
   await check(page, 'training gestartet', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
@@ -100,11 +102,9 @@ test('Vorschläge der App, Vorschau, schnelle Wege', async ({ page, site }, info
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await tab(page, 'Erstellen').click();
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
   await page.locator('[data-act="mk-existing"]').click();
   await check(page, 'vorschlaege der app', info);
-  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
-  await check(page, 'vorschlaege der app gefiltert', info);
-  await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
   await page.locator('.tcard[data-id="p-kraft"]').click();
   await check(page, 'vorschau mit fehlender ausruestung', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
@@ -165,14 +165,10 @@ test('Fertig-Karte, Kalender-Formular, Kalender mit offenem Eintrag', async ({ p
   await check(page, 'kalender training waehlen', info);
 });
 
-test('Übungen: Bereiche, Alle Übungen, Suche, Liste, Ausrüstung, Übung mit Animation', async ({ page, site }, info) => {
+test('Übungen: Bereiche, Alle Übungen, Suche, Liste, Auswahl für ein neues Training, Übung mit Animation', async ({ page, site }, info) => {
   await openApp(page, site, { state: seed() });
   await tab(page, 'Erstellen').click();
-  await page.getByRole('button', { name: 'Übungen', exact: true }).click();
   await check(page, 'uebungen', info);
-  await page.getByRole('button', { name: /Meine Ausrüstung/ }).click();
-  await check(page, 'uebungen ausruestung', info);
-  await page.getByRole('button', { name: 'Fertig' }).click();
   await page.locator('#lib-q').fill('Kniebeuge');
   await check(page, 'uebungen suche', info);
   await page.locator('#lib-q').fill('');
@@ -180,17 +176,27 @@ test('Übungen: Bereiche, Alle Übungen, Suche, Liste, Ausrüstung, Übung mit A
   await check(page, 'alle uebungen', info);
   await page.getByRole('group', { name: 'Zu einem Körperteil springen' }).getByRole('button', { name: 'Rücken' }).click();
   await check(page, 'alle uebungen ruecken', info);
-  await page.getByRole('button', { name: 'Nur passende Übungen' }).click();
-  await check(page, 'alle uebungen gefiltert', info);
+  await page.locator('section[aria-labelledby="all-h-ruecken"] .row-add').nth(0).click();
+  await page.locator('section[aria-labelledby="all-h-ruecken"] .row-add').nth(1).click();
+  await check(page, 'alle uebungen mit auswahl', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
+  await check(page, 'uebungen mit auswahl', info);
   await page.locator('.gt[data-g="beine"]').click();
   await check(page, 'uebungen bereich beine', info);
-  await page.locator('.row', { hasText: 'Goblet-Kniebeuge' }).first().click();
+  await page.locator('.row', { hasText: 'Goblet-Kniebeuge' }).first().locator('[data-act="lib-open"]').click();
   await check(page, 'uebung goblet-kniebeuge', info);
+  await page.getByRole('button', { name: 'Zum neuen Training hinzufügen' }).click();
+  await check(page, 'uebung goblet-kniebeuge hinzugefuegt', info);
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.getByRole('button', { name: 'Zurück' }).first().click();
   await page.locator('.gt[data-g="ganz"]').click();
   await check(page, 'uebungen bereich ganzkoerper', info);
+  await page.getByRole('button', { name: 'Zurück' }).first().click();
+  await page.locator('.draftbar').getByRole('button', { name: 'Weiter' }).click();
+  await check(page, 'training aus uebungen', info);
+  await page.locator('.draftbar').count();
+  await page.getByLabel('Name des Trainings').scrollIntoViewIfNeeded();
+  await check(page, 'training aus uebungen name', info);
 });
 
 test('Essen: Liste, Bearbeiten mit Kopierfeld, Ziel, Sicherung, Update-Leiste', async ({ page, site }, info) => {

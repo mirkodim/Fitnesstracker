@@ -41,7 +41,7 @@
   var now0 = new Date();
   /* runtime state, never stored */
   var R = {
-    tab: 'mine', flow: 'home', mineRun: false, pv: null, detail: null, sel: [], lib: { g: null, all: false, q: '', mine: false, eq: false },
+    tab: 'mine', flow: 'home', mineRun: false, pv: null, detail: null, sel: [], lib: { g: null, all: false, q: '' },
     rest: null, plank: null, fresh: null, confirm: false, last: null, pick: {}, demoOpen: false, calForm: false,
     cal: { y: now0.getFullYear(), m: now0.getMonth() }, calSel: todayKey(), calOpen: null, calUndo: null, calAdd: false,
     foodDate: todayKey(), draft: Store.newDraft('100'), foodMsg: '', foodGoto: null, undo: null, edit: null, copyOpen: false, editY: 0,
@@ -60,9 +60,10 @@
   }
 
   /* ---------- training helpers ---------- */
+  /* the training that is open in the run view; null when there is none (Tag A and Tag B can be deleted like any other) */
   function curTraining() {
     var t = Store.training(S, S.cur);
-    if (!t) { S.cur = 'A'; t = Store.training(S, 'A'); }
+    if (!t) { S.cur = Store.fallbackCur(S); t = S.cur ? Store.training(S, S.cur) : null; }
     return t;
   }
   function doneSets(id, exId) { var m = S.sets[id]; return (m && Store.own(m, exId)) ? m[exId] : 0; }
@@ -181,7 +182,7 @@
     for (r = 0; r < (A0.reps || 3); r++) {
       for (i = 1; i <= n; i++) {
         var from = steps[(i - 1) % n], to = steps[i % n];
-        segs.push({ from: from.pose, to: to.pose, ms: to.ms, hold: to.hold, label: to.label, bad: !!to.bad, t0: total });
+        segs.push({ from: from.pose, to: to.pose, ms: to.ms, hold: to.hold, label: to.label, bad: !!to.bad, flow: !!to.flow, t0: total });
         total += to.ms + to.hold;
       }
     }
@@ -197,7 +198,8 @@
       }
       var k = segs.length - 1;
       while (k > 0 && el < segs[k].t0) k--;
-      var s = segs[k], p = Math.min(1, (el - s.t0) / s.ms), ease = 0.5 - Math.cos(Math.PI * p) / 2;
+      /* flow: true on a step means "no slowing down into this pose": a swing built from many poses runs as one smooth movement */
+      var s = segs[k], p = Math.min(1, (el - s.t0) / s.ms), ease = s.flow ? p : 0.5 - Math.cos(Math.PI * p) / 2;
       Anim.paint(id, FIG.mix(s.from, s.to, ease), s.bad, s.label, null);
       Anim.raf = requestAnimationFrame(frame);
     }
@@ -207,8 +209,7 @@
   /* ---------- navigation: every step forward is one entry in the browser history, so the phone's back button steps back ---------- */
   var navStack = [], pendingPops = 0;
   function snap() { return { tab: R.tab, flow: R.flow, seg: R.seg, pv: R.pv, detail: R.detail ? { id: R.detail.id } : null, lib: JSON.parse(JSON.stringify(R.lib)), sel: R.sel.slice() }; }
-  /* "Nur passende Übungen" is a setting of the person, not of the screen: it stays when stepping back */
-  function applySnap(s) { var mine = R.lib.mine; R.tab = s.tab; R.flow = s.flow; R.seg = s.seg; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.lib.mine = mine; R.sel = s.sel; }
+  function applySnap(s) { R.tab = s.tab; R.flow = s.flow; R.seg = s.seg; R.pv = s.pv; R.detail = s.detail; R.lib = s.lib; R.sel = s.sel; }
   function resetTransient() {
     R.plank = null; R.confirm = false; R.undo = null; R.calUndo = null; R.edit = null; R.copyOpen = false; R.foodGoto = null; R.restore = null;
     R.calForm = false; R.calAdd = false; R.demoOpen = false; R.bookOpen = false;
@@ -261,9 +262,9 @@
     var patch = { tab: tab, detail: null };
     if (R.tab === 'mine') R.mineRun = R.flow === 'run' && !R.detail;
     if (tab === 'mine') patch.flow = R.mineRun ? 'run' : 'home';
-    if (tab === 'make') {
-      patch.flow = 'home';
-      if (R.tab === 'make') patch.lib = { g: null, all: false, q: '', mine: R.lib.mine, eq: false };
+    if (tab === 'make') {                                    // Erstellen always opens at the exercises: there a training is put together with the plus buttons
+      patch.flow = 'home'; patch.seg = 'lib';
+      if (R.tab === 'make') patch.lib = { g: null, all: false, q: '' };
     }
     if (tab === 'food' && key && parseKey(key)) patch.foodDate = key;
     if (tab === 'cal' && key && parseKey(key)) { var d = parseKey(key); patch.calSel = key; patch.cal = { y: d.getFullYear(), m: d.getMonth() }; patch.calOpen = null; }
@@ -543,7 +544,7 @@
           '<input id="w-' + ex.id + '" data-weight="' + ex.id + '" type="text" inputmode="decimal" autocomplete="off" placeholder="–" value="' + esc(Store.own(S.weights, ex.id) ? S.weights[ex.id] : '') + '"></div>';
       }
       if (ex.knee) html += '<div class="note">' + KNEE_NOTE + '</div>';
-      if (ex.note) html += '<div class="note">' + ex.note + '</div>';
+      if (ex.note) html += '<div class="note">' + esc(ex.note) + '</div>';
     }
     return html + '</section>';
   }
@@ -946,12 +947,13 @@
   function render() {
     Anim.stop();
     var head, main, v, foot = true;
+    if (R.flow === 'run' && R.tab === 'mine' && !curTraining()) R.flow = 'home';
     if (R.detail) { v = A.views.detail(); head = v.head; main = v.main; foot = false; }
     else if (R.tab === 'cal') { head = calHeaderHTML(); main = calGridHTML() + calDetailHTML(); }
     else if (R.tab === 'food') {
       var k = R.foodDate, T = Store.dayTotals(S, k);
       head = foodHeaderHTML(); main = summaryHTML(T) + formHTML() + foodListHTML(k);
-    } else if (R.tab === 'mine' && R.flow === 'run') { v = runView(); head = v.head; main = v.main; }
+    } else if (R.tab === 'mine' && R.flow === 'run' && curTraining()) { v = runView(); head = v.head; main = v.main; }
     else { v = A.views.flow(); head = v.head; main = v.main; foot = v.foot !== false; }
     app.innerHTML = '<h1 class="sr">Trainings-Strichliste</h1>' + head + '<main>' + main + '</main>' + (foot ? footHTML() : '') + navHTML();
     R.fresh = null;
@@ -966,7 +968,7 @@
     unlockAudio(); wake();
     var a = b.getAttribute('data-act');
     if (A.acts[a]) { A.acts[a](b, e); return; }
-    var t = curTraining(), d = t.id, cur = currentEx(t), n, k;
+    var t = curTraining(), d = t ? t.id : '', cur = t ? currentEx(t) : null, n, k;
 
     if (a === 'tab') { goTab(b.getAttribute('data-tab'), b.getAttribute('data-key')); }
     else if (a === 'flow-home') { R.rest = null; R.plank = null; go({ tab: 'mine', flow: 'home', detail: null }); }

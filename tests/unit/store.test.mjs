@@ -8,6 +8,9 @@ const Store = require('../../store.js');
 const { EX } = require('../../lib.js');
 const OLD = readFileSync(new URL('../fixtures/altformat.json', import.meta.url), 'utf8');
 
+const TARGETS_A = { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 };
+const TARGETS_B = { 'b-rdl': 3, 'b-row': 3, 'b-lunge': 3, 'b-curl': 3, 'b-crunch': 3 };
+
 function memStorage(initial = {}) {
   const m = new Map(Object.entries(initial));
   return {
@@ -31,10 +34,10 @@ test('Altformat: Import migriert in das neue Schema', () => {
   assert.deepEqual(s.holdSecs, { 'a-plank': 60 });
   assert.equal(s.goalP, 100);
   assert.equal(s.weightKg, 65);
-  assert.deepEqual(s.trainings, []);
+  assert.deepEqual(s.trainings, Store.seeds(), 'Tag A und Tag B sind jetzt gespeicherte Trainings, vorn in der Liste');
   assert.deepEqual(s.weights, { 'a-box': '40', 'b-rdl': '50', 'b-curl': '8' });
-  // log: ["A"] wird zu { day, sets, weights, note }
-  assert.deepEqual(s.log['2026-05-05'], [{ day: 'A', sets: {}, weights: {}, note: '' }]);
+  // log: ["A"] wird zu { day, title, targets, sets, weights, note }: Name und Zielsätze von damals bleiben im Eintrag
+  assert.deepEqual(s.log['2026-05-05'], [{ day: 'A', title: 'Tag A', targets: TARGETS_A, sets: {}, weights: {}, note: '' }]);
   assert.deepEqual(s.log['2026-05-09'].map((e) => e.day), ['A', 'B']);
   assert.deepEqual(Store.counts(s), { trainings: 5, foods: 4, plans: 0 });
   assert.equal(s.food['2026-05-12'].length, 3);
@@ -53,9 +56,125 @@ test('Schema 2 (die Version davor) wird übernommen: Tage A/B, Plank-Zeit, Kalen
   assert.equal(s.stamp.A, '2026-10-05');
   assert.equal(s.logged.A, '2026-10-05');
   assert.deepEqual(s.holdSecs, { 'a-plank': 45 });
-  assert.deepEqual(s.log['2026-10-05'][0], { day: 'A', sets: { 'a-box': 3 }, weights: { 'a-hip': '60' }, note: 'gut' });
+  assert.deepEqual(s.log['2026-10-05'][0], { day: 'A', title: 'Tag A', targets: TARGETS_A, sets: { 'a-box': 3 }, weights: { 'a-hip': '60' }, note: 'gut' });
   assert.equal(Store.entryTitle(s, s.log['2026-10-05'][0]), 'Tag A');
   assert.deepEqual(Store.entrySummary(s, s.log['2026-10-05'][0]), { done: 3, total: 15, hasDetails: true });
+});
+
+const V3 = {
+  schema: 3, cur: 'B', last: ['B', 'A', 'p-core', 'p-gibts-nicht'],
+  trainings: [{ id: 'u1', name: 'Rücken', items: [{ ex: 'b-row', sets: 2 }] }],
+  sets: { A: { 'a-box': 2 }, B: { 'b-row': 1 } }, stamp: { A: '2026-10-05', B: '' }, logged: { A: '2026-10-05', B: '' }, weights: { 'a-box': '60' }, holdSecs: { 'a-plank': 60 },
+  prefs: { equip: ['kh'] },
+  log: {
+    '2026-10-05': [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 3 }, weights: { 'a-box': '60' }, note: 'gut' }, { day: 'u1', title: 'Rücken', targets: { 'b-row': 2 }, sets: { 'b-row': 2 }, weights: {}, note: '' }],
+    '2026-10-03': [{ day: 'B', title: 'Mein Name', sets: {}, weights: {}, note: '' }]
+  },
+  food: {}, recent: [], goalP: 100, goalK: null, weightKg: 65
+};
+
+test('Schema 3 (die Version davor): Tag A und Tag B werden gespeicherte Trainings, der Kalender bleibt, wie er war', () => {
+  const s = Store.migrate(JSON.parse(JSON.stringify(V3)));
+  assert.equal(s.schema, 4);
+  assert.deepEqual(s.trainings.map((t) => t.id), ['A', 'B', 'u1'], 'Tag A und Tag B vorn, die eigenen danach');
+  assert.deepEqual(s.trainings.slice(0, 2), Store.seeds());
+  assert.equal(s.cur, 'B');
+  assert.deepEqual(s.last, ['B', 'A', 'p-core'], 'Unbekanntes fällt weg');
+  assert.deepEqual(s.sets, { A: { 'a-box': 2 }, B: { 'b-row': 1 } }, 'die Haken von heute bleiben');
+  assert.equal(s.stamp.A, '2026-10-05');
+  assert.equal(s.weights['a-box'], '60');
+  assert.deepEqual(s.prefs, { equip: ['kh'] });
+  // Namen und Zielsätze von damals stehen im Eintrag, ein vorhandener Name wird nicht überschrieben
+  assert.deepEqual(s.log['2026-10-05'].find((e) => e.day === 'A'), { day: 'A', title: 'Tag A', targets: TARGETS_A, sets: { 'a-box': 3, 'a-hip': 3 }, weights: { 'a-box': '60' }, note: 'gut' });
+  assert.equal(s.log['2026-10-03'][0].title, 'Mein Name');
+  assert.deepEqual(s.log['2026-10-03'][0].targets, TARGETS_B);
+  assert.deepEqual(s.log['2026-10-05'].find((e) => e.day === 'u1').targets, { 'b-row': 2 }, 'eigene Einträge bleiben unberührt');
+  assert.deepEqual(Store.counts(s), { trainings: 3, foods: 0, plans: 1 }, 'Tag A und Tag B gelten nicht als selbst gemacht');
+  // noch einmal migrieren ändert nichts
+  assert.deepEqual(Store.migrate(JSON.parse(JSON.stringify(s))), s);
+});
+
+test('Tag A löschen: der Kalender behält die absolvierten Trainings, und Tag A kommt nicht zurück', () => {
+  const s = Store.migrate(JSON.parse(JSON.stringify(V3)));
+  const entry = () => s.log['2026-10-05'].find((e) => e.day === 'A');
+  const rm = Store.removeTraining(s, 'A');
+  assert.ok(rm);
+  assert.equal(Store.training(s, 'A'), null);
+  assert.deepEqual(s.trainings.map((t) => t.id), ['B', 'u1']);
+  assert.equal(s.cur, 'B', 'das aktuelle Training bleibt, wenn es nicht das gelöschte war');
+  assert.equal(s.sets.A, undefined);
+  assert.equal(s.stamp.A, undefined);
+  assert.equal(Store.entryTitle(s, entry()), 'Tag A');
+  assert.deepEqual(Store.entryItems(s, entry()).map((x) => x.id), Object.keys(TARGETS_A));
+  assert.deepEqual(Store.entrySummary(s, entry()), { done: 6, total: 15, hasDetails: true });
+  assert.equal(Store.tagOf(s, entry()), 'A');
+  assert.equal(Store.counts(s).trainings, 3, 'es bleiben drei absolvierte Trainings im Kalender');
+  // auch nach einem Neustart (laden, migrieren) bleibt es gelöscht
+  const again = Store.migrate(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(again.trainings.map((t) => t.id), ['B', 'u1']);
+  assert.deepEqual(again, s);
+  // Rückgängig bringt Tag A mit allem zurück, an die alte Stelle
+  assert.equal(Store.restoreTraining(s, rm), true);
+  assert.deepEqual(s.trainings.map((t) => t.id), ['A', 'B', 'u1']);
+  assert.deepEqual(s.sets.A, { 'a-box': 2 });
+  assert.equal(s.stamp.A, '2026-10-05');
+});
+
+test('Wer alle Trainings löscht, hat eine leere Liste ohne aktuelles Training; Neues läuft danach normal', () => {
+  const s = Store.newState();
+  assert.equal(s.cur, 'A');
+  assert.deepEqual(s.trainings.map((t) => t.id), ['A', 'B']);
+  assert.equal(Store.fallbackCur(s), 'A');
+  Store.touch(s, 'B');
+  Store.removeTraining(s, 'B');
+  assert.equal(s.cur, 'A', 'das gelöschte war das aktuelle: das erste verbliebene wird es');
+  Store.removeTraining(s, 'A');
+  assert.equal(s.cur, '');
+  assert.equal(Store.fallbackCur(s), '');
+  assert.deepEqual(s.trainings, []);
+  assert.deepEqual(Store.allTrainings(s).own, []);
+  assert.ok(Store.allTrainings(s).ready.length >= 14, 'die Vorschläge der App gibt es weiter');
+  assert.deepEqual(Store.counts(s), { trainings: 0, foods: 0, plans: 0 });
+  // Schema 4: gelöscht bleibt gelöscht
+  const back = Store.migrate(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(back.trainings, []);
+  assert.equal(back.cur, '');
+  const t = Store.addTraining(back, 'Neu', [{ ex: 'x-squat' }]);
+  Store.touch(back, t.id);
+  assert.equal(Store.training(back, back.cur).name, 'Neu');
+});
+
+test('Neue Installation: Tag A und Tag B sind da, unverändert zählen sie nicht als selbst gemacht', () => {
+  const s = Store.newState();
+  assert.deepEqual(Store.seeds().map((t) => t.id), ['A', 'B']);
+  assert.deepEqual(s.trainings, Store.seeds());
+  assert.equal(Store.training(s, 'A').name, 'Tag A');
+  assert.equal(Store.training(s, 'A').sub, 'Kniebeuge + Hüfte + Push');
+  assert.equal(Store.training(s, 'A').kneeCheck, true);
+  assert.equal(Store.training(s, 'A').builtin, false);
+  assert.equal(Store.isEmpty(s), true, 'die Standard-Trainings allein sind keine Daten, die man sichern müsste');
+  assert.equal(Store.counts(s).plans, 0);
+  s.trainings[0].items[0].sets = 4;
+  assert.equal(Store.counts(s).plans, 1, 'ein geändertes Tag A zählt');
+  assert.equal(Store.isEmpty(s), false);
+  // jeder Aufruf liefert frische Kopien
+  const a = Store.seeds(), b = Store.seeds();
+  a[0].items[0].sets = 9;
+  assert.equal(b[0].items[0].sets, 3);
+  assert.equal(Store.newState().trainings[0].items[0].sets, 3);
+});
+
+test('Speicher: Schema 3 wird migriert, die alte Fassung bleibt gesichert, danach ist alles ok', () => {
+  const raw = JSON.stringify(V3);
+  const st = memStorage({ [Store.KEY]: raw });
+  const r = Store.load(st);
+  assert.equal(r.status, 'migrated');
+  assert.equal(st.getItem(Store.KEY + '.schema3'), raw);
+  assert.equal(JSON.parse(st.getItem(Store.KEY)).schema, 4);
+  assert.deepEqual(r.state.trainings.map((t) => t.id), ['A', 'B', 'u1']);
+  const r2 = Store.load(st);
+  assert.equal(r2.status, 'ok');
+  assert.deepEqual(r2.state, r.state);
 });
 
 test('Altformat: Tagesbilanz stimmt nach dem Import', () => {
@@ -169,9 +288,10 @@ test('migrate: __proto__ und andere gefährliche Schlüssel richten nichts an', 
   assert.deepEqual(s.log, {});
   assert.deepEqual(s.food, {});
   assert.deepEqual(s.holdSecs, {});
-  assert.equal(s.trainings.length, 1);
-  assert.deepEqual(s.trainings[0].items, [{ ex: 'a-box' }]);
-  assert.notEqual(s.trainings[0].id, '__proto__');
+  assert.deepEqual(s.trainings.map((t) => t.id).slice(0, 2), ['A', 'B'], 'Tag A und Tag B kommen dazu');
+  assert.equal(s.trainings.length, 3);
+  assert.deepEqual(s.trainings[2].items, [{ ex: 'a-box' }]);
+  assert.notEqual(s.trainings[2].id, '__proto__');
 });
 
 test('Roundtrip: toText -> parseBackup liefert denselben Zustand', () => {
@@ -222,10 +342,11 @@ test('Eigene Trainings: anlegen, bereinigen, auflösen, kopieren, löschen und z
   const c = Store.copyTraining(s, 'A');
   assert.equal(c.name, 'Tag A (Kopie)');
   assert.deepEqual(c.items.map((i) => i.ex), ['a-box', 'a-hip', 'a-push', 'a-tri', 'a-plank']);
-  assert.equal(c.items[1].note, undefined, 'Hinweistexte der App werden nicht kopiert');
+  assert.match(c.items[1].note, /^Hip Thrust: Start mit leichter Last/, 'der Hinweis unter der Übung wird mit kopiert');
+  assert.equal(Store.training(s, 'A').builtin, false, 'Tag A ist ein ganz normales gespeichertes Training');
   const listed = Store.allTrainings(s);
   assert.deepEqual(listed.own.slice(0, 2).map((x) => x.id), ['A', 'B'], 'Tag A und Tag B stehen zuerst');
-  assert.equal(listed.own[2].id, c.id, 'dann die eigenen, neueste zuerst');
+  assert.equal(listed.own[listed.own.length - 1].id, c.id, 'danach die eigenen in der Reihenfolge, in der sie entstanden sind');
   assert.ok(listed.ready.length >= 14 && listed.ready.every((x) => /^p-/.test(x.id)), 'Vorschläge der App ohne Tag A und B');
   // Löschen mit Haken, Rückgängig stellt alles wieder her
   Store.setsOf(s, t.id)['x-squat'] = 2; s.stamp[t.id] = '2026-10-05'; Store.touch(s, t.id);
@@ -470,7 +591,7 @@ test('Wiederholungen: gültige Angaben bleiben, der Bindestrich wird zum Gedanke
   assert.equal(Store.training(s, t.id).items[1].big, EX['x-lunge'].reps, 'ohne gültige Angabe gilt die der Bibliothek');
   // aus einer Sicherung kommen keine Tags in die Anzeige
   const back = Store.migrate({ trainings: [{ id: 'u1', name: 'T', items: [{ ex: 'x-squat', reps: '<script>' }] }] });
-  assert.deepEqual(back.trainings[0].items, [{ ex: 'x-squat' }]);
+  assert.deepEqual(back.trainings.find((x) => x.id === 'u1').items, [{ ex: 'x-squat' }]);
 });
 
 test('Ort zum Trainieren: nur die Ausrüstung wird gemerkt', () => {

@@ -1,14 +1,15 @@
 /* Store: state shape, validation, migration, backup parsing and the pure edit helpers.
    No DOM access, so it runs in the browser (global Store) and in Node (module.exports), where the tests use it directly.
    Everything that comes from outside (localStorage, a pasted backup, a file) goes through migrate(), which never trusts its input.
-   A training is identified by an id: "A" and "B" (the days of the first version), "p-..." (ready-made, trainings.js) or "u..." (made by the user). */
+   A training is identified by an id: "p-..." (a ready-made suggestion, trainings.js) or any other id for a stored one: "A" and "B" (the days of the
+   first version, put into the stored data once from SEEDS) and "u..." (made by the user). Stored trainings are all alike. */
 var Store = (function (data) {
   'use strict';
 
-  var EX = data.EX, TEMPLATES = data.TEMPLATES, TEMPLATE_MAP = data.TEMPLATE_MAP, NUTR = data.NUTR;
+  var EX = data.EX, SEEDS = data.SEEDS || [], TEMPLATES = data.TEMPLATES, TEMPLATE_MAP = data.TEMPLATE_MAP, NUTR = data.NUTR;
   var GROUPS = data.GROUPS, EQUIP = data.EQUIP;
   var KEY = 'strichliste.v1';
-  var SCHEMA = 3;
+  var SCHEMA = 4;
   var NOTE_MAX = 300, NAME_MAX = 60, MAX_TRAININGS = 80, MAX_ITEMS = 24;
   var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/;
 
@@ -46,9 +47,11 @@ var Store = (function (data) {
   function getMap(map, id) { return own(map, id) ? map[id] : undefined; }
 
   /* ---------- state ---------- */
+  /* what a new installation starts with: Tag A and Tag B as stored trainings */
+  function seeds() { return SEEDS.map(function (t) { return cleanTraining(JSON.parse(JSON.stringify(t)), {}); }); }
   function newState() {
     return {
-      schema: SCHEMA, cur: 'A', last: [], trainings: [], sets: {}, stamp: {}, logged: {}, weights: {}, holdSecs: {},
+      schema: SCHEMA, cur: SEEDS.length ? SEEDS[0].id : '', last: [], trainings: seeds(), sets: {}, stamp: {}, logged: {}, weights: {}, holdSecs: {},
       prefs: { equip: null },
       log: {}, food: {}, recent: [], goalP: null, goalK: null, weightKg: null
     };
@@ -106,6 +109,7 @@ var Store = (function (data) {
     if ((r = cleanReps(it.reps)) != null) o.reps = r;
     if (it.rest != null && (n = intIn(it.rest, 0, 300)) != null) o.rest = n;
     if (it.hold != null && (n = intIn(it.hold, 5, 600)) != null) o.hold = n;
+    if (typeof it.note === 'string' && it.note.trim()) o.note = it.note.trim().slice(0, NOTE_MAX);        // plain text, shown under the exercise while it runs
     return o;
   }
   function cleanItems(arr) {
@@ -127,8 +131,10 @@ var Store = (function (data) {
     if (!isObj(t)) return null;
     var id = (validId(t.id) && !own(TEMPLATE_MAP, t.id) && !used[t.id]) ? t.id : 'u' + uid();
     var out = { id: id, name: cleanName(t.name, 'Mein Training'), items: cleanItems(t.items), created: cleanKey(t.created) };
-    var g = cleanGroups(t.groups);
+    var g = cleanGroups(t.groups), sub = cleanName(t.sub, '');
     if (g.length) out.groups = g;
+    if (sub) out.sub = sub;
+    if (t.kneeCheck === true) out.kneeCheck = true;          // shows the knee check after the last set
     return out;
   }
   function cleanTrainings(src) {
@@ -167,23 +173,23 @@ var Store = (function (data) {
   function training(state, id) {
     var d = findDef(state, id);
     if (!d) return null;
-    return { id: d.id, name: d.name, sub: d.sub || '', builtin: own(TEMPLATE_MAP, d.id), origin: !!d.origin, kneeCheck: !!d.kneeCheck, groups: d.groups || [],
+    return { id: d.id, name: d.name, sub: d.sub || '', builtin: own(TEMPLATE_MAP, d.id), kneeCheck: !!d.kneeCheck, groups: d.groups || [],
       defItems: d.items, items: d.items.map(exItem) };
   }
-  /* Every training the user can pick. own: Tag A and Tag B (the days of the first version), then the ones the user made, newest first.
+  /* Every training the user can pick. own: the stored ones in the order they were made (Tag A and Tag B first, then the newer ones).
      ready: the suggestions of the app. */
   function allTrainings(state) {
-    var origin = TEMPLATES.filter(function (t) { return t.origin; }).map(function (t) { return training(state, t.id); });
-    var made = state.trainings.slice().reverse().map(function (t) { return training(state, t.id); });
-    return { own: origin.concat(made), ready: TEMPLATES.filter(function (t) { return !t.origin; }).map(function (t) { return training(state, t.id); }) };
+    return { own: state.trainings.map(function (t) { return training(state, t.id); }), ready: TEMPLATES.map(function (t) { return training(state, t.id); }) };
   }
-  function itemsOfDef(d) { return d.items.map(function (it) { var o = { ex: it.ex }; ['sets', 'reps', 'rest', 'hold'].forEach(function (k) { if (it[k] != null) o[k] = it[k]; }); return o; }); }
+  function itemsOfDef(d) { return d.items.map(function (it) { var o = { ex: it.ex }; ['sets', 'reps', 'rest', 'hold', 'note'].forEach(function (k) { if (it[k] != null) o[k] = it[k]; }); return o; }); }
   function addTraining(state, name, items, groups) {
     var t = { id: 'u' + uid(), name: cleanName(name, 'Mein Training'), items: cleanItems(items), created: todayKey() };
     var g = cleanGroups(groups); if (g.length) t.groups = g;
     state.trainings.push(t);
     return t;
   }
+  /* the training that counts as current when the current one is gone: the first stored one, or none */
+  function fallbackCur(state) { return state.trainings.length ? state.trainings[0].id : ''; }
   function removeTraining(state, id) {
     for (var i = 0; i < state.trainings.length; i++) {
       if (state.trainings[i].id !== id) continue;
@@ -191,7 +197,7 @@ var Store = (function (data) {
       var saved = { def: t, idx: i, sets: state.sets[id], stamp: state.stamp[id], logged: state.logged[id], cur: state.cur === id };
       delete state.sets[id]; delete state.stamp[id]; delete state.logged[id];
       state.last = state.last.filter(function (x) { return x !== id; });
-      if (state.cur === id) state.cur = 'A';
+      if (state.cur === id) state.cur = fallbackCur(state);
       return saved;
     }
     return null;
@@ -308,13 +314,22 @@ var Store = (function (data) {
   function schemaOf(raw) { return (isObj(raw) && typeof raw.schema === 'number' && raw.schema >= 1) ? Math.floor(raw.schema) : 1; }
 
   /* Any object in, a complete and valid state of the current schema out. Unknown or broken parts are dropped, never thrown on.
-     Schema 1 and 2 knew only the days "A" and "B" ("day", "plankSecs"); they become the trainings "A" and "B" ("cur", "holdSecs"). */
+     Schema 1 and 2 knew only the days "A" and "B" ("day", "plankSecs"); they become the trainings "A" and "B" ("cur", "holdSecs").
+     Before schema 4 these two were built into the app. They are now put into the stored trainings once, at the front, and the old calendar entries
+     of Tag A and Tag B get their name and planned sets written into them, so they stay what they were even if the training is changed or deleted later.
+     From schema 4 on Tag A and Tag B are trainings like any other: a deleted one stays deleted. */
   function migrate(raw) {
     var s = newState();
     if (!isObj(raw)) return s;
+    var from = schemaOf(raw);
     s.trainings = cleanTrainings(raw.trainings);
+    if (from < 4) {
+      var have = {};
+      s.trainings.forEach(function (t) { have[t.id] = true; });
+      s.trainings = seeds().filter(function (t) { return !have[t.id]; }).concat(s.trainings).slice(0, MAX_TRAININGS);
+    }
     var cur = raw.cur != null ? raw.cur : raw.day;
-    if (validId(cur) && (own(TEMPLATE_MAP, cur) || s.trainings.some(function (t) { return t.id === cur; }))) s.cur = cur;
+    s.cur = (validId(cur) && (own(TEMPLATE_MAP, cur) || s.trainings.some(function (t) { return t.id === cur; }))) ? cur : fallbackCur(s);
     s.sets = isObj(raw.sets) ? mapOfKeys(raw.sets, function (v) { var c = cleanSets(v); return Object.keys(c).length ? c : null; }) : {};
     s.stamp = mapOfKeys(isObj(raw.stamp) ? raw.stamp : {}, function (v) { var c = cleanKey(v); return c || null; });
     s.logged = mapOfKeys(isObj(raw.logged) ? raw.logged : {}, function (v) { var c = cleanKey(v); return c || null; });
@@ -328,6 +343,17 @@ var Store = (function (data) {
     }
     s.prefs = cleanPrefs(raw.prefs);
     s.log = cleanLog(raw.log);
+    if (from < 4) {
+      SEEDS.forEach(function (seed) {
+        Object.keys(s.log).forEach(function (k) {
+          s.log[k].forEach(function (e) {
+            if (e.day !== seed.id) return;
+            if (!e.title) e.title = seed.name;
+            if (!e.targets) { e.targets = {}; seed.items.forEach(function (it) { e.targets[it.ex] = it.sets || EX[it.ex].sets; }); }
+          });
+        });
+      });
+    }
     s.food = cleanFood(raw.food);
     s.recent = cleanRecent(raw.recent);
     s.goalP = posNum(raw.goalP);
@@ -383,7 +409,13 @@ var Store = (function (data) {
     var t = 0, f = 0;
     Object.keys(state.log).forEach(function (k) { t += state.log[k].length; });
     Object.keys(state.food).forEach(function (k) { f += state.food[k].length; });
-    return { trainings: t, foods: f, plans: state.trainings.length };
+    return { trainings: t, foods: f, plans: state.trainings.filter(function (x) { return !isSeed(x); }).length };
+  }
+  /* Tag A or Tag B exactly as a new installation has them: they do not count as something the user made */
+  function isSeed(t) {
+    var seed = null;
+    seeds().forEach(function (x) { if (x.id === t.id) seed = x; });
+    return !!seed && JSON.stringify({ n: t.name, s: t.sub || '', k: !!t.kneeCheck, i: t.items }) === JSON.stringify({ n: seed.name, s: seed.sub || '', k: !!seed.kneeCheck, i: seed.items });
   }
   function isEmpty(state) { var c = counts(state); return c.trainings === 0 && c.foods === 0 && c.plans === 0; }
 
@@ -501,8 +533,9 @@ var Store = (function (data) {
   }
   /* The letter or first letter shown on a calendar day for an entry. */
   function tagOf(state, entry) {
-    if (entry.day === 'A' || entry.day === 'B') return entry.day;
-    var t = entryTitle(state, entry).replace(/[^A-Za-zÄÖÜäöü0-9]/g, '');
+    var title = entryTitle(state, entry), m = /^Tag\s+([A-Za-z0-9])\b/.exec(title);
+    if (m) return m[1].toUpperCase();
+    var t = title.replace(/[^A-Za-zÄÖÜäöü0-9]/g, '');
     return t ? t.charAt(0).toUpperCase() : '•';
   }
 
@@ -597,7 +630,7 @@ var Store = (function (data) {
     newState: newState, migrate: migrate, schemaOf: schemaOf, parseBackup: parseBackup, toText: toText,
     load: load, save: save, backupBefore: backupBefore, counts: counts, isEmpty: isEmpty, refreshDays: refreshDays,
     training: training, allTrainings: allTrainings, addTraining: addTraining, removeTraining: removeTraining, restoreTraining: restoreTraining,
-    copyTraining: copyTraining, itemsOfDef: itemsOfDef, touch: touch, setsOf: setsOf, exItem: exItem, cleanItems: cleanItems, cleanName: cleanName, cleanGroups: cleanGroups,
+    copyTraining: copyTraining, seeds: seeds, fallbackCur: fallbackCur, itemsOfDef: itemsOfDef, touch: touch, setsOf: setsOf, exItem: exItem, cleanItems: cleanItems, cleanName: cleanName, cleanGroups: cleanGroups,
     logEntry: logEntry, entryItems: entryItems, entryTitle: entryTitle, entrySub: entrySub, tagOf: tagOf, snapshot: snapshot, blankEntry: blankEntry,
     addLog: addLog, logSession: logSession, removeLog: removeLog, restoreLog: restoreLog, moveLog: moveLog,
     setEntrySets: setEntrySets, setEntryWeight: setEntryWeight, setEntryNote: setEntryNote, entrySummary: entrySummary, loggedDate: loggedDate,
@@ -607,6 +640,6 @@ var Store = (function (data) {
   };
 })(typeof module !== 'undefined' && module.exports
   ? Object.assign({}, require('./plan.js'), require('./lib.js'), require('./trainings.js'))
-  : { EX: EX, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP, NUTR: NUTR, GROUPS: GROUPS, EQUIP: EQUIP });
+  : { EX: EX, SEEDS: SEEDS, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP, NUTR: NUTR, GROUPS: GROUPS, EQUIP: EQUIP });
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Store;

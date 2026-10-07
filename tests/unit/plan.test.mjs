@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const plan = require('../../plan.js');
 const { LIB, EX } = require('../../lib.js');
-const { TEMPLATES, TEMPLATE_MAP } = require('../../trainings.js');
+const { SEEDS, TEMPLATES, TEMPLATE_MAP } = require('../../trainings.js');
 const Builder = require('../../builder.js');
 const { GROUPS, LEAVES, EQUIP, PRESETS } = plan;
 
@@ -57,21 +57,35 @@ test('Die Knie-Notiz ist jetzt allgemein gehalten', () => {
 });
 
 test('Tag A und Tag B: Übungen in der richtigen Reihenfolge, wie bisher', () => {
-  assert.deepEqual(TEMPLATE_MAP.A.items.map((i) => i.ex), ['a-box', 'a-hip', 'a-push', 'a-tri', 'a-plank']);
-  assert.deepEqual(TEMPLATE_MAP.B.items.map((i) => i.ex), ['b-rdl', 'b-row', 'b-lunge', 'b-curl', 'b-crunch']);
-  assert.equal(TEMPLATE_MAP.A.sub, 'Kniebeuge + Hüfte + Push');
-  assert.equal(TEMPLATE_MAP.B.sub, ref.PLAN.B.focus);
+  const T = { A: SEEDS.find((t) => t.id === 'A'), B: SEEDS.find((t) => t.id === 'B') };
+  assert.deepEqual(SEEDS.map((t) => t.id), ['A', 'B']);
+  assert.deepEqual(T.A.items.map((i) => i.ex), ['a-box', 'a-hip', 'a-push', 'a-tri', 'a-plank']);
+  assert.deepEqual(T.B.items.map((i) => i.ex), ['b-rdl', 'b-row', 'b-lunge', 'b-curl', 'b-crunch']);
+  assert.equal(T.A.name, 'Tag A');
+  assert.equal(T.B.name, 'Tag B');
+  assert.equal(T.A.sub, 'Kniebeuge + Hüfte + Push');
+  assert.equal(T.B.sub, ref.PLAN.B.focus);
   const spec = {
     'a-box': [3, '8–10', 90], 'a-hip': [3, '8–12', 90], 'a-push': [3, 'max.', 60], 'a-tri': [3, '10–15', 60],
     'b-rdl': [3, '8–12', 90], 'b-row': [3, '10–15', 60], 'b-lunge': [3, '8–12', 90], 'b-curl': [3, '10–15', 60], 'b-crunch': [3, '10–15', 45]
   };
-  for (const it of [...TEMPLATE_MAP.A.items, ...TEMPLATE_MAP.B.items]) {
+  for (const it of [...T.A.items, ...T.B.items]) {
     if (it.ex === 'a-plank') { assert.equal(it.sets, 3); assert.equal(it.rest, 45); assert.equal(it.hold, 45); continue; }
     assert.deepEqual([it.sets, it.reps, it.rest], spec[it.ex], it.ex);
   }
-  const legSets = (d, ids) => TEMPLATE_MAP[d].items.filter((i) => ids.includes(i.ex)).reduce((n, i) => n + i.sets, 0);
+  const legSets = (d, ids) => T[d].items.filter((i) => ids.includes(i.ex)).reduce((n, i) => n + i.sets, 0);
   assert.equal(legSets('A', ['a-box', 'a-hip']), 6);
   assert.equal(legSets('B', ['b-rdl', 'b-lunge']), 6);
+});
+
+test('Tag A und Tag B sind keine Sonderfälle mehr: sie stehen nicht unter den fertigen Vorschlägen', () => {
+  assert.equal(TEMPLATE_MAP.A, undefined);
+  assert.equal(TEMPLATE_MAP.B, undefined);
+  assert.ok(!TEMPLATES.some((t) => t.id === 'A' || t.id === 'B'));
+  for (const t of SEEDS) {
+    assert.equal(t.kneeCheck, true, t.id + ' behält den Knie-Hinweis');
+    for (const it of t.items) assert.ok(EX[it.ex], t.id + ' ' + it.ex);
+  }
 });
 
 test('Hip Thrust und TRX-Trizepsstrecken: Inhalte laut Auftrag', () => {
@@ -80,7 +94,7 @@ test('Hip Thrust und TRX-Trizepsstrecken: Inhalte laut Auftrag', () => {
   assert.equal(hip.gear, 'Langhantel mit Polster oder Kurzhantel');
   assert.match(hip.cues[0], /Bankkante/);
   assert.match(hip.cues[1], /Kinn leicht zur Brust/);
-  const note = TEMPLATE_MAP.A.items.find((i) => i.ex === 'a-hip').note;
+  const note = SEEDS.find((t) => t.id === 'A').items.find((i) => i.ex === 'a-hip').note;
   assert.match(note, /6 Sätze/);
   assert.match(note, /Physio/);
   const tri = EX['a-tri'];
@@ -151,12 +165,12 @@ test('Wiederholungen: genau drei Bereiche, jede Übung beginnt mit einem davon',
   for (const ex of LIB) if (!ex.timer) assert.ok(plan.REPS.includes(ex.reps), ex.id + ' hat ' + ex.reps);
   const used = new Set(LIB.filter((e) => !e.timer).map((e) => e.reps));
   assert.equal(used.size, 3, 'alle drei Bereiche werden gebraucht');
-  // die fertigen Vorschläge nehmen die Werte der Bibliothek, nur Tag A und B behalten ihre eigenen aus dem ersten Plan
-  for (const t of TEMPLATES.filter((x) => !x.origin)) for (const it of t.items) assert.equal(it.reps, undefined, t.id + ' ' + it.ex);
+  // die fertigen Vorschläge nehmen die Werte der Bibliothek, nur Tag A und B (SEEDS) behalten ihre eigenen aus dem ersten Plan
+  for (const t of TEMPLATES) for (const it of t.items) assert.equal(it.reps, undefined, t.id + ' ' + it.ex);
 });
 
 test('Vorlagen: gültige Übungen, passende Angaben, nirgends eine Zeitangabe', () => {
-  const ready = TEMPLATES.filter((t) => !t.origin);
+  const ready = TEMPLATES;
   assert.ok(ready.length >= 14, 'mindestens 14 Vorschläge, es sind ' + ready.length);
   const ids = TEMPLATES.map((t) => t.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -164,7 +178,40 @@ test('Vorlagen: gültige Übungen, passende Angaben, nirgends eine Zeitangabe', 
     assert.ok(t.name && t.items.length >= 3, t.id);
     assert.equal(new Set(t.items.map((i) => i.ex)).size, t.items.length, t.id + ' doppelte Übung');
     for (const it of t.items) assert.ok(EX[it.ex], t.id + ' ' + it.ex);
-    if (!t.origin) assert.match(t.id, /^p-/);
+    assert.match(t.id, /^p-/);
     assert.doesNotMatch(t.name + ' ' + (t.sub || ''), /\d+\s*(Min|Minute|Stunde)|\bMin\.|Dauer/i, t.id + ' nennt eine Zeit');
   }
+});
+
+test('Maschinen aus Fitness- und Reha-Zentren: die üblichen Geräte sind alle da, jedes in seinem Bereich', () => {
+  const expect = {
+    'x-legpress': 'oberschenkel', 'x-legext': 'oberschenkel', 'x-legcurl': 'oberschenkel', 'x-legcurlseat': 'oberschenkel', 'x-adduct': 'oberschenkel', 'x-abduct': 'gesaess',
+    'x-hack': 'oberschenkel', 'x-smith': 'oberschenkel', 'x-calfpress': 'unterschenkel', 'x-calfmach': 'unterschenkel', 'x-glutekick': 'gesaess',
+    'x-pulldown': 'ruecken', 'x-machinerow': 'ruecken', 'x-assistpull': 'ruecken', 'x-lumbar': 'ruecken', 'x-hyper': 'ruecken', 'x-revfly': 'schultern',
+    'x-chestpress': 'brust', 'x-pecdeck': 'brust', 'x-inclinedb': 'brust',
+    'x-shpress': 'schultern', 'x-latmach': 'schultern', 'x-curlmach': 'oberarme', 'x-trimach': 'oberarme',
+    'x-crunchmach': 'bauch', 'x-captain': 'bauch', 'x-woodchop': 'bauch', 'x-facepull': 'schultern', 'x-straightarm': 'ruecken',
+    'x-cablehip': 'gesaess', 'x-extrot': 'schultern', 'x-tke': 'oberschenkel', 'x-balance': 'unterschenkel'
+  };
+  for (const [id, leaf] of Object.entries(expect)) {
+    assert.ok(EX[id], id + ' fehlt');
+    assert.equal(EX[id].regions[0], leaf, id + ' steht unter ' + leaf);
+  }
+  const machines = LIB.filter((e) => e.eq.includes('ma'));
+  assert.ok(machines.length >= 24, 'mindestens 24 Übungen an Maschinen, es sind ' + machines.length);
+  assert.ok(LIB.length >= 118, 'die Bibliothek ist deutlich grösser geworden: ' + LIB.length);
+  // jede Maschine hat ein Gewichtsfeld (ausser dem Rückenstrecker auf der Bank und der Beinhebestation, die mit dem Körpergewicht arbeiten)
+  for (const e of machines) if (!['x-hyper', 'x-captain'].includes(e.id)) assert.equal(e.weight, true, e.id + ' mit Gewichtsfeld');
+  // die Rehabilitation: Knie- und Schulterübungen ohne Gerät oder mit Band
+  for (const id of ['x-extrot', 'x-tke', 'x-balance']) assert.ok(!EX[id].eq.includes('ma'), id + ' geht auch ohne Maschine');
+  assert.equal(EX['x-tke'].knee, true);
+  assert.equal(EX['x-balance'].timer, true);
+  assert.equal(EX['x-balance'].sides, 2);
+  // im Fitnessstudio kommen die neuen Maschinen auch in den Vorschlägen vor, ohne Ausrüstung nie
+  const seen = new Set();
+  for (let seed = 1; seed <= 60; seed++) for (const g of ['beine', 'ruecken', 'brust', 'schultern', 'arme', 'bauch', 'ganz']) {
+    for (const it of Builder.suggest({ groups: [g], equip: PRESETS[0].equip, seed }).items) if (EX[it.ex].eq.includes('ma')) seen.add(it.ex);
+    for (const it of Builder.suggest({ groups: [g], equip: [], seed }).items) assert.ok(!EX[it.ex].eq.includes('ma'), 'ohne Ausrüstung keine Maschine: ' + it.ex);
+  }
+  assert.ok(seen.size >= 12, 'in den Vorschlägen kommen viele verschiedene Maschinen vor: ' + seen.size);
 });

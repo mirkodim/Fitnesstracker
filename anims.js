@@ -410,21 +410,25 @@
       ] });
   })();
 
-  /* Kettlebell-Swing: the hips drive the bell, the arms only guide it */
+  /* Kettlebell-Swing: one smooth pendulum. The arms stay straight all the way (aa: the arm angle, so the elbow never bends between two poses),
+     the hips lead and the arms and the bell follow a little later; the bell hangs off the hands. Many short steps without slowing down (flow)
+     make it one movement; three swings in a row, then the wrong one. */
   (function () {
-    var A = [150, G], bell = { t: 'bell', at: 'wrist', dx: 0, dy: 15, r: 8 };
-    var back = norm({ hip: [128, G - 64], th: 62, ankle: A, wrist: [142, G - 48], ha: 40 });
-    var mid = norm({ hip: [140, G - 66], th: 34, ankle: A, wrist: [205.7, 97] });
-    var top = norm({ hip: [152, G - 70], th: 2, ankle: A, wrist: [201.6, 56] });
-    var bad = norm({ hip: [158, G - 68], th: -14, ankle: A, wrist: [192, 60] });
-    add('x-swing', { reps: 4, hl: ['glute', 'thigh'], thumb: 0, sweep: true, props: [bell],
-      steps: [
-        { pose: back, ms: 800, hold: 150, label: 'Hüfte nach hinten, die Kugel schwingt zwischen den Beinen durch' },
-        { pose: mid, ms: 400, hold: 0, label: 'Die Hüfte kräftig nach vorn schieben' },
-        { pose: top, ms: 400, hold: 250, label: 'Oben aufrecht, die Arme führen die Kugel nur bis Brusthöhe' },
-        { pose: bad, ms: 500, hold: 1100, bad: true, label: 'Falsch: Oben ins Hohlkreuz gelehnt' },
-        { pose: mid, ms: 600, hold: 0, label: 'Die Kugel fällt, die Hüfte geht wieder nach hinten' }
-      ] });
+    var A = [150, G], N = 24, bell = { t: 'bell', at: 'wrist', along: 13, r: 8 };
+    function at(u) {                                   // u = 0: back, the bell between the legs; 0.5: the top; 1: back again
+      var s = 0.5 - 0.5 * Math.cos(2 * Math.PI * u), h = 0.5 - 0.5 * Math.cos(2 * Math.PI * (u + 0.05));
+      return norm({ hip: [128 + 24 * h, G - 64 - 6 * h], th: 62 - 60 * h, ankle: A, aa: -39 + 119 * s, ha: 40 - 38 * h });
+    }
+    function label(u) {
+      if (u < 0.06 || u >= 0.94) return 'Hüfte nach hinten, die Kugel schwingt zwischen den Beinen durch';
+      if (u < 0.36) return 'Die Hüfte kräftig nach vorn schieben, die Arme bleiben gestreckt';
+      if (u < 0.6) return 'Oben aufrecht, die Kugel schwebt bis auf Brusthöhe';
+      return 'Die Kugel fällt zurück, die Hüfte geht wieder nach hinten';
+    }
+    var steps = [], c, k;
+    for (c = 0; c < 3; c++) for (k = 0; k < N; k++) steps.push({ pose: at(k / N), ms: 75, hold: 0, flow: true, label: label(k / N) });
+    steps.push({ pose: norm({ hip: [158, G - 68], th: -14, ankle: A, aa: 85, ha: -10 }), ms: 700, hold: 1200, bad: true, label: 'Falsch: Oben ins Hohlkreuz gelehnt' });
+    add('x-swing', { reps: 1, hl: ['glute', 'thigh'], thumb: 12, sweep: true, props: [bell], steps: steps });
   })();
 
   /* TRX-Kniebeuge: straps hold the hands, the legs do the work */
@@ -754,34 +758,38 @@
       ] });
   })();
 
-  /* Kurzhantel-Bankdrücken (incline): the back rests on a tilted pad, the dumbbells go straight up */
+  /* Bankdrücken mit Kurzhanteln: flat on the bench, the same movement as with the barbell, the dumbbells go straight up from the chest */
   (function () {
-    var S = [86, 108], A = [172, G];
-    var pose = function (wrist) { return norm({ sh: S, th: -60, ankle: A, wrist: wrist, ha: -50 }); };
-    var up = pose([88, 62]), dn = pose([98, 106]), bad = pose([116, 72]);
-    add('x-dbpress', { reps: 3, hl: ['torso', 'upper'], thumb: 0, sweep: true,
-      props: [{ t: 'rail', x1: 73.8, y1: 109, x2: 122.3, y2: 137.1 }, { t: 'box', x: 108, y: 135.5, w: 44, h: 42.5 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 6 }],
+    var S = [80, 141], A = [168, G];
+    var pose = function (wrist, extra) { return norm(Object.assign({ sh: S, th: -90, ankle: A, wrist: wrist, ha: -70 }, extra || {})); };
+    var up = pose([88, 94]), dn = pose([95, 132]), bad = pose([95, 128], { th: -110, round: -8 });
+    add('x-dbpress', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 60, y: 144.5, w: 100, h: 33.5 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 7 }],
       steps: [
-        { pose: up, ms: 1100, hold: 500, label: 'Die Hanteln hochdrücken, über der Schulter treffen sie sich fast' },
-        { pose: dn, ms: 1700, hold: 400, label: 'Langsam senken, bis die Ellbogen knapp unter Brusthöhe sind' },
-        { pose: up, ms: 1100, hold: 300, label: 'Die Hanteln hochdrücken, über der Schulter treffen sie sich fast' },
-        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Hanteln wandern nach vorn, die Schultern werden belastet' }
+        { pose: up, ms: 1100, hold: 500, label: 'Die Hanteln hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Die Hanteln kontrolliert zur Brust senken' },
+        { pose: up, ms: 1100, hold: 300, label: 'Die Hanteln hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Das Gesäss hebt ab, Hohlkreuz' }
       ] });
   })();
 
-  /* Brustpresse: seated against the pad, the handles go straight forward from the chest */
+  /* Brustpresse an der Maschine: seated in the machine, the back against the pad. The frame stands around the seat, the grips slide along a
+     horizontal guide at chest height and are pushed straight away from the chest. */
   (function () {
-    var H = [100, 145], A = [150, G], PV = [190, 100];
-    var start = norm({ hip: H, th: -5, ankle: A, wrist: [108, 108], ha: -4 });
-    var press = norm({ hip: H, th: -5, ankle: A, wrist: [144, 100], ha: -4 });
-    var bad = norm({ hip: H, th: 15, ankle: A, wrist: [150, 100], ha: 25 });
+    var H = [100, 145], A = [150, G];
+    var sh = [H[0] + 46 * Math.sin(-4 * D2R), H[1] - 46 * Math.cos(-4 * D2R)], gy = sh[1] + 16;      // the grips stay at this height
+    var pose = function (dx, extra) { return norm(Object.assign({ hip: H, th: -4, ankle: A, wrist: [sh[0] + dx, gy], ha: -2 }, extra || {})); };
+    var start = pose(17), press = pose(46);
+    var shB = [H[0] + 46 * Math.sin(15 * D2R), H[1] - 46 * Math.cos(15 * D2R)];
+    var bad = norm({ hip: H, th: 15, ankle: A, wrist: [shB[0] + 34, gy], ha: 28 });
     add('x-chestpress', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
-      props: [{ t: 'box', x: 78, y: 147, w: 40, h: 31 }, { t: 'rail', x1: 90, y1: 150, x2: 87, y2: 80 }, { t: 'rail', x1: PV[0], y1: 60, x2: PV[0], y2: 178 },
-        { t: 'pulley', x: PV[0], y: PV[1] }, { t: 'strap', anchor: PV, at: 'wrist' }],
+      props: [{ t: 'box', x: 40, y: 98, w: 24, h: 80 }, { t: 'rail', x1: 70, y1: 178, x2: 70, y2: 58 }, { t: 'rail', x1: 70, y1: 58, x2: 196, y2: 58 }, { t: 'rail', x1: 196, y1: 58, x2: 196, y2: 178 },
+        { t: 'box', x: 78, y: 150, w: 44, h: 28 }, { t: 'rail', x1: 91, y1: 152, x2: 88, y2: 80 }, { t: 'rail', x1: 104, y1: gy, x2: 196, y2: gy },
+        { t: 'pad', at: 'wrist', dx: 0, dy: 0, ang: 90, len: 20 }],
       steps: [
-        { pose: start, ms: 1500, hold: 400, label: 'Kontrolliert zurückkommen lassen, die Ellbogen etwas hinter dem Körper' },
-        { pose: press, ms: 1100, hold: 500, label: 'Gleichmässig nach vorn drücken, nicht ganz durchstrecken' },
-        { pose: start, ms: 1500, hold: 300, label: 'Kontrolliert zurückkommen lassen, die Ellbogen etwas hinter dem Körper' },
+        { pose: start, ms: 1500, hold: 400, label: 'Die Griffe kontrolliert zur Brust zurückkommen lassen, der Rücken bleibt am Polster' },
+        { pose: press, ms: 1100, hold: 500, label: 'Die Griffe gleichmässig von der Brust wegdrücken, nicht ganz durchstrecken' },
+        { pose: start, ms: 1500, hold: 300, label: 'Die Griffe kontrolliert zur Brust zurückkommen lassen, der Rücken bleibt am Polster' },
         { pose: bad, ms: 800, hold: 1200, bad: true, label: 'Falsch: Der Rücken löst sich vom Polster, die Schultern rollen nach vorn' }
       ] });
   })();
@@ -1485,5 +1493,533 @@
   })();
 
   /* ==== new animations below ==== */
+
+  /* ===== Maschinen im Sitzen, von vorn gesehen =====
+     The thighs of a seated person point at us, so they are drawn short (ts) and level (angle 90); the lower legs hang straight down.
+     The pelvis stays on the seat in every picture (auto: 0, py 138), only the legs, arms or shoulders move. */
+  var SEAT = [{ t: 'box', x: 140, y: 142, w: 40, h: 36 }, { t: 'box', x: 147, y: 84, w: 26, h: 52 }];
+  function seated(o) { return normF(Object.assign({ legs: [90, 0], ts: 0.3, auto: 0, py: 138, arms: [10, 6] }, o || {})); }
+
+  /* Beinanzieher (Adduktorenmaschine): the knees start wide apart and are pressed together against the pads */
+  (function () {
+    var open = seated({ ts: 0.78 }), shut = seated({ ts: 0.1 }), jerk = seated({ ts: 1, py: 132, sh: 5 });
+    var pads = [{ t: 'strap', anchor: [153, 170], at: 'knL', dx: 5 }, { t: 'strap', anchor: [167, 170], at: 'knR', dx: -5 },
+      { t: 'pad', at: 'knL', dx: 5, dy: 0, ang: 90, len: 24 }, { t: 'pad', at: 'knR', dx: -5, dy: 0, ang: 90, len: 24 }];
+    add('x-adduct', { view: 'f', reps: 3, hl: ['thigh'], thumb: 0, sweep: true, props: SEAT.concat(pads),
+      steps: [
+        { pose: open, ms: 1700, hold: 500, label: 'Langsam öffnen lassen, die Beine nur so weit, wie es angenehm ist' },
+        { pose: shut, ms: 1100, hold: 700, label: 'Die Knie gegen die Polster zusammendrücken, kurz halten' },
+        { pose: open, ms: 1700, hold: 300, label: 'Langsam öffnen lassen, die Beine nur so weit, wie es angenehm ist' },
+        { pose: jerk, ms: 800, hold: 1200, bad: true, label: 'Falsch: Zu weit geöffnet und mit Schwung, das Becken hebt ab' }
+      ] });
+  })();
+
+  /* Beinspreizer (Abduktorenmaschine): the knees start together and are pressed outwards against the pads */
+  (function () {
+    var shut = seated({ ts: 0.1 }), open = seated({ ts: 0.8 }), jerk = seated({ ts: 0.8, py: 131, sh: 5 });
+    var pads = [{ t: 'strap', anchor: [153, 170], at: 'knL', dx: -5 }, { t: 'strap', anchor: [167, 170], at: 'knR', dx: 5 },
+      { t: 'pad', at: 'knL', dx: -5, dy: 0, ang: 90, len: 24 }, { t: 'pad', at: 'knR', dx: 5, dy: 0, ang: 90, len: 24 }];
+    add('x-abduct', { view: 'f', reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true, props: SEAT.concat(pads),
+      steps: [
+        { pose: shut, ms: 1700, hold: 400, label: 'Langsam zurückkommen lassen, die Knie bleiben unter Spannung' },
+        { pose: open, ms: 1100, hold: 700, label: 'Die Knie gegen die Polster nach aussen drücken, kurz halten' },
+        { pose: shut, ms: 1700, hold: 300, label: 'Langsam zurückkommen lassen, die Knie bleiben unter Spannung' },
+        { pose: jerk, ms: 800, hold: 1200, bad: true, label: 'Falsch: Mit Schwung gespreizt, das Becken hebt ab' }
+      ] });
+  })();
+
+  /* Butterfly (Brustmaschine): the forearms rest on the pads, the elbows swing from wide apart to together in front of the chest */
+  (function () {
+    function pose(us, extra) { return seated(Object.assign({ armL: [90, 180], armR: [90, 180], us: us }, extra || {})); }
+    var wide = pose(1), mid = pose(0.5), shut = pose(0.12), shrug = pose(0.12, { sh: 9 });
+    var pads = [{ t: 'pad', at: 'wrL', dx: -3, dy: 12, ang: 90, len: 28 }, { t: 'pad', at: 'wrR', dx: 3, dy: 12, ang: 90, len: 28 }];
+    add('x-pecdeck', { view: 'f', reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true, props: SEAT.concat(pads),
+      steps: [
+        { pose: wide, ms: 1500, hold: 400, label: 'Langsam öffnen, bis die Ellbogen etwa auf Schulterhöhe sind' },
+        { pose: mid, ms: 550, hold: 0, label: 'Die Unterarme in einem Bogen nach vorn führen' },
+        { pose: shut, ms: 600, hold: 700, label: 'Vor der Brust zusammenführen und die Brust anspannen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam wieder öffnen' },
+        { pose: wide, ms: 700, hold: 300, label: 'Langsam öffnen, bis die Ellbogen etwa auf Schulterhöhe sind' },
+        { pose: shrug, ms: 800, hold: 1200, bad: true, label: 'Falsch: Die Schultern ziehen zu den Ohren' }
+      ] });
+  })();
+
+  /* Reverse Butterfly: the chest rests on the pad, the arms open backwards to the sides */
+  (function () {
+    function pose(k, extra) { return seated(Object.assign({ arms: [90, 90], us: k, fs: k }, extra || {})); }
+    var front = pose(0.2), mid = pose(0.6), back = pose(1), shrug = pose(1, { sh: 9, lean: 4 });
+    var grips = [{ t: 'plate', at: 'wrL', r: 3.5 }, { t: 'plate', at: 'wrR', r: 3.5 }];
+    add('x-revfly', { view: 'f', reps: 3, hl: ['trap', 'upper'], thumb: 2, sweep: true, props: SEAT.concat(grips),
+      steps: [
+        { pose: front, ms: 1500, hold: 400, label: 'Langsam nach vorn führen, die Brust bleibt am Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Arme in einem Bogen seitlich nach hinten öffnen' },
+        { pose: back, ms: 600, hold: 700, label: 'Auf Schulterhöhe öffnen und die Schulterblätter zusammenziehen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam nach vorn führen' },
+        { pose: front, ms: 700, hold: 300, label: 'Langsam nach vorn führen, die Brust bleibt am Polster' },
+        { pose: shrug, ms: 800, hold: 1200, bad: true, label: 'Falsch: Mit Schwung und hochgezogenen Schultern' }
+      ] });
+  })();
+
+  /* Seitheben an der Maschine: the elbows are bent forwards (so the forearms point at us) and rest on the pads; the upper arms swing up to the sides */
+  (function () {
+    function pose(a, extra) { return seated(Object.assign({ arms: [a, a], us: 1, fs: 0.15 }, extra || {})); }
+    var low = pose(12), mid = pose(50), high = pose(86), over = pose(120, { sh: 9 });
+    var pads = [{ t: 'plate', at: 'elL', dx: -2, r: 4 }, { t: 'plate', at: 'elR', dx: 2, r: 4 }];
+    add('x-latmach', { view: 'f', reps: 3, hl: ['delt', 'upper'], thumb: 2, sweep: true, props: SEAT.concat(pads),
+      steps: [
+        { pose: low, ms: 1700, hold: 400, label: 'Langsam ablassen, etwa 3 Sekunden' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Ellbogen seitlich nach oben schieben' },
+        { pose: high, ms: 700, hold: 500, label: 'Bis auf Schulterhöhe heben, nicht höher' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam ablassen' },
+        { pose: low, ms: 800, hold: 300, label: 'Langsam ablassen, etwa 3 Sekunden' },
+        { pose: over, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu hoch, die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
+  /* Aussenrotation mit Band: the elbow stays at the side, the forearm swings from across the belly (pointing in) forwards (pointing at us) and out to the side */
+  (function () {
+    function pose(a2, fs, extra) { return normF(Object.assign({ legs: [4, 0], armL: [6, 4], armR: [4, a2], fs: 1 }, extra || {}, { fs: fs })); }
+    var inn = pose(-90, 1), fwd1 = pose(-90, 0.12), fwd2 = pose(90, 0.12), out = pose(90, 0.78);
+    var bad = pose(90, 0.78, { armR: [38, 90] });
+    var band = [{ t: 'strap', band: true, anchor: [96, 82], at: 'wrR' }, { t: 'anchor', x: 96, y: 76 }];
+    add('x-extrot', { view: 'f', reps: 3, hl: ['delt', 'fore'], thumb: 3, sweep: true, props: band,
+      steps: [
+        { pose: inn, ms: 1300, hold: 400, label: 'Den Ellbogen am Körper lassen, der Unterarm liegt quer vor dem Bauch' },
+        { pose: fwd1, ms: 600, hold: 0, label: 'Den Unterarm nach vorn und aussen drehen, der Ellbogen bleibt am Körper' },
+        { pose: fwd2, ms: 40, hold: 0, label: 'Den Unterarm nach vorn und aussen drehen, der Ellbogen bleibt am Körper' },
+        { pose: out, ms: 600, hold: 700, label: 'Bis etwa 45° nach aussen drehen, kurz halten' },
+        { pose: fwd2, ms: 600, hold: 0, label: 'Langsam zurückdrehen' },
+        { pose: fwd1, ms: 40, hold: 0, label: 'Langsam zurückdrehen' },
+        { pose: inn, ms: 800, hold: 300, label: 'Den Ellbogen am Körper lassen, der Unterarm liegt quer vor dem Bauch' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Ellbogen löst sich vom Körper' }
+      ] });
+  })();
+
+
+  /* ===== Maschinen im Sitzen, von der Seite gesehen ===== */
+  var SEAT_H = [100, 145];                                 // hip on the seat; the seat box top is at 150
+  function seatBox() { return { t: 'box', x: 78, y: 150, w: 44, h: 28 }; }
+  function backPad(top) { return { t: 'rail', x1: 91, y1: 152, x2: 88, y2: top || 80 }; }
+
+  /* Schulterpresse an der Maschine: back against the pad, the grips go from shoulder height straight up */
+  (function () {
+    var H = SEAT_H, A = [150, G];
+    var sh = shOf(H, -4);
+    var low = norm({ hip: H, th: -4, ankle: A, wrist: [sh[0] + 13, sh[1] - 17], ha: -2, es: 1 });
+    var mid = norm({ hip: H, th: -4, ankle: A, wrist: [sh[0] + 10, sh[1] - 34], ha: -2, es: 1 });
+    var high = norm({ hip: H, th: -4, ankle: A, wrist: [sh[0] + 7, sh[1] - 46], ha: -2, es: 1 });
+    var shB = shOf(H, 16);
+    var bad = norm({ hip: H, th: 16, ankle: A, wrist: [shB[0] + 16, shB[1] - 40], ha: 24, es: 1 });
+    add('x-shpress', { reps: 3, hl: ['delt', 'upper'], thumb: 2, sweep: true,
+      props: [{ t: 'box', x: 40, y: 98, w: 24, h: 80 }, seatBox(), backPad(76), { t: 'rail', x1: 70, y1: 178, x2: 70, y2: 22 }, { t: 'rail', x1: 70, y1: 22, x2: 150, y2: 22 },
+        { t: 'plate', at: 'wrist', r: 3.5 }],
+      steps: [
+        { pose: low, ms: 1600, hold: 400, label: 'Die Griffe kontrolliert bis auf Schulterhöhe ablassen, der Rücken bleibt am Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Griffe nach oben drücken' },
+        { pose: high, ms: 600, hold: 500, label: 'Bis die Arme fast gestreckt sind, die Schultern bleiben unten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Kontrolliert ablassen' },
+        { pose: low, ms: 700, hold: 300, label: 'Die Griffe kontrolliert bis auf Schulterhöhe ablassen, der Rücken bleibt am Polster' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Rücken löst sich vom Polster, Hohlkreuz' }
+      ] });
+  })();
+
+  /* Bizepscurl an der Maschine (Scott-Pult): the upper arms lie on the sloped pad, only the forearms move */
+  (function () {
+    var H = [96, 145], th = 8, sh = shOf(H, th), A = [146, G];
+    var ang = 38;                                          // the upper arm lies on the sloped pad, the elbow stays where the pad holds it
+    var pose = function (la, extra) { return norm(Object.assign({ hip: H, th: th, ankle: A, ua: ang, la: la, ha: 14 }, extra || {})); };
+    var down = pose(ang), mid = pose(110), up = pose(200);
+    var bad = norm({ hip: H, th: -14, ankle: A, ua: 20, la: 140, ha: -10 });
+    add('x-curlmach', { reps: 3, hl: ['upper'], thumb: 2, sweep: true,
+      props: [seatBox(), backPad(76),
+        { t: 'poly', pts: [[sh[0] + 3, sh[1] + 8], [sh[0] + 33, sh[1] + 45], [sh[0] + 25, sh[1] + 52], [sh[0] - 4, sh[1] + 16]] },
+        { t: 'rail', x1: sh[0] + 28, y1: sh[1] + 50, x2: sh[0] + 28, y2: 178 }, { t: 'plate', at: 'wrist', r: 3.5 }],
+      steps: [
+        { pose: down, ms: 1700, hold: 400, label: 'Langsam ablassen, bis die Arme fast gestreckt sind' },
+        { pose: mid, ms: 600, hold: 0, label: 'Die Griffe zu den Schultern curlen, die Oberarme bleiben auf dem Polster' },
+        { pose: up, ms: 600, hold: 700, label: 'Oben kurz anspannen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam ablassen' },
+        { pose: down, ms: 900, hold: 300, label: 'Langsam ablassen, bis die Arme fast gestreckt sind' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit Schwung aus dem Rücken, die Ellbogen heben ab' }
+      ] });
+  })();
+
+  /* Trizepsstrecken an der Maschine (sitzend): the elbows stay at the sides, the grips are pressed down */
+  (function () {
+    var H = SEAT_H, A = [150, G], sh = shOf(H, -4);
+    var pose = function (la, extra) { return norm(Object.assign({ hip: H, th: -4, ankle: A, ua: 6, la: la, ha: -2 }, extra || {})); };    // the elbows stay at the sides
+    var bent = pose(84), mid = pose(40), straight = pose(6);
+    var bad = norm({ hip: H, th: 14, ankle: A, ua: 28, la: 60, ha: 24 });
+    add('x-trimach', { reps: 3, hl: ['upper'], thumb: 2, sweep: true,
+      props: [{ t: 'box', x: 40, y: 98, w: 24, h: 80 }, seatBox(), backPad(76), { t: 'rail', x1: 70, y1: 178, x2: 70, y2: 60 }, { t: 'rail', x1: sh[0] + 30, y1: sh[1] + 20, x2: sh[0] + 8, y2: sh[1] + 49 },
+        { t: 'plate', at: 'wrist', r: 3.5 }],
+      steps: [
+        { pose: bent, ms: 1500, hold: 400, label: 'Die Griffe langsam hochkommen lassen, die Ellbogen bleiben am Körper' },
+        { pose: mid, ms: 450, hold: 0, label: 'Nach unten drücken' },
+        { pose: straight, ms: 500, hold: 600, label: 'Die Arme ganz strecken und den Trizeps anspannen' },
+        { pose: mid, ms: 800, hold: 0, label: 'Langsam zurückkommen lassen' },
+        { pose: bent, ms: 700, hold: 300, label: 'Die Griffe langsam hochkommen lassen, die Ellbogen bleiben am Körper' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit dem Oberkörper nach vorn gedrückt, die Ellbogen wandern' }
+      ] });
+  })();
+
+  /* Bauchmaschine (Crunch): the hips stay on the seat, the upper body rolls forward against the chest pad */
+  (function () {
+    var H = SEAT_H, A = [150, G];
+    var up = norm({ hip: H, th: -4, ankle: A, wrist: [118, 104], ha: -2, es: 1 });
+    var mid = norm({ hip: H, th: 14, ankle: A, wrist: [126, 108], ha: 14, round: 3, es: 1 });
+    var crunch = norm({ hip: H, th: 32, ankle: A, wrist: [132, 118], ha: 36, round: 7, es: 1 });
+    var bad = norm({ hip: H, th: 20, ankle: A, wrist: [140, 98], ha: 62, hdx: 8, round: 2, es: 1 });
+    add('x-crunchmach', { reps: 3, hl: ['torso'], thumb: 2, sweep: true,
+      props: [{ t: 'box', x: 40, y: 98, w: 24, h: 80 }, seatBox(), backPad(76), { t: 'strap', anchor: [66, 120], at: 'sh', dx: 11, dy: 7 }, { t: 'pad', at: 'sh', dx: 11, dy: 7, ang: 70, len: 22 }],
+      steps: [
+        { pose: up, ms: 1600, hold: 400, label: 'Langsam zurückkommen lassen, der Rücken berührt das Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Den Oberkörper aus dem Bauch heraus nach vorn rollen' },
+        { pose: crunch, ms: 600, hold: 600, label: 'Den Bauch fest anspannen, kurz halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückkommen lassen' },
+        { pose: up, ms: 700, hold: 300, label: 'Langsam zurückkommen lassen, der Rücken berührt das Polster' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit Armen und Nacken gezogen statt mit dem Bauch' }
+      ] });
+  })();
+
+  /* Rudern an der Maschine (brustgestützt): the chest rests on the pad, the elbows are pulled back past the body */
+  (function () {
+    var H = [94, 146], th = 14, sh = shOf(H, th), A = [146, G];
+    var gy = sh[1] + 8;
+    var pose = function (dx, extra) { return norm(Object.assign({ hip: H, th: th, ankle: A, wrist: [sh[0] + dx, gy], ha: 6, es: 1 }, extra || {})); };
+    var out = pose(47), mid = pose(26), pull = pose(2);
+    var shB = shOf(H, -12);
+    var bad = norm({ hip: H, th: -12, ankle: A, wrist: [shB[0] + 4, gy], ha: -8, es: 1 });
+    add('x-machinerow', { reps: 3, hl: ['torso', 'upper'], thumb: 2, sweep: true,
+      props: [{ t: 'box', x: 72, y: 151, w: 44, h: 27 }, { t: 'poly', pts: [[sh[0] + 5, sh[1] - 12], [sh[0] + 14, sh[1] - 12], [sh[0] + 18, sh[1] + 34], [sh[0] + 9, sh[1] + 34]] },
+        { t: 'rail', x1: sh[0] + 14, y1: sh[1] + 36, x2: sh[0] + 14, y2: 178 }, { t: 'rail', x1: sh[0] + 18, y1: gy, x2: 200, y2: gy },
+        { t: 'box', x: 204, y: 100, w: 22, h: 78 }, { t: 'plate', at: 'wrist', r: 3.5 }],
+      steps: [
+        { pose: out, ms: 1500, hold: 400, label: 'Langsam nach vorn gleiten lassen, die Brust bleibt am Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Ellbogen nach hinten ziehen' },
+        { pose: pull, ms: 600, hold: 600, label: 'Die Schulterblätter zusammenziehen, kurz halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückgleiten lassen' },
+        { pose: out, ms: 700, hold: 300, label: 'Langsam nach vorn gleiten lassen, die Brust bleibt am Polster' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit dem Oberkörper nach hinten geschaukelt' }
+      ] });
+  })();
+
+  /* Klimmzug-Maschine mit Gegengewicht: kneeling on the pad that carries part of the body weight, the pad rises with every repetition */
+  (function () {
+    var kx = 148, W = [kx + 3, 24];
+    function kneel(ky, th, extra) {
+      var hip = [kx, ky - 36], sh = shOf(hip, th);
+      return norm(Object.assign({ hip: hip, th: th, ankle: [kx - 36, ky], fa: 90, wrist: W, ha: th * 0.4, es: 1, ks: -1 }, extra || {}));
+    }
+    var hang = kneel(155.7, 0);                              // the handles are just in reach of the straight arms
+    var top = kneel(110, -6);
+    var mid = kneel(133, -3);
+    var half = kneel(128, -4);
+    add('x-assistpull', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'rail', x1: 214, y1: 8, x2: 214, y2: 178 }, { t: 'rail', x1: 214, y1: W[1], x2: W[0], y2: W[1] }, { t: 'strap', anchor: [kx - 12, 176], at: 'knee', dx: -12, dy: 5 },
+        { t: 'pad', at: 'knee', dx: -4, dy: 5, ang: 0, len: 44 }, { t: 'box', x: kx - 40, y: 168, w: 56, h: 10 }],
+      steps: [
+        { pose: hang, ms: 1700, hold: 400, label: 'Langsam ablassen, bis die Arme gestreckt sind' },
+        { pose: mid, ms: 600, hold: 0, label: 'Ellbogen nach unten ziehen' },
+        { pose: top, ms: 700, hold: 600, label: 'Hochziehen, bis das Kinn auf Höhe der Griffe ist' },
+        { pose: mid, ms: 1000, hold: 0, label: 'Langsam ablassen' },
+        { pose: hang, ms: 800, hold: 300, label: 'Langsam ablassen, bis die Arme gestreckt sind' },
+        { pose: half, ms: 800, hold: 1200, bad: true, label: 'Falsch: Nur halb hochgezogen, die Schultern wandern zu den Ohren' }
+      ] });
+  })();
+
+  /* Face Pull am Kabelzug: the rope goes to the face, the elbows high and wide */
+  (function () {
+    var A = [120, G], hip = [118, G - 71.4], th = -6, sh = shOf(hip, th);
+    var P = [214, 54];
+    var pose = function (w, es, extra) { return norm(Object.assign({ hip: hip, th: th, ankle: A, wrist: [sh[0] + w[0], sh[1] + w[1]], ha: -2, es: es }, extra || {})); };
+    var out = pose([47, 2], -1), mid = pose([28, -2], -1), pull = pose([12, -8], 1);
+    var hipB = [112, G - 68], shB = shOf(hipB, -26);
+    var bad = norm({ hip: hipB, th: -26, ankle: A, wrist: [shB[0] + 24, shB[1] + 18], ha: -14, es: 1 });
+    add('x-facepull', { reps: 3, hl: ['trap', 'upper', 'delt'], thumb: 2, sweep: true,
+      props: [{ t: 'rail', x1: 232, y1: 8, x2: 232, y2: 178 }, { t: 'rail', x1: 232, y1: P[1], x2: P[0], y2: P[1] }, { t: 'pulley', x: P[0], y: P[1] }, { t: 'strap', anchor: P, at: 'wrist' }],
+      steps: [
+        { pose: out, ms: 1500, hold: 400, label: 'Langsam nach vorn führen lassen, die Arme sind fast gestreckt' },
+        { pose: mid, ms: 500, hold: 0, label: 'Das Seil zum Gesicht ziehen, die Ellbogen hoch' },
+        { pose: pull, ms: 600, hold: 700, label: 'Die Hände neben die Ohren, die Schulterblätter zusammen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückführen' },
+        { pose: out, ms: 700, hold: 300, label: 'Langsam nach vorn führen lassen, die Arme sind fast gestreckt' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu schwer, der Oberkörper lehnt weit zurück' }
+      ] });
+  })();
+
+  /* Gestreckter Armzug am Kabel: the straight arms swing from in front of the head down to the thighs */
+  (function () {
+    var A = [140, G], hip = [118, G - 66], th = 18;
+    var P = [196, 18];
+    var pose = function (aa, extra) { return norm(Object.assign({ hip: hip, th: th, ankle: A, aa: aa, ha: 12 }, extra || {})); };
+    var top = pose(142), mid = pose(80), low = pose(14);
+    var hipB = [112, G - 64], bad = norm({ hip: hipB, th: 40, ankle: A, aa: 62, al: 30, ha: 40 });
+    add('x-straightarm', { reps: 3, hl: ['torso', 'upper'], thumb: 2, sweep: true,
+      props: [{ t: 'rail', x1: 232, y1: 8, x2: 232, y2: 178 }, { t: 'rail', x1: 232, y1: P[1], x2: P[0], y2: P[1] }, { t: 'pulley', x: P[0], y: P[1] }, { t: 'strap', anchor: P, at: 'wrist' }],
+      steps: [
+        { pose: top, ms: 1500, hold: 400, label: 'Die Arme langsam nach oben führen lassen, sie bleiben gestreckt' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die gestreckten Arme in einem Bogen nach unten ziehen' },
+        { pose: low, ms: 600, hold: 600, label: 'Bis zu den Oberschenkeln, die Schulterblätter nach unten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückführen' },
+        { pose: top, ms: 700, hold: 300, label: 'Die Arme langsam nach oben führen lassen, sie bleiben gestreckt' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Ellbogen beugen sich, Schwung aus dem Rücken' }
+      ] });
+  })();
+
+  /* Rückenstrecker auf der 45°-Bank: the hips rest on the pad, the heels are held, the upper body goes from hanging down to a straight line */
+  (function () {
+    var hip = [150, 98], A = [hip[0] - 50.9, hip[1] - 50.9];
+    function torso(theta) { return [hip[0] + 46 * Math.sin(theta * D2R), hip[1] + 46 * Math.cos(theta * D2R)]; }       // theta: 0 = hanging straight down, 45 = in line with the legs
+    function pose(theta, extra) { var sh = torso(theta); return norm(Object.assign({ hip: hip, sh: sh, ankle: A, fa: 30, wrist: [sh[0] - 6, sh[1] - 4], ha: 170 - theta, es: 1 }, extra || {})); }
+    var down = pose(8, { round: -8 }), mid = pose(28), top = pose(45), over = pose(78, { round: -7 });
+    add('x-hyper', { reps: 3, hl: ['torso', 'glute'], thumb: 2, sweep: true,
+      props: [{ t: 'rail', x1: 64, y1: 178, x2: 64, y2: 52 }, { t: 'rail', x1: 64, y1: 52, x2: 140, y2: 128 }, { t: 'rail', x1: 148, y1: 178, x2: 148, y2: 118 }, { t: 'rail', x1: 40, y1: 178, x2: 170, y2: 178 },
+        { t: 'pad', at: 'hip', dx: -4, dy: 6, ang: 45, len: 40 }, { t: 'plate', at: 'ankle', dx: 4, dy: -4, r: 4 }],
+      steps: [
+        { pose: down, ms: 1600, hold: 400, label: 'Langsam nach unten rollen lassen, der Rücken bleibt lang' },
+        { pose: mid, ms: 500, hold: 0, label: 'Den Oberkörper aufrichten' },
+        { pose: top, ms: 600, hold: 700, label: 'Bis Oberkörper und Beine eine Linie bilden, das Gesäss anspannen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam ablassen' },
+        { pose: down, ms: 800, hold: 300, label: 'Langsam nach unten rollen lassen, der Rücken bleibt lang' },
+        { pose: over, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu weit überstreckt, Hohlkreuz' }
+      ] });
+  })();
+
+  /* ===== Beine und Gesäss an Maschinen ===== */
+
+  /* Hackenschmidt-Kniebeuge: the back lies on a pad that slides along rails tilted back by 25 degrees, the feet stand on the platform in front */
+  (function () {
+    var beta = 25, dir = [Math.sin(beta * D2R), Math.cos(beta * D2R)], A = [158, 168];
+    var P0 = [A[0] - 71.5 * Math.sin(20 * D2R), A[1] - 71.5 * Math.cos(20 * D2R)];
+    function hipAt(t) { return [P0[0] + dir[0] * t, P0[1] + dir[1] * t]; }
+    function pose(t, extra) {
+      var hip = hipAt(t), sh = shOf(hip, -beta);
+      return norm(Object.assign({ hip: hip, th: -beta, ankle: A, wrist: [sh[0] + 14, sh[1] + 21], ha: -beta + 8, es: 1 }, extra || {}));
+    }
+    var top = pose(0), mid = pose(12), bot = pose(24), bad = pose(24, { th: -12, round: 9, ha: 14, wrist: [hipAt(24)[0] + 4, hipAt(24)[1] - 24] });
+    var B = [P0[0] - 24, P0[1] - 14];
+    add('x-hack', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true,
+      props: [{ t: 'rail', x1: B[0] - 40 * dir[0], y1: B[1] - 40 * dir[1], x2: B[0] + 62 * dir[0], y2: B[1] + 62 * dir[1] }, { t: 'rail', x1: B[0] + 62 * dir[0], y1: B[1] + 62 * dir[1], x2: B[0] + 62 * dir[0], y2: 178 },
+        { t: 'box', x: 128, y: 171, w: 66, h: 7 }, { t: 'pad', at: 'hip', dx: -14, dy: -19, ang: 65, len: 62 }],
+      steps: [
+        { pose: top, ms: 1300, hold: 500, label: 'Kräftig aufstehen, die Knie nicht ganz durchdrücken' },
+        { pose: mid, ms: 600, hold: 0, label: 'Kontrolliert absenken, der Rücken bleibt am Polster' },
+        { pose: bot, ms: 1000, hold: 600, label: 'Bis die Knie etwa im rechten Winkel gebeugt sind' },
+        { pose: mid, ms: 500, hold: 0, label: 'Kräftig aufstehen' },
+        { pose: top, ms: 900, hold: 300, label: 'Kräftig aufstehen, die Knie nicht ganz durchdrücken' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Unten rollt das Becken ein, der untere Rücken rundet sich' }
+      ] });
+  })();
+
+  /* Kniebeuge an der Multipresse (Smith-Maschine): the bar only moves straight up and down, so the feet stand a little in front of it */
+  (function () {
+    var X = 120, A = [X + 24, G];
+    function pose(shy, th, extra) { return norm(Object.assign({ sh: [X, shy], th: th, ankle: A, wr: [-8, 0], ha: th * 0.4 - 4, es: -1 }, extra || {})); }
+    var top = pose(62, 4), mid = pose(88, 18), bot = pose(112, 32), bad = pose(108, 52, { ha: 26 });
+    add('x-smith', { reps: 3, hl: ['thigh', 'glute'], thumb: 1, sweep: true,
+      props: [{ t: 'rail', x1: X - 22, y1: 6, x2: X - 22, y2: 178 }, { t: 'rail', x1: X + 20, y1: 6, x2: X + 20, y2: 178 }, { t: 'plate', at: 'wrist', dx: -3, dy: -1, r: 7 }],
+      steps: [
+        { pose: top, ms: 1300, hold: 500, label: 'Kräftig aufstehen, Hüfte und Knie strecken' },
+        { pose: mid, ms: 700, hold: 0, label: 'Kontrolliert absenken, die Stange gleitet senkrecht' },
+        { pose: bot, ms: 1000, hold: 600, label: 'Hüfte nach hinten, bis die Oberschenkel fast waagrecht sind' },
+        { pose: mid, ms: 500, hold: 0, label: 'Kräftig aufstehen' },
+        { pose: top, ms: 900, hold: 300, label: 'Kräftig aufstehen, Hüfte und Knie strecken' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper klappt nach vorn, die Füsse stehen zu weit hinten' }
+      ] });
+  })();
+
+  /* Wadenheben an der Beinpresse: the legs stay almost straight, only the ankles move the plate */
+  (function () {
+    var H = [118, 144], dir = [Math.cos(38 * D2R), -Math.sin(38 * D2R)], hands = [122, 134];
+    function foot(d) { return [H[0] + d * dir[0], H[1] + d * dir[1]]; }
+    function pose(d, fa, extra) { return norm(Object.assign({ hip: H, th: -55, ankle: foot(d), fa: fa, wrist: hands, ha: -55 }, extra || {})); }
+    var low = pose(70.5, -146), high = pose(70.5, -98), bad = pose(60, -98, { round: 3 });
+    add('x-calfpress', { reps: 3, hl: ['shin'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 96, y: 149, w: 46, h: 29 }, { t: 'rail', x1: 121, y1: 151, x2: 66, y2: 111 }, { t: 'rail', x1: 136, y1: 150, x2: 206, y2: 90 }, { t: 'pad', at: 'toe', dx: 2, dy: -3, ang: 128, len: 46 }],
+      steps: [
+        { pose: low, ms: 1500, hold: 500, label: 'Die Fersen langsam zurücksinken lassen, die Beine bleiben fast gestreckt' },
+        { pose: high, ms: 1000, hold: 700, label: 'Mit den Zehenballen wegdrücken, oben 1 Sekunde halten' },
+        { pose: low, ms: 1500, hold: 300, label: 'Die Fersen langsam zurücksinken lassen, die Beine bleiben fast gestreckt' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Die Knie beugen und strecken sich mit' }
+      ] });
+  })();
+
+  /* Wadenheben stehend an der Maschine: the shoulders are under the pads, the heels sink and rise */
+  (function () {
+    var wr = [10, 6];
+    var lo = norm({ hip: [150, G - 70], th: 2, ankle: [150, G], wr: wr, es: 1 });
+    var hi = norm({ hip: [153, G - 80], th: 2, ankle: [154.1, G - 10], fa: 45.6, wr: wr, es: 1 });
+    var bad = norm({ hip: [160, G - 68], th: 6, ankle: [154.1, G - 10], fa: 45.6, wr: wr, es: 1 });
+    add('x-calfmach', { reps: 3, hl: ['shin'], thumb: 1, sweep: true,
+      props: [{ t: 'box', x: 40, y: 70, w: 24, h: 108 }, { t: 'rail', x1: 70, y1: 178, x2: 70, y2: 28 }, { t: 'strap', anchor: [70, 28], at: 'sh', dx: -2, dy: -8 }, { t: 'pad', at: 'sh', dx: -2, dy: -8, ang: 0, len: 18 }],
+      steps: [
+        { pose: lo, ms: 1500, hold: 400, label: 'Langsam ablassen, die Fersen sinken bis zum Boden' },
+        { pose: hi, ms: 1100, hold: 700, label: 'Fersen hoch auf die Zehen, oben 1 Sekunde halten' },
+        { pose: lo, ms: 1500, hold: 300, label: 'Langsam ablassen, die Fersen sinken bis zum Boden' },
+        { pose: bad, ms: 800, hold: 1100, bad: true, label: 'Falsch: Die Knie beugen sich, die Wade arbeitet kaum' }
+      ] });
+  })();
+
+  /* Gesäss-Kickback an der Maschine: the chest rests on the pad, one foot on the lever plate pushes back and up */
+  (function () {
+    var hip = [128, 103], th = 24, sh = shOf(hip, th), A = [136, G];
+    var t = [Math.sin(th * D2R), -Math.cos(th * D2R)], n = [Math.cos(th * D2R), Math.sin(th * D2R)];
+    var c = [hip[0] + 33 * t[0] + 9 * n[0], hip[1] + 33 * t[1] + 9 * n[1]];
+    var pt = function (a, b) { return [c[0] + a * t[0] + b * n[0], c[1] + a * t[1] + b * n[1]]; };
+    function pose(a2, extra) { return norm(Object.assign({ hip: hip, th: th, ankle: A, ankle2: a2, fa2: 25, wrist: [sh[0] + 18, sh[1] + 14], ha: 22, es: 1 }, extra || {})); }
+    var start = pose([hip[0] + 6, hip[1] + 62]), mid = pose([hip[0] - 22, hip[1] + 54]), end = pose([hip[0] - 48, hip[1] + 38]);
+    var bad = pose([hip[0] - 60, hip[1] + 20], { th: 6, round: -9, ha: 8, wrist: [hip[0] + 20, hip[1] - 22] });
+    add('x-glutekick', { reps: 3, hl: ['glute'], thumb: 2, sweep: true,
+      props: [{ t: 'poly', pts: [pt(-20, -3), pt(20, -3), pt(20, 5), pt(-20, 5)] }, { t: 'rail', x1: pt(20, 1)[0], y1: pt(20, 1)[1], x2: pt(20, 1)[0] + 6, y2: 178 },
+        { t: 'strap', anchor: [166, 172], at: 'ankle2', dy: 5 }, { t: 'pad', at: 'ankle2', dx: -2, dy: 5, ang: 0, len: 18 }],
+      steps: [
+        { pose: start, ms: 1500, hold: 400, label: 'Langsam zurückkommen lassen, der Oberkörper bleibt am Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Das Bein nach hinten drücken' },
+        { pose: end, ms: 600, hold: 700, label: 'Hüfte strecken, das Gesäss fest anspannen, kurz halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückkommen lassen' },
+        { pose: start, ms: 700, hold: 300, label: 'Langsam zurückkommen lassen, der Oberkörper bleibt am Polster' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Hohlkreuz, das Bein wird mit Schwung hochgeschleudert' }
+      ] });
+  })();
+
+  /* ===== Rücken und Brust an Maschinen und Bank ===== */
+
+  /* Rückenstrecker an der Maschine (sitzend): the pelvis is fixed, the back pushes the pad backwards until the body is upright */
+  (function () {
+    var H = SEAT_H, A = [150, G];
+    function pose(th, extra) { return norm(Object.assign({ hip: H, th: th, ankle: A, wr: [10, 10], ha: th * 0.4, es: 1 }, extra || {})); }
+    var flexed = pose(30), mid = pose(14), upright = pose(-4), bad = pose(-24, { round: -9, ha: -22 });
+    add('x-lumbar', { reps: 3, hl: ['torso'], thumb: 2, sweep: true,
+      props: [seatBox(), { t: 'box', x: 40, y: 98, w: 24, h: 80 }, { t: 'strap', anchor: [78, 140], at: 'sh', dx: -8, dy: 8 }, { t: 'pad', at: 'hip', dx: 22, dy: -9, ang: 90, len: 14 }],
+      steps: [
+        { pose: flexed, ms: 1700, hold: 400, label: 'Langsam nach vorn kommen lassen, die Spannung bleibt' },
+        { pose: mid, ms: 500, hold: 0, label: 'Den Rücken gegen das Polster drücken' },
+        { pose: upright, ms: 600, hold: 700, label: 'Bis der Oberkörper aufrecht ist, kurz halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam nach vorn kommen lassen' },
+        { pose: flexed, ms: 800, hold: 300, label: 'Langsam nach vorn kommen lassen, die Spannung bleibt' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Zu weit nach hinten gedrückt, Hohlkreuz' }
+      ] });
+  })();
+
+  /* Schrägbankdrücken mit Kurzhanteln: the bench is tilted by 30 degrees, the dumbbells go from the upper chest straight up */
+  (function () {
+    var S = [80, 119], A = [164, G], th = -60;
+    var pose = function (wrist, extra) { return norm(Object.assign({ sh: S, th: th, ankle: A, wrist: wrist, ha: -52 }, extra || {})); };
+    var up = pose([S[0] + 9, S[1] - 47]), dn = pose([S[0] + 14, S[1] - 7]);
+    var bad = pose([S[0] + 14, S[1] - 9], { th: -82, round: -8 });
+    var tdir = [Math.sin(th * D2R), -Math.cos(th * D2R)], head = [S[0] + 34 * tdir[0], S[1] + 34 * tdir[1]], seat = [S[0] - 40 * tdir[0] + 4, S[1] - 40 * tdir[1] + 3];
+    add('x-inclinedb', { reps: 3, hl: ['torso', 'upper'], thumb: 1, sweep: true,
+      props: [{ t: 'poly', pts: [[head[0] - 3, head[1] + 3], [seat[0] - 3, seat[1] + 3], [seat[0] - 8, seat[1] + 11], [head[0] - 8, head[1] + 11]] }, { t: 'box', x: 112, y: 148, w: 44, h: 30 },
+        { t: 'rail', x1: head[0] - 5, y1: head[1] + 8, x2: head[0] - 5, y2: 178 }, { t: 'plate', at: 'wrist', dx: 0, dy: 0, r: 7 }],
+      steps: [
+        { pose: up, ms: 1100, hold: 500, label: 'Die Hanteln hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: dn, ms: 1700, hold: 400, label: 'Die Hanteln kontrolliert zur oberen Brust senken' },
+        { pose: up, ms: 1100, hold: 300, label: 'Die Hanteln hochdrücken, bis die Arme fast gestreckt sind' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Das Gesäss hebt ab, Hohlkreuz' }
+      ] });
+  })();
+
+  /* ===== Bauch ===== */
+
+  /* Beinheben im Stütz (Captain's Chair): the back against the pad, the forearms on the rests, the knees come up towards the chest */
+  (function () {
+    var sh = [100, 44];
+    function pose(hip, th, ankle, extra) { return norm(Object.assign({ hip: hip, th: th, ankle: ankle, fa: 60, wrist: [sh[0] + 26, sh[1] + 26], ha: 0, es: 1 }, extra || {})); }
+    var hip = [100, 90];
+    var down = pose(hip, 0, [100.5, 161.5]), mid = pose(hip, 0, [128, 126]), up = pose(hip, 0, [112, 106], { round: 2 });
+    var bad = pose([108, 92], -14, [166, 110], { ha: -12 });
+    add('x-captain', { reps: 3, hl: ['torso', 'thigh'], thumb: 2, sweep: true,
+      props: [{ t: 'rail', x1: 90, y1: 32, x2: 90, y2: 142 }, { t: 'pad', at: 'wrist', dx: -12, dy: 5, ang: 0, len: 34 }, { t: 'rail', x1: 120, y1: 76, x2: 120, y2: 178 }, { t: 'rail', x1: 70, y1: 178, x2: 150, y2: 178 }, { t: 'plate', at: 'wrist', r: 3 }],
+      steps: [
+        { pose: down, ms: 1500, hold: 400, label: 'Langsam ablassen, die Beine hängen ruhig' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Knie zum Bauch ziehen' },
+        { pose: up, ms: 600, hold: 600, label: 'Das Becken leicht aufrollen und kurz halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam ablassen' },
+        { pose: down, ms: 700, hold: 300, label: 'Langsam ablassen, die Beine hängen ruhig' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Mit Schwung gehoben, der Körper schaukelt' }
+      ] });
+  })();
+
+  /* Holzhacker am Kabelzug (von vorn gesehen): both hands guide the rope diagonally from high on one side to low on the other, the trunk turns with it */
+  (function () {
+    function pose(a, extra) { return normF(Object.assign({ legs: [10, 4], armL: [a, a], armR: [-a, -a] }, extra || {})); }
+    var hi = pose(142, { lean: -9 }), mid = pose(90, { lean: 0 }), lo = pose(-40, { lean: 11 }), bad = pose(-40, { lean: 26, sh: 6 });
+    add('x-woodchop', { view: 'f', reps: 3, hl: ['torso', 'trap'], thumb: 2, sweep: true,
+      props: [{ t: 'pulley', x: 62, y: 16 }, { t: 'link', a: 'wrL', b: 'wrR' }, { t: 'strap', anchor: [62, 16], at: 'wrL' }],
+      steps: [
+        { pose: hi, ms: 1400, hold: 400, label: 'Die gestreckten Arme schräg nach oben zur Kabelseite führen lassen' },
+        { pose: mid, ms: 500, hold: 0, label: 'Das Seil diagonal nach unten ziehen, der Rumpf dreht mit' },
+        { pose: lo, ms: 600, hold: 600, label: 'Bis neben das Knie der anderen Seite, den Bauch anspannen' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam zurückführen' },
+        { pose: hi, ms: 700, hold: 300, label: 'Die gestreckten Arme schräg nach oben zur Kabelseite führen lassen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper knickt seitlich ein statt zu drehen' }
+      ] });
+  })();
+
+  /* ===== weitere Maschinen und Übungen aus Fitness- und Reha-Zentren ===== */
+
+  /* Beinbeuger sitzend: the thighs are held down by a pad, the heels curl down and back under the seat */
+  (function () {
+    var H = [100, 134], th = -12, sh = shOf(H, th);
+    function pose(a, extra) { return norm(Object.assign({ hip: H, th: th, ankle: a, fa: 30, wrist: [sh[0] + 12, sh[1] + 23], ha: -6, es: 1 }, extra || {})); }
+    var out = pose([170, 139]), mid = pose([150, 152]), curl = pose([112, 166]);
+    var bad = pose([114, 164], { hip: [100, 127], th: 12, ha: 16, wrist: [sh[0] + 28, sh[1] + 26] });
+    add('x-legcurlseat', { reps: 3, hl: ['thigh'], thumb: 2, sweep: true,
+      props: [{ t: 'box', x: 76, y: 138, w: 52, h: 40 }, { t: 'rail', x1: 90, y1: 136, x2: 86, y2: 66 }, { t: 'pad', at: 'knee', dx: -14, dy: -8, ang: 0, len: 26 }, { t: 'plate', at: 'ankle', dx: -1, dy: 6, r: 5 }],
+      steps: [
+        { pose: out, ms: 1700, hold: 400, label: 'Langsam strecken lassen, die Oberschenkel bleiben unter dem Polster' },
+        { pose: mid, ms: 500, hold: 0, label: 'Die Fersen nach unten und hinten ziehen' },
+        { pose: curl, ms: 600, hold: 700, label: 'Die Fersen unter den Sitz ziehen, oben 1 Sekunde halten' },
+        { pose: mid, ms: 900, hold: 0, label: 'Langsam strecken lassen' },
+        { pose: out, ms: 800, hold: 300, label: 'Langsam strecken lassen, die Oberschenkel bleiben unter dem Polster' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper beugt sich vor, das Gesäss hebt ab' }
+      ] });
+  })();
+
+  /* Hüftabduktion am Kabelzug (von vorn gesehen): the cuff on the ankle is pulled by the low pulley, the leg goes out to the side */
+  (function () {
+    function pose(a, extra) { return normF(Object.assign({ armL: [30, 24], armR: [30, 24], legL: [0, 0], legR: [a, a] }, extra || {})); }
+    var near = pose(3), out = pose(32), bad = pose(40, { lean: -12, sh: 6 });
+    add('x-cablehip', { view: 'f', reps: 3, hl: ['glute', 'thigh'], thumb: 1, sweep: true,
+      props: [{ t: 'pulley', x: 62, y: 170 }, { t: 'rail', x1: 40, y1: 178, x2: 62, y2: 170 }, { t: 'strap', anchor: [62, 170], at: 'anR' }],
+      steps: [
+        { pose: near, ms: 1600, hold: 400, label: 'Langsam zurückführen, das Standbein bleibt gerade und stabil' },
+        { pose: out, ms: 1100, hold: 600, label: 'Das Bein gestreckt zur Seite führen, der Oberkörper bleibt aufrecht' },
+        { pose: near, ms: 1600, hold: 300, label: 'Langsam zurückführen, das Standbein bleibt gerade und stabil' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper kippt zur Seite, das Bein wird geschwungen' }
+      ] });
+  })();
+
+  /* Kniestrecken mit Band (terminale Knieextension): the band pulls the knee forwards, the knee presses back until the leg is straight */
+  (function () {
+    var A = [150, G], AN = [226, 134];
+    var bent = norm({ hip: [149, G - 63], th: 0, ankle: A, wr: [4, 46], ha: 0 });
+    var straight = norm({ hip: [150, G - 71.5], th: 0, ankle: A, wr: [4, 46], ha: 0 });
+    var bad = norm({ hip: [140, G - 62], th: 16, ankle: A, wr: [8, 44], ha: 12 });
+    add('x-tke', { reps: 3, hl: ['thigh'], thumb: 1, sweep: true,
+      props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', band: true, anchor: AN, at: 'knee', dx: -4 }],
+      steps: [
+        { pose: bent, ms: 1300, hold: 300, label: 'Das Knie leicht gebeugt, das Band zieht das Knie nach vorn' },
+        { pose: straight, ms: 1000, hold: 800, label: 'Das Knie gegen das Band ganz strecken und den Oberschenkel anspannen' },
+        { pose: bent, ms: 1300, hold: 300, label: 'Das Knie leicht gebeugt, das Band zieht das Knie nach vorn' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper kippt vor, das Knie wird nicht gestreckt' }
+      ] });
+  })();
+
+  /* Einbeinstand: the other knee is lifted to hip height, the arms help to balance; seconds are counted */
+  (function () {
+    var A = [150, G], hip = [150, G - 71.5];
+    var rest = norm({ hip: hip, th: 0, ankle: A, ankle2: [153, G], wr: [14, 24], ha: 0 });
+    var hold = norm({ hip: hip, th: 0, ankle: A, ankle2: [hip[0] + 36, hip[1] + 36], fa2: 20, wr: [16, 22], ha: 0 });
+    var bad = norm({ hip: [146, G - 66], th: 14, ankle: A, ankle2: [hip[0] + 30, hip[1] + 44], fa2: 20, wr: [26, 14], ha: 14 });
+    add('x-balance', { reps: 2, hl: ['thigh', 'glute'], thumb: 1, sweep: true, props: [],
+      steps: [
+        { pose: rest, ms: 1000, hold: 400, label: 'Aufrecht stehen, den Blick auf einen festen Punkt richten' },
+        { pose: hold, ms: 1100, hold: 1400, label: 'Ein Knie auf Hüfthöhe heben und ruhig stehen bleiben' },
+        { pose: rest, ms: 1000, hold: 300, label: 'Wieder abstellen' },
+        { pose: bad, ms: 900, hold: 1200, bad: true, label: 'Falsch: Der Oberkörper kippt, das Standbein knickt ein' }
+      ] });
+  })();
 
 })(typeof module !== 'undefined' && module.exports ? require('./fig.js') : FIG);

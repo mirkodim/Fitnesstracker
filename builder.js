@@ -2,6 +2,7 @@
    and in Node, where the tests use them.
    - which exercises fit the equipment the user has (eqOK),
    - a suggestion for one or more body areas and a place to train (suggest), alternatives for one exercise (alternatives),
+     a short name for a new training, made from what is really in it (nameFor),
      fitting a training to other equipment (adapt), the plus and minus of the repetitions (repsShift), the list of all exercises (allByGroup).
    There is no time and no level anywhere: a training lasts as long as it lasts, and a suggestion always uses the easier half of the library.
    A training item is { ex: id, sets, reps, rest, hold } where everything but ex falls back to the library defaults. */
@@ -16,7 +17,7 @@ var Builder = (function (data) {
   /* which pattern is worth doing first (big, demanding moves before small ones) */
   var PRIORITY = { squat: 10, hinge: 10, bridge: 9, vpull: 9, row: 9, push: 9, vpush: 9, lunge: 8, swing: 8, cond: 7, carry: 7,
     core: 6, hold: 6, rot: 6, raise: 5, curl: 5, tri: 5, fly: 5, shrug: 4, calf: 4, neck: 4, wrist: 4, mob: 3,
-    bench: 9, ohp: 8, ext: 6, legcurl: 6, dip: 6, cardio: 7, extension: 5, crunch: 5, legraise: 5, kick: 5, abd: 5, shin: 4, extend: 4, pullapart: 4, sidebend: 4, stretch: 2 };
+    bench: 9, ohp: 8, ext: 6, legcurl: 6, dip: 6, cardio: 7, extension: 5, crunch: 5, legraise: 5, kick: 5, abd: 5, shin: 4, extend: 4, pullapart: 4, sidebend: 4, stretch: 2, balance: 3, adduct: 5 };
   var FULL = ['beine', 'gesaess', 'brust', 'ruecken', 'bauch', 'schultern', 'arme'];
 
   /* ---------- helpers ---------- */
@@ -225,11 +226,61 @@ var Builder = (function (data) {
     });
   }
 
+  /* ---------- the name of a new training ---------- */
+  var UPPER = ['brust', 'ruecken', 'schultern', 'arme'], LOWER = ['beine', 'gesaess'];
+  var NAME_ORDER = ['brust', 'ruecken', 'schultern', 'arme', 'beine', 'gesaess', 'bauch', 'nacken', 'ganz'];     // which area is named first when two are equally big
+  var EQ_ORDER = ['ma', 'kz', 'lh', 'kh', 'kb', 'mb', 'trx', 'band', 'stange', 'bank', 'box'];
+  var EQ_NAME = { ma: 'Maschinen', kz: 'Kabelzug', lh: 'Langhantel', kh: 'Kurzhanteln', kb: 'Kettlebell', mb: 'Medizinball', trx: 'TRX', band: 'Band', stange: 'Klimmzugstange', bank: 'Bank', box: 'Kiste' };
+  /* The areas the exercises train first (their main area), not the ones they only help: "Beine & Gesäss", "Brust & Rücken", "Oberkörper" when three or more
+     upper areas are in, "Ganzkörper" when upper and lower body are both in and at least three areas, or when most exercises are whole-body ones. */
+  function areaName(items) {
+    var n = items.length;
+    if (!n) return 'Training';
+    var cnt = {}, ids = [], order = NAME_ORDER;
+    items.forEach(function (it) { var g = mainGroup(EX[it.ex]); if (!cnt[g]) { cnt[g] = 0; ids.push(g); } cnt[g]++; });
+    var sum = function (list) { return list.reduce(function (a, g) { return a + (cnt[g] || 0); }, 0); };
+    var lower = sum(LOWER), upper = sum(UPPER), distinct = ids.filter(function (g) { return g !== 'ganz'; });
+    if ((cnt.ganz || 0) * 2 >= n || (lower && upper && distinct.length >= 3)) return 'Ganzkörper';
+    var sorted = ids.slice().sort(function (a, b) { return (cnt[b] - cnt[a]) || (order.indexOf(a) - order.indexOf(b)); });
+    if (!lower && sorted.filter(function (g) { return UPPER.indexOf(g) >= 0; }).length >= 3) return 'Oberkörper';
+    var pick = sorted.filter(function (g, i) { return i === 0 || cnt[g] / n >= 0.25; }).slice(0, 3);
+    var names = pick.map(function (g) { return GROUP[g].label; });
+    return names.length === 3 ? names[0] + ', ' + names[1] + ' & ' + names[2] : names.join(' & ');
+  }
+  /* the equipment most of the exercises need ("Maschinen", "Kurzhanteln", "Körpergewicht"), or '' when it is a mix */
+  function equipName(items) {
+    var cnt = {}, best = '', bestN = 0;
+    items.forEach(function (it) {
+      var ex = EX[it.ex], key = 'Körpergewicht';
+      if (ex.eq.length) {
+        var all = [];
+        ex.eq.forEach(function (tok) { tok.split('|').forEach(function (a) { all.push(a); }); });
+        var first = EQ_ORDER.filter(function (e) { return all.indexOf(e) >= 0; })[0];
+        key = first ? EQ_NAME[first] : '';
+      }
+      if (key) cnt[key] = (cnt[key] || 0) + 1;
+    });
+    Object.keys(cnt).forEach(function (k) { if (cnt[k] > bestN) { bestN = cnt[k]; best = k; } });
+    return items.length && bestN / items.length >= 0.6 ? best : '';
+  }
+  /* A short, true name without asking anyone: the areas the training works. If another training already has that name, the equipment is added
+     ("Beine & Gesäss · Maschinen"), and if even that is taken, a number. taken: the names that exist already. */
+  function nameFor(items, taken) {
+    var low = (taken || []).map(function (t) { return String(t).toLowerCase(); });
+    function free(nm) { return low.indexOf(nm.toLowerCase()) < 0; }
+    var base = areaName(items), eq = equipName(items);
+    if (free(base)) return base;
+    if (eq && free(base + ' · ' + eq)) return base + ' · ' + eq;
+    var b = eq ? base + ' · ' + eq : base, i = 2;
+    while (!free(b + ' ' + i)) i++;
+    return b + ' ' + i;
+  }
+
   return {
     PRIORITY: PRIORITY, FULL: FULL, REPS: REPS, LEVEL: LEVEL,
     haveSet: haveSet, eqOK: eqOK, missing: missing, eqLabel: eqLabel, leavesOf: leavesOf, inLeaves: inLeaves, inGroup: inGroup, groupsOf: groupsOf, rngOf: rngOf,
     perSide: perSide, resolveItem: resolveItem, repsShift: repsShift, needs: needs, weightIn: weightIn, SHARE: SHARE, groupShare: groupShare, isFullBody: isFullBody,
-    countFor: countFor, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup, mainGroup: mainGroup, allByGroup: allByGroup
+    areaName: areaName, equipName: equipName, nameFor: nameFor, countFor: countFor, suggest: suggest, alternatives: alternatives, adapt: adapt, listGroup: listGroup, mainGroup: mainGroup, allByGroup: allByGroup
   };
 })(typeof module !== 'undefined' && module.exports ? Object.assign({}, require('./plan.js'), require('./lib.js')) : { LIB: LIB, EX: EX, GROUPS: GROUPS, EQUIP: EQUIP, REPS: REPS });
 
