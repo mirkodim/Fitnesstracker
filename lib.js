@@ -237,7 +237,7 @@ x({ id: 'x-latlunge', name: 'Seitliche Ausfallschritte', gear: 'Körpergewicht o
 x({ id: 'x-swing', name: 'Kettlebell-Swing', gear: 'Kettlebell', reg: 'gesaess oberschenkel ruecken ganz', eq: 'kb', lvl: 2, pat: 'swing',
   sets: 4, reps: '8–12', rest: 60, weight: true,
   cues: ['Die Kraft kommt aus der Hüfte, nicht aus den Armen.', 'Oben aufrecht stehen, das Gesäss ist fest.'],
-  watch: ['Füsse schulterbreit, die Kettlebell steht etwa einen Schritt vor dir.', 'Hüfte nach hinten schieben, der Rücken bleibt gerade, die Kugel schwingt zwischen den Beinen nach hinten.', 'Die Hüfte kräftig nach vorn schieben, die Arme führen die Kugel nur bis Brusthöhe.', 'Oben stehst du aufrecht, das Gesäss ist fest, die Arme sind nur locker gestreckt.', 'Lass die Kugel zurückfallen und schiebe die Hüfte wieder nach hinten, ohne die Arme zu beugen.'],
+  watch: ['Füsse schulterbreit, die Kettlebell steht etwa einen Schritt vor dir.', 'Hüfte nach hinten schieben, der Rücken bleibt gerade, die Kugel schwingt zwischen den Beinen nach hinten.', 'Die Hüfte kräftig nach vorn schieben, die Arme bleiben gestreckt und führen die Kugel nur bis Brusthöhe.', 'Oben stehst du aufrecht, das Gesäss ist fest, die Arme sind gestreckt.', 'Lass die Kugel zurückfallen und schiebe die Hüfte wieder nach hinten, ohne die Arme zu beugen.'],
   mistakes: ['Die Arme ziehen die Kugel hoch.', 'Der Rücken wird rund, wenn die Kugel zurückschwingt.', 'Es wird eine Kniebeuge statt eines Hüftstosses.', 'Oben ins Hohlkreuz lehnen.'],
   feel: 'Gesäss und Rückseite der Oberschenkel, dazu Rücken, Rumpf und Griffkraft. Der Puls steigt.',
   easier: 'Zuerst die Hüftbewegung ohne Schwung üben: die Kettlebell mit geradem Rücken vom Boden aufheben und wieder abstellen.' });
@@ -764,6 +764,212 @@ x({ id: 'x-mbcrunch', name: 'Crunch mit Medizinball', gear: 'Medizinball, auf de
   easier: 'Ohne Ball oder mit einem leichten Ball.' });
 
 /* ==== new exercises below ==== */
+
+/* ===== Maschinen und weitere Übungen aus Fitness- und Reha-Zentren ===== */
+
+x({ id: 'x-adduct', name: 'Beinanzieher an der Maschine', gear: 'Adduktorenmaschine', reg: 'oberschenkel', eq: 'ma', lvl: 1, pat: 'adduct',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Aufrecht sitzen, der Rücken liegt am Polster.', 'Die Beine kontrolliert zusammendrücken, nicht zusammenschlagen lassen.'],
+  watch: ['Stelle die Sitzlehne so ein, dass die Polster innen an den Knien oder knapp darüber liegen.', 'Öffne die Beine mit der Startverstellung nur so weit, wie es angenehm ist, es soll nicht in der Leiste ziehen.', 'Rücken und Gesäss bleiben am Polster, die Hände halten sich an den Griffen.', 'Drücke die Knie gegen die Polster zusammen und halte oben 1 Sekunde.', 'Lasse das Gewicht langsam wieder öffnen, ohne dass es aufsetzt.'],
+  mistakes: ['Die Beine werden mit Schwung zusammengeschlagen.', 'Zu weit geöffnet, das zieht schmerzhaft in der Leiste.', 'Der Oberkörper wippt vor und zurück.', 'Zu viel Gewicht und eine winzige Bewegung.'],
+  feel: 'Innenseite der Oberschenkel (Adduktoren). Zieht es in der Leiste oder im Knie, das Gewicht senken oder den Weg verkürzen.' });
+
+x({ id: 'x-abduct', name: 'Beinspreizer an der Maschine', gear: 'Abduktorenmaschine', reg: 'gesaess oberschenkel', eq: 'ma', lvl: 1, pat: 'abd',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Aufrecht sitzen, das Becken bleibt fest auf dem Sitz.', 'Die Knie gleichmässig nach aussen drücken.'],
+  watch: ['Lege die Polster aussen an die Knie, die Füsse stehen auf den Rasten.', 'Rücken und Gesäss bleiben am Polster, die Hände halten sich an den Griffen.', 'Drücke die Knie gegen die Polster nach aussen, so weit es geht, ohne dass das Becken ausweicht.', 'Halte oben kurz und lasse die Beine dann langsam wieder zusammenkommen.', 'Das Gewicht setzt unten nicht auf.'],
+  mistakes: ['Das Becken kippt oder hebt sich vom Sitz ab.', 'Die Beine werden mit Schwung gespreizt und fallen zurück.', 'Der Oberkörper lehnt nach vorn und zieht mit.', 'Zu viel Gewicht, die Bewegung wird winzig.'],
+  feel: 'Seitlich am Gesäss und an der Hüfte (Gesässmuskeln). Zwickt es in der Hüfte, das Gewicht senken.' });
+
+x({ id: 'x-pecdeck', name: 'Butterfly an der Maschine', gear: 'Brustmaschine (Pec Deck)', reg: 'brust schultern', eq: 'ma', lvl: 1, pat: 'fly',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Der Rücken liegt am Polster, die Ellbogen etwa auf Schulterhöhe.', 'Vor der Brust zusammenführen, nicht zusammenschlagen.'],
+  watch: ['Stelle den Sitz so ein, dass die Ellbogen oder Unterarme etwa auf Schulterhöhe liegen.', 'Lege die Unterarme an die Polster oder fasse die Griffe, der Rücken liegt am Polster.', 'Führe die Arme in einem Bogen vor der Brust zusammen, die Schultern bleiben unten.', 'Halte kurz und spanne die Brust an.', 'Öffne langsam, nur so weit, wie es in den Schultern angenehm ist, und setze das Gewicht nicht ab.'],
+  mistakes: ['Die Schultern ziehen zu den Ohren.', 'Zu weit nach hinten geöffnet, das belastet die vordere Schulter.', 'Das Gewicht wird mit Schwung zusammengeschlagen.', 'Der Rücken löst sich vom Polster.'],
+  feel: 'Brust und vordere Schulter. Zieht es vorn in der Schulter, den Sitz etwas höher stellen oder weniger weit öffnen.' });
+
+x({ id: 'x-revfly', name: 'Reverse Butterfly an der Maschine', gear: 'Butterfly-Maschine (hintere Schulter)', reg: 'schultern ruecken', eq: 'ma', lvl: 1, pat: 'pullapart',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Brust liegt am Polster, die Arme sind fast gestreckt.', 'Die Schulterblätter zusammenziehen, nicht die Schultern hochziehen.'],
+  watch: ['Stelle den Sitz so ein, dass die Griffe auf Schulterhöhe sind, die Brust liegt am Polster.', 'Fasse die Griffe, die Arme sind fast gestreckt.', 'Öffne die Arme seitlich nach hinten, bis sie etwa auf einer Linie mit den Schultern sind.', 'Ziehe die Schulterblätter zusammen und halte kurz.', 'Lasse die Arme langsam wieder nach vorn kommen, ohne das Gewicht abzusetzen.'],
+  mistakes: ['Die Schultern wandern zu den Ohren.', 'Der Oberkörper schaukelt, die Bewegung kommt aus dem Rücken.', 'Die Arme gehen weit hinter die Schultern.', 'Zu viel Gewicht, die Arme beugen sich stark.'],
+  feel: 'Hintere Schulter und der obere Rücken zwischen den Schulterblättern. Wichtig für eine aufrechte Haltung.' });
+
+x({ id: 'x-latmach', name: 'Seitheben an der Maschine', gear: 'Schultermaschine (Seitheber)', reg: 'schultern', eq: 'ma', lvl: 1, pat: 'raise',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Ellbogen schieben die Polster nach aussen und oben.', 'Nur bis auf Schulterhöhe heben.'],
+  watch: ['Stelle den Sitz so ein, dass die Drehachse des Geräts auf Höhe der Schultern liegt.', 'Lege die Unterarme oder Ellbogen an die Polster, die Ellbogen sind etwa im rechten Winkel gebeugt.', 'Schiebe die Polster seitlich nach oben, bis die Oberarme etwa waagrecht sind.', 'Halte oben kurz und lasse dann langsam wieder ab, die Polster setzen nicht auf.', 'Die Schultern bleiben unten, der Nacken locker.'],
+  mistakes: ['Die Schultern ziehen zu den Ohren.', 'Zu hoch gehoben, über die Schulterhöhe hinaus.', 'Mit Schwung aus dem Oberkörper.', 'Zu viel Gewicht, die Bewegung wird kurz und ruckartig.'],
+  feel: 'Seitliche Schulter (Delta). Wird der Nacken hart, das Gewicht senken und die Schultern bewusst entspannen.' });
+
+x({ id: 'x-extrot', name: 'Aussenrotation mit Band', gear: 'Widerstandsband oder Kabelzug', reg: 'schultern', eq: 'band|kz', lvl: 1, pat: 'rot',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Arm', rest: 45,
+  cues: ['Der Ellbogen bleibt am Körper, ein gefaltetes Handtuch hilft.', 'Nur den Unterarm langsam nach aussen drehen.'],
+  watch: ['Befestige das Band auf Ellbogenhöhe, zum Beispiel an einer Tür. Stelle dich seitlich dazu, sodass das Band quer vor dem Bauch zur Hand läuft.', 'Der Ellbogen ist im rechten Winkel gebeugt und liegt am Körper, am besten mit einem gefalteten Handtuch dazwischen.', 'Drehe den Unterarm langsam nach aussen, bis die Hand etwa 45° vom Bauch weg zeigt, der Ellbogen bleibt am Körper.', 'Halte kurz und drehe langsam zurück.', 'Die Schulter bleibt unten, der Oberkörper dreht nicht mit. Danach der andere Arm.'],
+  mistakes: ['Der Ellbogen löst sich vom Körper.', 'Der Oberkörper dreht mit statt des Arms.', 'Zu viel Widerstand, die Schulter zieht nach oben.', 'Zu schnell zurückgezogen.'],
+  feel: 'Hinterseite der Schulter (Rotatorenmanschette). Eine ruhige Übung mit wenig Widerstand. Bei Schmerz in der Schulter mit der Physiotherapie abklären.',
+  easier: 'Ein weicheres Band oder nur gegen den Widerstand der eigenen Hand drehen.' });
+
+x({ id: 'x-shpress', name: 'Schulterpresse an der Maschine', gear: 'Schulterpresse', reg: 'schultern oberarme', eq: 'ma', lvl: 1, pat: 'ohp',
+  sets: 3, reps: '8–10', rest: 75, weight: true,
+  cues: ['Der Rücken liegt am Polster, die Griffe sind auf Schulterhöhe.', 'Gerade nach oben drücken, die Schultern bleiben unten.'],
+  watch: ['Stelle den Sitz so ein, dass die Griffe in der unteren Stellung etwa auf Schulterhöhe sind.', 'Der Rücken liegt am Polster, die Füsse stehen fest am Boden.', 'Drücke die Griffe gerade nach oben, bis die Arme fast gestreckt sind.', 'Drücke die Ellbogen oben nicht ganz durch, die Schultern bleiben tief.', 'Lasse die Griffe kontrolliert wieder auf Schulterhöhe sinken.'],
+  mistakes: ['Hohlkreuz, der Rücken löst sich vom Polster.', 'Die Schultern ziehen zum Nacken.', 'Die Ellbogen werden oben hart durchgedrückt.', 'Das Gewicht wird mit Schwung nach oben gestossen.'],
+  feel: 'Schultern (Delta) und Trizeps. Wird es im Nacken eng, das Gewicht senken.' });
+
+x({ id: 'x-curlmach', name: 'Bizepscurl an der Maschine', gear: 'Scott-Maschine (Preacher Curl)', reg: 'oberarme', eq: 'ma', lvl: 1, pat: 'curl',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Oberarme liegen ganz auf dem Polster.', 'Nur die Unterarme bewegen, langsam ablassen.'],
+  watch: ['Stelle den Sitz so ein, dass die Achseln am Polster anliegen und die Oberarme flach auf dem Polster liegen.', 'Fasse die Griffe, die Arme sind fast gestreckt.', 'Curle die Griffe zu den Schultern, die Oberarme bleiben auf dem Polster.', 'Spanne oben kurz an und lasse in etwa 3 Sekunden wieder ab.', 'Strecke die Arme unten nicht hart durch.'],
+  mistakes: ['Die Ellbogen heben vom Polster ab.', 'Mit Schwung aus dem Rücken.', 'Unten ruckartig fallen gelassen.', 'Die Arme werden unten ganz durchgedrückt, das belastet die Ellbogen.'],
+  feel: 'Vorderseite des Oberarms (Bizeps). Zieht es in der Ellbogenbeuge, das Gewicht senken.' });
+
+x({ id: 'x-trimach', name: 'Trizepsstrecken an der Maschine', gear: 'Trizepsmaschine (sitzend)', reg: 'oberarme', eq: 'ma', lvl: 1, pat: 'extension',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Ellbogen bleiben am Körper.', 'Die Arme nach unten ganz strecken, langsam zurückkommen lassen.'],
+  watch: ['Stelle den Sitz so ein, dass die Ellbogen am Körper liegen und die Griffe etwa auf Brusthöhe starten.', 'Der Rücken liegt am Polster, die Füsse stehen am Boden.', 'Drücke die Griffe nach unten, bis die Arme gestreckt sind, die Ellbogen bleiben am Körper.', 'Spanne unten kurz an und lasse die Griffe langsam wieder hochkommen, bis die Ellbogen etwa im rechten Winkel sind.', 'Die Schultern bleiben unten.'],
+  mistakes: ['Die Ellbogen wandern nach vorn oder zur Seite.', 'Der Oberkörper beugt sich vor und drückt mit.', 'Die Schultern ziehen hoch.', 'Zu viel Gewicht, die Arme werden nicht ganz gestreckt.'],
+  feel: 'Rückseite des Oberarms (Trizeps). Zieht es im Ellbogen, das Gewicht senken.' });
+
+x({ id: 'x-crunchmach', name: 'Bauchmaschine (Crunch)', gear: 'Bauchmaschine', reg: 'bauch', eq: 'ma', lvl: 1, pat: 'crunch',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Den Oberkörper aus dem Bauch heraus nach vorn rollen.', 'Die Arme und der Nacken ziehen nicht mit.'],
+  watch: ['Stelle den Sitz so ein, dass die Drehachse etwa auf Höhe des Bauchnabels liegt.', 'Die Füsse stehen fest, die Hände liegen locker an den Griffen oder das Brustpolster liegt an der Brust.', 'Rolle den Oberkörper aus dem Bauch heraus nach vorn, als würdest du die Rippen zum Becken ziehen.', 'Spanne unten kurz an und lasse langsam zurückkommen, ohne das Gewicht abzusetzen.', 'Atme beim Zusammenrollen aus.'],
+  mistakes: ['Mit den Armen oder dem Nacken gezogen.', 'Nur die Hüfte gebeugt statt den Bauch angespannt.', 'Mit Schwung gearbeitet.', 'Zu viel Gewicht, die Bewegung wird winzig.'],
+  feel: 'Gerade Bauchmuskeln. Spürst du es vor allem im Nacken oder in den Hüftbeugern, das Gewicht senken.' });
+
+x({ id: 'x-machinerow', name: 'Rudern an der Maschine (brustgestützt)', gear: 'Rudermaschine', reg: 'ruecken oberarme', eq: 'ma', lvl: 1, pat: 'row',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Brust bleibt am Polster, der Rücken gerade.', 'Die Ellbogen eng nach hinten, die Schulterblätter zusammen.'],
+  watch: ['Stelle den Sitz so ein, dass die Griffe auf Brusthöhe sind und die Brust am Polster anliegt.', 'Fasse die Griffe mit fast gestreckten Armen, die Schultern bleiben unten.', 'Ziehe die Ellbogen eng nach hinten, bis die Hände etwa auf Höhe der Rippen sind.', 'Presse die Schulterblätter kurz zusammen.', 'Lasse langsam nach vorn gleiten, die Brust bleibt am Polster.'],
+  mistakes: ['Der Oberkörper löst sich vom Polster und schaukelt.', 'Die Schultern ziehen zu den Ohren.', 'Die Arme ziehen allein, die Schulterblätter bewegen sich nicht.', 'Zu viel Gewicht, die Bewegung ist kurz und ruckartig.'],
+  feel: 'Mittlerer Rücken und Schulterblätter, dazu der Bizeps. Wichtig für eine aufrechte Haltung.' });
+
+x({ id: 'x-assistpull', name: 'Klimmzug an der Maschine', gear: 'Klimmzugmaschine mit Gegengewicht', reg: 'ruecken oberarme', eq: 'ma', lvl: 1, pat: 'vpull',
+  sets: 3, reps: '8–10', rest: 75, weight: true,
+  cues: ['Das Gegengewicht trägt einen Teil deines Körpergewichts.', 'Die Ellbogen nach unten ziehen, die Brust zu den Griffen.'],
+  watch: ['Stelle das Gegengewicht so ein, dass du saubere Wiederholungen schaffst. Mehr Gegengewicht macht es leichter.', 'Knie dich auf das Polster oder stelle dich auf die Plattform und fasse die Griffe etwas breiter als die Schultern.', 'Ziehe die Ellbogen nach unten, bis das Kinn etwa auf Höhe der Griffe ist.', 'Lasse dich langsam wieder ab, bis die Arme gestreckt sind.', 'Der Körper bleibt ruhig, ohne Schwung.'],
+  mistakes: ['Die Schultern ziehen zu den Ohren.', 'Mit Schwung aus dem Körper hochgezogen.', 'Nur halb hoch gezogen oder nicht ganz abgelassen.', 'Zu viel Hilfe, dann ist es kaum Arbeit.'],
+  feel: 'Breiter Rückenmuskel und Bizeps. Mit der Zeit das Gegengewicht verringern, bis der Klimmzug an der Stange klappt.',
+  harder: 'Das Gegengewicht schrittweise verringern.' });
+
+x({ id: 'x-facepull', name: 'Face Pull am Kabelzug', gear: 'Kabelzug mit Seil', reg: 'schultern ruecken', eq: 'kz', lvl: 1, pat: 'pullapart',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Das Seil zum Gesicht ziehen, die Ellbogen hoch und weit.', 'Die Schulterblätter zusammen, der Oberkörper bleibt aufrecht.'],
+  watch: ['Stelle den Seilzug etwa auf Kopfhöhe ein und befestige das Seil.', 'Fasse die Enden des Seils, gehe so weit zurück, dass die Arme fast gestreckt sind, die Knie sind leicht gebeugt.', 'Ziehe das Seil zum Gesicht, die Ellbogen sind hoch und zeigen nach aussen.', 'Ziehe die Hände neben die Ohren und die Schulterblätter zusammen, halte kurz.', 'Lasse langsam zurück, das Gewicht setzt nicht auf.'],
+  mistakes: ['Zu viel Gewicht, der Oberkörper lehnt zurück.', 'Die Ellbogen sinken unter die Hände.', 'Die Schultern ziehen zu den Ohren.', 'Das Seil wird zum Hals gezogen statt zum Gesicht.'],
+  feel: 'Hintere Schulter und oberer Rücken. Eine leichte Übung, gut für die Haltung und gesunde Schultern.' });
+
+x({ id: 'x-straightarm', name: 'Gestreckter Armzug am Kabel', gear: 'Kabelzug mit Stange oder Seil', reg: 'ruecken', eq: 'kz', lvl: 2, pat: 'vpull',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Arme bleiben fast gestreckt, die Bewegung kommt aus der Schulter.', 'Die Stange in einem Bogen zu den Oberschenkeln ziehen.'],
+  watch: ['Stelle den Seilzug hoch ein und befestige die Stange oder das Seil.', 'Stehe etwa einen Schritt zurück, beuge den Oberkörper leicht vor und die Knie leicht, der Rücken bleibt gerade.', 'Fasse mit fast gestreckten Armen und ziehe die Stange in einem Bogen nach unten bis zu den Oberschenkeln.', 'Spanne kurz an, die Schulterblätter bleiben unten.', 'Lasse die Arme langsam wieder nach oben führen, ohne die Rumpfhaltung zu verändern.'],
+  mistakes: ['Die Ellbogen beugen sich, es wird ein Trizeps-Pushdown.', 'Mit Schwung aus dem Rücken.', 'Der Oberkörper richtet sich beim Ziehen auf und wieder ab.', 'Zu viel Gewicht, die Arme werden steif.'],
+  feel: 'Breiter Rückenmuskel, dazu der Bauch, der den Oberkörper hält. Spürst du nur die Arme, das Gewicht senken.' });
+
+x({ id: 'x-hyper', name: 'Rückenstrecker auf der Bank', gear: 'Hyperextension-Bank', reg: 'ruecken gesaess', eq: 'ma', lvl: 1, pat: 'extend',
+  sets: 3, reps: '8–12', rest: 60,
+  cues: ['Die Hüfte liegt auf dem Polster, die Fersen sind fest.', 'Nur bis in eine gerade Linie hochkommen, nicht darüber hinaus.'],
+  watch: ['Stelle das Polster so ein, dass es unter dem Beckenkamm liegt und du dich in der Hüfte beugen kannst.', 'Die Fersen stehen fest unter den Rollen, die Arme sind vor der Brust gekreuzt.', 'Lasse den Oberkörper mit geradem Rücken nach unten sinken, die Hüfte beugt sich.', 'Richte dich auf, bis Oberkörper und Beine eine gerade Linie bilden, spanne das Gesäss kurz an.', 'Überstrecke nicht ins Hohlkreuz, der Blick geht zum Boden.'],
+  mistakes: ['Zu weit nach oben überstreckt, Hohlkreuz.', 'Mit Schwung aus dem Rücken hochgeschleudert.', 'Der Rücken wird unten rund.', 'Das Polster ist zu hoch und drückt auf den Bauch.'],
+  feel: 'Gesäss, Rückseite der Oberschenkel und unterer Rücken (Rückenstrecker). Bei Rückenschmerzen vorher abklären.',
+  harder: 'Eine leichte Scheibe oder Hantel vor der Brust halten.' });
+
+x({ id: 'x-hack', name: 'Hackenschmidt-Kniebeuge', gear: 'Hackenschmidt-Maschine', reg: 'oberschenkel gesaess', eq: 'ma', lvl: 2, pat: 'squat',
+  sets: 3, reps: '8–10', rest: 90, weight: true, knee: true,
+  cues: ['Rücken und Gesäss bleiben am Polster.', 'Die Knie zeigen in Richtung der Zehen, oben nicht durchstrecken.'],
+  watch: ['Stelle dich mit den Schultern unter die Polster, der Rücken liegt flach am Rückenpolster, die Füsse stehen etwa schulterbreit auf der Plattform.', 'Löse die Sicherung und lasse den Schlitten kontrolliert nach unten.', 'Gehe etwa bis die Knie im rechten Winkel gebeugt sind, nur so tief, wie es dir gut tut.', 'Drücke dich mit dem ganzen Fuss wieder nach oben, die Knie oben nicht ganz durchdrücken.', 'Das Becken bleibt am Polster.'],
+  mistakes: ['Die Knie fallen nach innen.', 'Das Becken rollt unten ein und löst sich vom Polster.', 'Die Fersen heben ab, die Füsse stehen zu weit hinten.', 'Zu viel Gewicht und eine kurze Bewegung.'],
+  feel: 'Vordere Oberschenkel und Gesäss. Stehen die Füsse weiter vorn, arbeitet mehr das Gesäss.' });
+
+x({ id: 'x-smith', name: 'Kniebeuge an der Multipresse', gear: 'Multipresse (Smith-Maschine)', reg: 'oberschenkel gesaess', eq: 'ma', lvl: 2, pat: 'squat',
+  sets: 3, reps: '8–10', rest: 90, weight: true, knee: true,
+  cues: ['Die Füsse stehen etwas vor der Stange, der Rücken bleibt gerade.', 'Die Stange gleitet senkrecht, die Fersen bleiben am Boden.'],
+  watch: ['Stelle die Sicherungshaken so ein, dass du unten nicht eingeklemmt wirst.', 'Gehe mit der Stange im Nacken (auf dem oberen Rücken) unter die Stange, die Füsse stehen etwa schulterbreit und einen halben bis ganzen Fuss vor der Stange.', 'Drehe die Stange aus der Halterung, beuge Hüfte und Knie und gehe kontrolliert nach unten.', 'Gehe etwa bis die Oberschenkel waagrecht sind, die Fersen bleiben am Boden.', 'Stehe kräftig auf, die Knie oben nicht ganz durchdrücken. Hänge die Stange am Ende sicher wieder ein.'],
+  mistakes: ['Die Füsse stehen zu weit hinten, der Oberkörper klappt nach vorn.', 'Die Fersen heben ab.', 'Die Knie fallen nach innen.', 'Die Stange wird nicht sicher eingehängt, die Sicherungshaken sind vergessen.'],
+  feel: 'Vordere Oberschenkel und Gesäss. Mit den Füssen weiter vorn arbeitet mehr das Gesäss, näher an der Stange mehr der Oberschenkel.' });
+
+x({ id: 'x-calfpress', name: 'Wadenheben an der Beinpresse', gear: 'Beinpresse', reg: 'unterschenkel', eq: 'ma', lvl: 1, pat: 'calf',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Beine bleiben fast gestreckt, die Knie nicht durchdrücken.', 'Nur die Fussgelenke bewegen, oben kurz halten.'],
+  watch: ['Setze dich in die Beinpresse und stelle nur die Fussballen auf die untere Kante der Platte, die Fersen hängen frei.', 'Drücke die Platte in die Ausgangsstellung und löse die Sicherung. Die Knie bleiben leicht gebeugt, nicht durchgedrückt.', 'Drücke mit den Zehenballen die Platte weg, auf die Zehenspitzen, und halte oben 1 Sekunde.', 'Lasse die Fersen langsam zurücksinken, bis die Waden gedehnt sind.', 'Sichere die Platte zum Schluss wieder.'],
+  mistakes: ['Die Knie beugen und strecken sich mit.', 'Die Knie werden ganz durchgedrückt.', 'Zu schnell, mit Federn unten.', 'Die Bewegung ist winzig.'],
+  feel: 'Waden (Unterschenkel). Bei einem Wadenkrampf das Gewicht senken und die Wade lockern.' });
+
+x({ id: 'x-calfmach', name: 'Wadenheben an der Maschine', gear: 'Wadenmaschine (stehend)', reg: 'unterschenkel', eq: 'ma', lvl: 1, pat: 'calf',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Die Schulterpolster tragen das Gewicht, der Körper bleibt gerade.', 'Ganz hoch auf die Zehen, unten die Waden dehnen.'],
+  watch: ['Stelle die Polster so ein, dass sie bequem auf den Schultern liegen und die Knie fast gestreckt sind.', 'Die Fussballen stehen auf der Kante, die Fersen hängen frei.', 'Drücke dich ganz hoch auf die Zehenspitzen und halte oben 1 Sekunde.', 'Lasse die Fersen langsam bis zur Dehnung sinken.', 'Die Knie bleiben leicht gebeugt, der Oberkörper aufrecht.'],
+  mistakes: ['Die Knie beugen sich mit, die Wade arbeitet kaum.', 'Die Bewegung ist winzig, die Fersen sinken nicht.', 'Mit Schwung federnd.', 'Der Oberkörper kippt nach vorn.'],
+  feel: 'Waden. Spürst du es in den Knien oder im Rücken, das Gewicht senken.' });
+
+x({ id: 'x-glutekick', name: 'Gesäss-Rückstoss an der Maschine', gear: 'Kickback-Maschine', reg: 'gesaess', eq: 'ma', lvl: 1, pat: 'kick',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Bein', rest: 60, weight: true,
+  cues: ['Die Brust liegt am Polster, die Hände halten sich fest.', 'Das Bein nach hinten drücken, bis die Hüfte gestreckt ist.'],
+  watch: ['Stelle dich mit der Brust ans Polster, halte dich an den Griffen fest und stelle den Fuss des Arbeitsbeins auf die Fussplatte.', 'Das Standbein steht fest, der Rücken bleibt gerade und ist leicht nach vorn geneigt.', 'Drücke die Platte mit dem Fuss nach hinten, bis die Hüfte gestreckt ist.', 'Spanne oben das Gesäss kurz fest an.', 'Lasse die Platte langsam zurückkommen, ohne dass das Gewicht aufsetzt. Danach das andere Bein.'],
+  mistakes: ['Hohlkreuz beim Drücken.', 'Das Becken dreht sich auf.', 'Mit Schwung nach hinten geschleudert.', 'Zu viel Gewicht und eine kleine Bewegung.'],
+  feel: 'Gesäss des Arbeitsbeins. Spürst du es im unteren Rücken, die Bewegung verkürzen und das Gewicht senken.' });
+
+x({ id: 'x-lumbar', name: 'Rückenstrecker an der Maschine', gear: 'Rückenmaschine (sitzend)', reg: 'ruecken', eq: 'ma', lvl: 1, pat: 'extend',
+  sets: 3, reps: '8–12', rest: 60, weight: true,
+  cues: ['Das Becken ist fixiert, nur der Rücken arbeitet.', 'Nur bis zur aufrechten Haltung, nicht ins Hohlkreuz.'],
+  watch: ['Setze dich so, dass Becken und Oberschenkel fest fixiert sind und die Drehachse auf Höhe der Hüfte liegt.', 'Lehne den Oberkörper locker an das Rückenpolster, die Arme sind vor der Brust gekreuzt.', 'Drücke den Rücken gegen das Polster, bis der Oberkörper aufrecht ist.', 'Halte oben kurz, ohne zu überstrecken.', 'Lasse langsam nach vorn zurück, die Spannung bleibt.'],
+  mistakes: ['Zu weit nach hinten gedrückt, Hohlkreuz.', 'Mit Schwung aus den Beinen oder den Armen.', 'Das Becken ist nicht richtig fixiert.', 'Zu viel Gewicht, der Rücken wird in die Bewegung gerissen.'],
+  feel: 'Unterer und mittlerer Rücken (Rückenstrecker). Eine übliche Übung in der Reha, Gewicht und Weg mit Physio oder MTT abstimmen.' });
+
+x({ id: 'x-inclinedb', name: 'Schrägbankdrücken mit Kurzhanteln', gear: 'Kurzhanteln und Schrägbank', reg: 'brust schultern oberarme', eq: 'kh bank', lvl: 2, pat: 'bench',
+  sets: 3, reps: '8–10', rest: 75, weight: true,
+  cues: ['Die Bank steht auf etwa 30°, die Schulterblätter liegen fest an.', 'Die Hanteln senkrecht über der oberen Brust hochdrücken.'],
+  watch: ['Stelle die Rückenlehne auf etwa 30°, nicht steiler, sonst arbeitet vor allem die Schulter.', 'Setze dich mit den Hanteln auf den Oberschenkeln hin und lege dich zurück, die Füsse stehen fest am Boden.', 'Die Schulterblätter sind zusammen und unten, die Hanteln beginnen auf Höhe der oberen Brust.', 'Drücke die Hanteln hoch, bis die Arme fast gestreckt sind.', 'Senke sie kontrolliert zur oberen Brust, die Ellbogen zeigen schräg nach unten, etwa 45° vom Körper. Lege die Hanteln am Ende zuerst auf die Oberschenkel.'],
+  mistakes: ['Das Gesäss hebt ab, Hohlkreuz.', 'Die Ellbogen stehen weit zur Seite (T-Position).', 'Die Hanteln gehen zu weit auseinander oder zu tief.', 'Die Bank ist zu steil, die Schultern übernehmen.'],
+  feel: 'Obere Brust, vordere Schulter und Trizeps.',
+  easier: 'Mit leichteren Hanteln oder an der Brustpresse beginnen.' });
+
+x({ id: 'x-captain', name: 'Beinheben im Stütz', gear: 'Beinhebe-Station (Captain\'s Chair)', reg: 'bauch', eq: 'ma', lvl: 2, pat: 'legraise',
+  sets: 3, reps: '8–12', rest: 60,
+  cues: ['Der Rücken liegt am Polster, die Unterarme fest auf den Auflagen.', 'Die Knie langsam zum Bauch ziehen, nicht schwingen.'],
+  watch: ['Stütze die Unterarme auf die Auflagen, der Rücken liegt am Polster, die Schultern sind unten.', 'Lasse die Beine ruhig hängen, die Füsse berühren den Boden nicht.', 'Ziehe die Knie langsam zum Bauch und rolle dabei das Becken leicht auf.', 'Halte oben kurz und lasse langsam ab, ohne zu schwingen.', 'Schwerer: die Beine gestreckt heben.'],
+  mistakes: ['Mit Schwung gehoben, der Körper schaukelt.', 'Das Becken rollt nicht auf, nur die Hüfte beugt sich.', 'Der Rücken löst sich vom Polster.', 'Die Schultern sinken zwischen die Ohren.'],
+  feel: 'Unterer Bauch und Hüftbeuger. Zieht es im unteren Rücken, die Knie nur halb heben.',
+  easier: 'Weniger hoch heben oder die Füsse zwischendurch auf dem Boden abstellen.',
+  harder: 'Die Beine gestreckt heben.' });
+
+x({ id: 'x-woodchop', name: 'Holzhacker am Kabelzug', gear: 'Kabelzug mit Seil oder Griff', reg: 'bauch schultern', eq: 'kz', lvl: 2, pat: 'rot',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Seite', rest: 60, weight: true,
+  cues: ['Die Arme bleiben fast gestreckt, der Rumpf dreht mit.', 'Aus den Beinen und dem Bauch, nicht aus den Armen.'],
+  watch: ['Stelle den Seilzug hoch ein und stehe seitlich dazu, die Füsse etwa schulterbreit.', 'Fasse den Griff mit beiden Händen, die Arme sind fast gestreckt, die Hände sind oben nahe am Seilzug.', 'Ziehe den Griff schräg nach unten zur anderen Seite, der Rumpf dreht mit, Hüfte und Füsse folgen leicht.', 'Spanne unten kurz den Bauch an und führe langsam zurück.', 'Danach die Seite wechseln.'],
+  mistakes: ['Nur die Arme ziehen, der Rumpf bleibt steif.', 'Der Rücken wird rund oder der Oberkörper kippt zur Seite.', 'Mit Schwung gearbeitet.', 'Zu viel Gewicht, die Drehung wird ruckartig.'],
+  feel: 'Schräge Bauchmuskeln und Rumpf, dazu Schultern und Gesäss. Bei Rückenschmerzen ruhig und mit wenig Gewicht beginnen.' });
+
+x({ id: 'x-legcurlseat', name: 'Beinbeuger sitzend', gear: 'Maschine', reg: 'oberschenkel', eq: 'ma', lvl: 1, pat: 'legcurl',
+  sets: 3, reps: '8–12', rest: 60, weight: true, knee: true,
+  cues: ['Die Oberschenkel liegen fest unter dem Polster.', 'Die Fersen langsam unter den Sitz ziehen.'],
+  watch: ['Stelle die Lehne und das Oberschenkelpolster so ein, dass die Knie auf Höhe der Drehachse sind und das Polster fest über den Oberschenkeln liegt.', 'Die Fersen liegen auf der Rolle, der Rücken am Polster.', 'Ziehe die Fersen nach unten und hinten unter den Sitz und halte oben 1 Sekunde.', 'Lasse langsam in die Streckung zurück, das Gewicht setzt nicht auf.', 'Das Gesäss bleibt am Sitz.'],
+  mistakes: ['Das Gesäss hebt ab, der Oberkörper beugt sich vor.', 'Mit Schwung gezogen und fallen gelassen.', 'Die Knie liegen nicht auf Höhe der Drehachse.', 'Zu viel Gewicht und eine kurze Bewegung.'],
+  feel: 'Rückseite der Oberschenkel (Beinbeuger). Bei einem Krampf das Gewicht senken.' });
+
+x({ id: 'x-cablehip', name: 'Hüftabduktion am Kabelzug', gear: 'Kabelzug mit Knöchelmanschette', reg: 'gesaess oberschenkel', eq: 'kz', lvl: 1, pat: 'abd',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Bein', rest: 60, weight: true,
+  cues: ['Das Standbein bleibt gerade, der Oberkörper aufrecht.', 'Das Bein gestreckt zur Seite führen.'],
+  watch: ['Befestige die Manschette am Knöchel des Arbeitsbeins und stelle den Seilzug ganz unten ein.', 'Stehe seitlich zum Gerät, das Arbeitsbein ist das äussere, halte dich an der Stütze fest.', 'Führe das gestreckte Bein langsam seitlich nach aussen, die Zehen zeigen nach vorn.', 'Halte oben kurz und führe das Bein langsam zurück, das Gewicht setzt nicht auf.', 'Der Oberkörper bleibt aufrecht, das Becken kippt nicht zur Seite. Danach das andere Bein.'],
+  mistakes: ['Der Oberkörper kippt zur Seite.', 'Das Bein wird mit Schwung geschleudert.', 'Das Bein dreht sich nach aussen, die Zehen zeigen zur Decke.', 'Zu viel Gewicht, das Becken weicht aus.'],
+  feel: 'Seitlich am Gesäss und an der Hüfte des Arbeitsbeins. Das Standbein arbeitet beim Stabilisieren mit.' });
+
+x({ id: 'x-tke', name: 'Kniestrecken mit Band', gear: 'Widerstandsband', reg: 'oberschenkel', eq: 'band', lvl: 1, pat: 'ext',
+  sets: 3, reps: '8–12', unit: 'Wdh. pro Bein', rest: 45, knee: true,
+  cues: ['Das Band zieht von vorn an die Kniekehle, das Knie drückt dagegen.', 'Oben das Knie ganz strecken und den Oberschenkel anspannen.'],
+  watch: ['Befestige das Band auf Kniehöhe an einem stabilen Pfosten oder Rack und lege es hinter das Knie des Standbeins.', 'Stehe aufrecht, der Fuss etwa einen Schritt vor dem Befestigungspunkt, das Knie leicht gebeugt, das Band zieht das Knie nach vorn.', 'Strecke das Knie gegen den Zug des Bandes ganz durch, bis es gerade ist, ohne es zu überstrecken.', 'Spanne oben 1 bis 2 Sekunden den Oberschenkel an.', 'Beuge das Knie langsam wieder. Danach das andere Bein.'],
+  mistakes: ['Der Oberkörper kippt nach vorn.', 'Das Knie wird nicht ganz gestreckt.', 'Das Knie wird überstreckt oder hart durchgedrückt.', 'Ein zu starkes Band, das Knie knickt ein.'],
+  feel: 'Vorderer Oberschenkel direkt über dem Knie (innerer Quadrizeps). Eine klassische Reha-Übung für das Knie.' });
+
+x({ id: 'x-balance', name: 'Einbeinstand', gear: 'Körpergewicht, Wand oder Stuhl zum Festhalten', reg: 'unterschenkel gesaess', eq: '', lvl: 1, pat: 'balance', timer: true, holds: [20, 30, 45], sides: 2,
+  sets: 3, rest: 30,
+  cues: ['Den Blick auf einen festen Punkt richten.', 'Das Standknie leicht gebeugt, das Becken bleibt waagrecht.'],
+  watch: ['Stehe aufrecht, die Füsse hüftbreit, in Reichweite einer Wand oder eines Stuhls zum Festhalten.', 'Verlagere das Gewicht auf ein Bein und hebe das andere Knie etwa auf Hüfthöhe.', 'Das Standknie ist leicht gebeugt, das Becken bleibt waagrecht, die Arme helfen beim Ausbalancieren.', 'Halte die Zeit ruhig atmend, dann wechsle das Bein.', 'Schwerer: die Augen schliessen oder auf ein zusammengelegtes Handtuch stellen.'],
+  mistakes: ['Das Becken sackt zur Seite ab.', 'Das Standknie fällt nach innen.', 'Der Oberkörper kippt zur Seite.', 'Der Blick wandert herum, die Luft wird angehalten.'],
+  feel: 'Fuss, Unterschenkel und Gesäss, die dich stabilisieren. Eine einfache Übung für das Gleichgewicht, auch in der Reha.',
+  harder: 'Die Augen schliessen oder auf ein zusammengelegtes Handtuch oder Kissen stellen.' });
+
 
 })();
 

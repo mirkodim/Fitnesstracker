@@ -22,7 +22,11 @@ var FIG = (function () {
      hip, th (torso angle from vertical, + = leaning forward), ankle, fa (foot angle, + = toes down),
      wr (wrist relative to shoulder), wrist (absolute) or wt (wrist relative to the hip, in the torso's frame: [along the torso towards
      the knees, out of the front], for a bar resting on the hips), ankle2/fa2 (second leg), ha (head angle), hdx (head pushed sideways, px),
-     round (spine bulge), es (elbow side), ks/ks2 (knee side, default -1 = knee forward), wrist2|wr2 + es2 (the far arm, drawn lighter).
+     round (spine bulge), es (elbow side), ks/ks2 (knee side, default -1 = knee forward), wrist2|wr2 + es2 (the far arm, drawn lighter),
+     aa (a straight arm at this angle from straight down, + = forward, 90 = horizontal; it stays exactly straight while the angle changes, which two
+     wrist keyframes cannot do: they cut across the circle and bend the elbow), al (arm length, default 49.995 = straight),
+     ua + la (both arm bones by their angles, from straight down: the upper arm from the shoulder, the forearm from the elbow; the elbow stays exactly where
+     the upper arm angle puts it, for a pad that holds the elbow: preacher curl, triceps machine).
      Two more ways to describe the body make a move follow its true circle instead of the straight line between two keyframes,
      so segment lengths and a straight body stay intact while it moves:
        { ankle, lean, torso }  legs straight from the ankle at angle lean (from vertical), torso at angle torso (default: same, a straight body)
@@ -50,7 +54,9 @@ var FIG = (function () {
       if (p.sh) q.th = Math.atan2(p.sh[0] - p.hip[0], -(p.sh[1] - p.hip[1])) / D2R; else q.th = p.th;
     }
     q.ankle = p.ankle.slice(); q.fa = p.fa || 0;
-    if (p.wt) q.wt = p.wt.slice(); else if (p.wr) q.wr = p.wr.slice(); else q.wrist = p.wrist.slice();
+    if (p.ua != null) { q.ua = p.ua; q.la = p.la; }
+    else if (p.aa != null) { q.aa = p.aa; q.al = p.al != null ? p.al : 49.995; }
+    else if (p.wt) q.wt = p.wt.slice(); else if (p.wr) q.wr = p.wr.slice(); else q.wrist = p.wrist.slice();
     if (p.ankle2) { q.ankle2 = p.ankle2.slice(); q.fa2 = p.fa2 || 0; }
     q.ha = p.ha != null ? p.ha : (Math.abs(q.th) < 45 ? q.th * 0.5 : q.th - (q.th > 0 ? 10 : -10));
     q.round = p.round || 0;
@@ -69,7 +75,9 @@ var FIG = (function () {
     if (a.v === 'f') return mixF(a, b, t);
     var q = { hip: lerpP(a.hip, b.hip, t), th: lerp(a.th, b.th, t), ankle: lerpP(a.ankle, b.ankle, t), fa: lerp(a.fa, b.fa, t),
       ha: lerp(a.ha, b.ha, t), round: lerp(a.round, b.round, t), es: b.es, ks: b.ks, ks2: b.ks2, hdx: lerp(a.hdx || 0, b.hdx || 0, t) };
-    if (a.wt) q.wt = lerpP(a.wt, b.wt, t); else if (a.wr) q.wr = lerpP(a.wr, b.wr, t); else q.wrist = lerpP(a.wrist, b.wrist, t);
+    if (a.ua != null) { q.ua = lerp(a.ua, b.ua, t); q.la = lerp(a.la, b.la, t); }
+    else if (a.aa != null) { q.aa = lerp(a.aa, b.aa, t); q.al = lerp(a.al, b.al, t); }
+    else if (a.wt) q.wt = lerpP(a.wt, b.wt, t); else if (a.wr) q.wr = lerpP(a.wr, b.wr, t); else q.wrist = lerpP(a.wrist, b.wrist, t);
     if (a.ankle2) { q.ankle2 = lerpP(a.ankle2, b.ankle2, t); q.fa2 = lerp(a.fa2, b.fa2, t); }
     if (a.wrist2 && b.wrist2) { q.wrist2 = lerpP(a.wrist2, b.wrist2, t); q.es2 = b.es2; }
     else if (a.wr2 && b.wr2) { q.wr2 = lerpP(a.wr2, b.wr2, t); q.es2 = b.es2; }
@@ -84,15 +92,19 @@ var FIG = (function () {
   function solve(q) {
     var r = q.th * D2R, hip = q.hip;
     var sh = [hip[0] + LB * Math.sin(r), hip[1] - LB * Math.cos(r)];
-    var wrist = q.wt ? [hip[0] - Math.sin(r) * q.wt[0] + Math.cos(r) * q.wt[1], hip[1] + Math.cos(r) * q.wt[0] + Math.sin(r) * q.wt[1]]
-      : (q.wr ? [sh[0] + q.wr[0], sh[1] + q.wr[1]] : q.wrist);
+    var elbowFK = null;
+    if (q.ua != null) elbowFK = [sh[0] + LU * Math.sin(q.ua * D2R), sh[1] + LU * Math.cos(q.ua * D2R)];
+    var wrist = q.ua != null ? [elbowFK[0] + LF * Math.sin(q.la * D2R), elbowFK[1] + LF * Math.cos(q.la * D2R)]
+      : (q.aa != null ? [sh[0] + q.al * Math.sin(q.aa * D2R), sh[1] + q.al * Math.cos(q.aa * D2R)]
+        : (q.wt ? [hip[0] - Math.sin(r) * q.wt[0] + Math.cos(r) * q.wt[1], hip[1] + Math.cos(r) * q.wt[0] + Math.sin(r) * q.wt[1]]
+          : (q.wr ? [sh[0] + q.wr[0], sh[1] + q.wr[1]] : q.wrist)));
     var hr = q.ha * D2R, hd = NECK + HR;
     var fr = q.fa * D2R;
     var j = { hip: hip, sh: sh, th: q.th, round: q.round, ankle: q.ankle, wrist: wrist,
       head: [sh[0] + hd * Math.sin(hr) + (q.hdx || 0), sh[1] - hd * Math.cos(hr)] };
     j.knee = ik(hip, q.ankle, LT, LS, q.ks == null ? -1 : q.ks);
     j.toe = [q.ankle[0] + FOOT * Math.cos(fr), q.ankle[1] + FOOT * Math.sin(fr)];
-    j.elbow = ik(sh, wrist, LU, LF, q.es);
+    j.elbow = elbowFK || ik(sh, wrist, LU, LF, q.es);
     if (q.ankle2) {
       var f2 = q.fa2 * D2R;
       j.ankle2 = q.ankle2;
@@ -110,11 +122,14 @@ var FIG = (function () {
      Angles are measured from "straight down"; for the left limbs (left on the screen) positive swings out to the left, for the right limbs to the
      right, so a symmetrical move uses the same numbers on both sides. 180 = straight up.
        arms / legs: [upper, lower] for both sides, armL/armR/legL/legR override one side.
+       us, fs, ts, cs: how much of the upper arm, forearm, thigh and shin is seen (default 1 = full length, 0 = pointing straight at the viewer). A seated figure
+       seen from the front has thighs that point at us (ts about 0.3, angle 90), and an elbow bent forward has a forearm that points at us (fs about 0.15):
+       a limb that turns towards or away from the viewer is drawn shorter instead of being cut off.
        lean: torso side bend (deg, + = to the right of the screen), hd: head tilt on top of that, sh: shoulders lifted (px),
        rot: the whole body turned about the pelvis (positive = clockwise on the screen, 90 = lying with the head to the left),
        px/py: pelvis position, auto (default 1): py is solved so the lowest point of the body just touches the floor. */
   var FW = { pelvis: 18, shoulders: 34, foot: 10 };
-  var FDEF = { rot: 0, px: 160, py: 0, auto: 1, lean: 0, hd: 0, sh: 0, al1: 0, al2: 0, ar1: 0, ar2: 0, ll1: 0, ll2: 0, lr1: 0, lr2: 0 };
+  var FDEF = { rot: 0, px: 160, py: 0, auto: 1, lean: 0, hd: 0, sh: 0, al1: 0, al2: 0, ar1: 0, ar2: 0, ll1: 0, ll2: 0, lr1: 0, lr2: 0, us: 1, fs: 1, ts: 1, cs: 1 };
   function normF(p) {
     var q = { v: 'f' }, k;
     for (k in FDEF) q[k] = p[k] != null ? p[k] : FDEF[k];
@@ -139,8 +154,8 @@ var FIG = (function () {
       var m = [root[0] + dir * l1 * Math.sin(a1 * D2R), root[1] + l1 * Math.cos(a1 * D2R)];
       return [m, [m[0] + dir * l2 * Math.sin(a2 * D2R), m[1] + l2 * Math.cos(a2 * D2R)]];
     }
-    var aL = limb(shL, q.al1, q.al2, LU, LF, -1), aR = limb(shR, q.ar1, q.ar2, LU, LF, 1);
-    var lL = limb(hipL, q.ll1, q.ll2, LT, LS, -1), lR = limb(hipR, q.lr1, q.lr2, LT, LS, 1);
+    var aL = limb(shL, q.al1, q.al2, LU * q.us, LF * q.fs, -1), aR = limb(shR, q.ar1, q.ar2, LU * q.us, LF * q.fs, 1);
+    var lL = limb(hipL, q.ll1, q.ll2, LT * q.ts, LS * q.cs, -1), lR = limb(hipR, q.lr1, q.lr2, LT * q.ts, LS * q.cs, 1);
     var hd = NECK + HR;
     var j = { P: [0, 0], hipL: hipL, hipR: hipR, C: C, shL: shL, shR: shR, head: [C[0] + hd * Math.sin(he), C[1] - hd * Math.cos(he)],
       elL: aL[0], wrL: aL[1], elR: aR[0], wrR: aR[1], knL: lL[0], anL: lL[1], knR: lR[0], anR: lR[1],
@@ -157,7 +172,15 @@ var FIG = (function () {
   function ln(a, b, cls) {
     return '<line class="' + cls + '" x1="' + n1(a[0]) + '" y1="' + n1(a[1]) + '" x2="' + n1(b[0]) + '" y2="' + n1(b[1]) + '"/>';
   }
-  function propPt(j, p) { var b = j[p.at]; return [b[0] + (p.dx || 0), b[1] + (p.dy || 0)]; }
+  /* where a held prop sits: at a joint plus a fixed offset (dx, dy), and/or `along` pixels further in the direction of the forearm (a weight that hangs off the hands of a straight arm) */
+  function propPt(j, p) {
+    var b = j[p.at], x = b[0] + (p.dx || 0), y = b[1] + (p.dy || 0);
+    if (p.along && j.elbow) {
+      var dx = b[0] - j.elbow[0], dy = b[1] - j.elbow[1], d = Math.sqrt(dx * dx + dy * dy) || 1;
+      x += dx / d * p.along; y += dy / d * p.along;
+    }
+    return [x, y];
+  }
   function circ(c, r, cls) { return '<circle class="' + cls + '" cx="' + n1(c[0]) + '" cy="' + n1(c[1]) + '" r="' + r + '"/>'; }
   var HELD = { plate: 1, bell: 1, ball: 1, pad: 1 };
   function heldR(p) { return p.r || (p.t === 'bell' ? 8 : (p.t === 'pad' ? (p.len || 30) / 2 : 10)); }
@@ -173,9 +196,13 @@ var FIG = (function () {
       c = propPt(j, p);
       return '<circle class="pp pl" cx="' + n1(c[0]) + '" cy="' + n1(c[1]) + '" r="' + p.r + '"/><circle class="pd" cx="' + n1(c[0]) + '" cy="' + n1(c[1]) + '" r="2.4"/>';
     }
-    if (p.t === 'bell') {                                         // kettlebell: round body, handle on top
+    if (p.t === 'bell') {                                         // kettlebell: round body, handle on top (or, when it hangs off the hands, towards the hands)
       c = p.at ? propPt(j, p) : [p.x, p.y]; r = p.r || 8;
-      return '<path class="bh" d="M' + n1(c[0] - r * 0.55) + ' ' + n1(c[1] - r * 0.75) + ' C' + n1(c[0] - r * 0.55) + ' ' + n1(c[1] - r * 2) + ' ' + n1(c[0] + r * 0.55) + ' ' + n1(c[1] - r * 2) + ' ' + n1(c[0] + r * 0.55) + ' ' + n1(c[1] - r * 0.75) + '"/>' + circ(c, r, 'pp pl');
+      var ux = 0, uy = -1;
+      if (p.along && p.at) { var hx = j[p.at][0] - c[0], hy = j[p.at][1] - c[1], hd = Math.sqrt(hx * hx + hy * hy) || 1; ux = hx / hd; uy = hy / hd; }
+      var vx = -uy, vy = ux;
+      var P = function (a, b) { return n1(c[0] + ux * a + vx * b) + ' ' + n1(c[1] + uy * a + vy * b); };
+      return '<path class="bh" d="M' + P(r * 0.75, -r * 0.55) + ' C' + P(r * 2, -r * 0.55) + ' ' + P(r * 2, r * 0.55) + ' ' + P(r * 0.75, r * 0.55) + '"/>' + circ(c, r, 'pp pl');
     }
     if (p.t === 'ball') {                                         // medicine ball: circle with a seam
       c = p.at ? propPt(j, p) : [p.x, p.y]; r = p.r || 10;
@@ -366,7 +393,7 @@ var FIG = (function () {
   return {
     ANIM: ANIM, add: add, solve: solve, solveF: solveF, mix: mix, frame: frame, thumb: thumb, icon: icon, W: W, H: H, G: G, FLOOR: FLOOR, D2R: D2R,
     LB: LB, LT: LT, LS: LS, LU: LU, LF: LF, HR: HR, FOOT: FOOT, FW: FW,
-    ik: ik, norm: norm, normF: normF, lineHip: lineHip, tiltHip: tiltHip, leanOf: leanOf, bendBody: bendBody, floorBody: floorBody, body: body
+    propPt: propPt, ik: ik, norm: norm, normF: normF, lineHip: lineHip, tiltHip: tiltHip, leanOf: leanOf, bendBody: bendBody, floorBody: floorBody, body: body
   };
 })();
 if (typeof module !== 'undefined') module.exports = FIG;

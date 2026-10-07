@@ -1,6 +1,8 @@
 /* Renders contact sheets of the exercise animations, drawn with the real styles.css and the same mixing the app uses. Look at the PNG, do not guess.
-   Usage: node tools/contact-sheet.mjs [exercise ids...] [--out tests/out/sheet.png] [--theme light|dark] [--cols 4] [--cell 250] [--full]
+   Usage: node tools/contact-sheet.mjs [exercise ids...] [--out tests/out/sheet.png] [--theme light|dark] [--cols 4] [--cell 250] [--every 3] [--full]
    Default (compact): one row per exercise with every key pose and the middle of every move, in the order of the loop.
+   --every n: only every n-th step (for the animations built from many short steps, like the swing; the wrong step is always shown).
+   --cols n: pictures per row (default: two per step, at most 8). With --cols 3 --cell 640 a single picture is large enough to check a drawing.
    --full: five frames for every transition. Without ids every animation is drawn. */
 import { chromium } from '@playwright/test';
 import { createRequire } from 'node:module';
@@ -16,13 +18,14 @@ require('../anims.js');
 const args = process.argv.slice(2);
 const flag = (name, def) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : def; };
 const full = args.includes('--full');
-const valueFlags = new Set(['--out', '--theme', '--cols', '--cell']);
+const valueFlags = new Set(['--out', '--theme', '--cols', '--cell', '--every']);
 const ids = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && valueFlags.has(args[i - 1])));
 const list = ids.length ? ids : Object.keys(FIG.ANIM);
 const theme = flag('theme', 'light');
 const cell = Number(flag('cell', full ? 250 : 200));
 const out = path.resolve(flag('out', path.join(root, 'tests', 'out', 'sheet.png')));
 const FRAMES = [0, 0.25, 0.5, 0.75, 1];
+const every = Number(flag('every', 1)) || 1;
 
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 const stage = (id, q, bad, t, tag) => '<div class="stage' + (bad ? ' bd' : '') + '"><svg viewBox="0 0 320 190">' + FIG.frame(id, q, bad) + '</svg><span class="t">' + tag + '</span></div>';
@@ -42,14 +45,15 @@ for (const id of list) {
     });
     body += '</div>';
   } else {
-    const cols = Math.min(2 * n, 8); maxCols = Math.max(maxCols, cols);
+    const shown = A.steps.filter((s, i) => i % every === 0 || s.bad).length, cols = Number(flag('cols', 0)) || Math.min(2 * shown, 8); maxCols = Math.max(maxCols, cols);
     body += '<h2>' + id + (A.view === 'f' ? ' (Frontansicht)' : '') + '</h2><div class="sheet" style="grid-template-columns:repeat(' + cols + ',1fr)">';
     A.steps.forEach((to, i) => {
+      if (i % every !== 0 && !to.bad) return;
       const from = A.steps[(i + n - 1) % n];
       body += stage(id, FIG.mix(from.pose, to.pose, 0.5), !!to.bad, 0.5, '↝');
       body += stage(id, to.pose, !!to.bad, 1, (i + 1) + (to.bad ? ' falsch' : '')) ;
     });
-    body += '</div><div class="seg">' + A.steps.map((s, i) => (i + 1) + ': ' + esc(s.label)).join('  ·  ') + '</div>';
+    body += '</div><div class="seg">' + A.steps.filter((s, i) => i % every === 0 || s.bad).map((s) => esc(s.label)).filter((l, i, a) => a.indexOf(l) === i).join('  ·  ') + '</div>';
   }
 }
 

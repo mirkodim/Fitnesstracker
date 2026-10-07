@@ -108,7 +108,7 @@ test.describe('Training', () => {
     await expect(page.locator('.note', { hasText: 'Eingetragen:' })).toHaveText('Eingetragen: Tag A am Montag, 5. Oktober 2026.');
 
     const s = await stored(page);
-    expect(s.schema).toBe(3);
+    expect(s.schema).toBe(4);
     expect(s.log[TODAY]).toHaveLength(1);
     expect(s.log[TODAY][0]).toMatchObject({ day: 'A', title: 'Tag A', sets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 }, weights: { 'a-hip': '60' }, note: '' });
     expect(s.log[TODAY][0].targets).toEqual({ 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 });
@@ -265,7 +265,7 @@ test.describe('Kalender', () => {
     await expect(page.locator('.card h3.name')).toHaveText('Samstag, 3. Oktober 2026');
     await expect(page.locator('.entry-head[data-day="A"]')).toHaveAttribute('aria-expanded', 'true');
     s = await stored(page);
-    expect(s.log['2026-10-03']).toEqual([{ day: 'A', sets: { 'a-box': 2, 'a-hip': 3, 'a-push': 2 }, weights: { 'a-hip': '55,5' }, note: 'Knie war gut' }]);
+    expect(s.log['2026-10-03']).toEqual([{ day: 'A', title: 'Tag A', targets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 }, sets: { 'a-box': 2, 'a-hip': 3, 'a-push': 2 }, weights: { 'a-hip': '55,5' }, note: 'Knie war gut' }]);
     expect(s.log['2026-10-01'].map((e) => e.day)).toEqual(['B']);
     await day(page, '2026-10-01').click();
     await expect(page.locator('.entry-head')).toHaveCount(1);

@@ -10,9 +10,14 @@ const place = (page, p) => page.locator('[data-act="wiz-place"][data-p="' + p + 
 /* what the app itself knows (the browser has the same Builder, library and equipment as the tests) */
 const fits = (page, ids, equip) => page.evaluate(([i, e]) => i.every((id) => Builder.eqOK(EX[id], Builder.haveSet(e))), [ids, equip]);
 
-/* the tab Erstellen, part "Training": choose areas and press "Neues Training erstellen" */
+const seg = (page, name) => page.getByRole('button', { name, exact: true });
+const nameField = (page) => page.getByLabel('Name des Trainings');
+const ownNames = (page) => page.locator('.mrow .rn b').allInnerTexts();
+
+/* the tab Erstellen opens at the exercises; part "Training": choose areas and press "Neues Training erstellen" */
 async function startAssistant(page, areas) {
   await tab(page, 'Erstellen').click();
+  await seg(page, 'Training').click();
   for (const a of areas) await tile(page, a).click();
   await page.locator('[data-act="mk-new"]').click();
   await expect(page.getByRole('heading', { name: 'Wo trainierst du?' })).toBeVisible();
@@ -25,7 +30,7 @@ test.describe('Meine Trainings', () => {
     await expect(top(page).locator('h2.mt')).toHaveText('Meine Trainings');
     await expect(tab(page, 'Meine Trainings')).toHaveAttribute('aria-current', 'page');
     const names = await page.locator('.mrow .rn b').allInnerTexts();
-    expect(names).toEqual(['Tag A', 'Tag B', 'Zweites', 'Mein Test']);                       // Tag A und B zuerst, dann die eigenen, neueste zuerst
+    expect(names).toEqual(['Tag A', 'Tag B', 'Mein Test', 'Zweites']);                       // Tag A und B sind ganz normale Trainings: in der Reihenfolge, in der sie entstanden sind
     // keine Vorschläge der App in diesem Reiter
     expect(await page.locator('.tcard').count()).toBe(0);
     await expect(page.getByText('Vorschläge der App')).toHaveCount(0);
@@ -46,38 +51,92 @@ test.describe('Meine Trainings', () => {
     await expect(page.getByRole('button', { name: 'Los geht’s' })).toBeVisible();
   });
 
-  test('Ohne eigene Trainings steht ein Hinweis da, "Neues Training erstellen" führt zum Reiter Erstellen', async ({ page, site }) => {
+  test('Neu installiert: Tag A und Tag B stehen da wie jedes andere Training, "Neues Training erstellen" führt zu den Übungen', async ({ page, site }) => {
     await openApp(page, site);
     await expect(page.locator('.mrow')).toHaveCount(2);
-    await expect(page.locator('p.hint').first()).toContainText('Deine eigenen Trainings erscheinen hier');
+    expect(await ownNames(page)).toEqual(['Tag A', 'Tag B']);
     await page.getByRole('button', { name: 'Neues Training erstellen' }).click();
     await expect(tab(page, 'Erstellen')).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    await expect(page.locator('#lib-q')).toBeVisible();                                         // zuerst die Übungen
+    await expect(seg(page, 'Übungen')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('Tag A ist ein normales Training: ändern, löschen, zurückholen; der Kalender behält seine Einträge', async ({ page, site }) => {
+    const log = { '2026-10-01': [{ day: 'A', sets: { 'a-box': 3, 'a-hip': 3 }, weights: { 'a-box': '60' }, note: 'gut' }] };
+    await openApp(page, site, { state: { schema: 3, cur: 'A', log } });
+    // die Einträge der früheren Version bekommen Namen und Zielsätze, damit sie bleiben, was sie waren
+    const s0 = await stored(page);
+    expect(s0.schema).toBe(4);
+    expect(s0.log['2026-10-01'][0]).toMatchObject({ day: 'A', title: 'Tag A', targets: { 'a-box': 3, 'a-hip': 3, 'a-push': 3, 'a-tri': 3, 'a-plank': 3 } });
+    await page.locator('[data-act="tr-open"][data-id="A"]').click();
+    await expect(page.locator('.eyebrow').first()).toContainText('Mein Training');
+    await expect(page.getByRole('button', { name: 'Bearbeiten' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Löschen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Als Kopie anpassen' })).toHaveCount(0);
+    // eine Übung entfernen und speichern: Tag A ist jetzt kürzer, die Zahlen der anderen bleiben
+    await page.getByRole('button', { name: 'Bearbeiten' }).click();
+    const lastName = await page.locator('.brow').last().locator('.brow-head b').innerText();
+    await page.locator('.brow').last().getByRole('button', { name: lastName + ' entfernen' }).click();
+    await page.getByRole('button', { name: 'Speichern', exact: true }).click();
+    const s1 = await stored(page);
+    const a = s1.trainings.find((t) => t.id === 'A');
+    expect(a.items).toHaveLength(4);
+    expect(a.items.find((i) => i.ex === 'a-tri').reps).toBe('10–15');
+    expect(a.items.find((i) => i.ex === 'a-hip').note).toMatch(/^Hip Thrust: Start mit leichter Last/);       // der Hinweis zu Hip Thrust bleibt erhalten
+    expect(s1.log['2026-10-01'][0].targets['a-plank']).toBe(3);                                               // der Kalender bleibt, wie er war
+    // löschen mit Rückgängig
+    await page.getByRole('button', { name: 'Löschen' }).click();
+    await expect(page.locator('.note.undo')).toContainText('Training gelöscht.');
+    expect(await ownNames(page)).toEqual(['Tag B']);
+    expect((await stored(page)).trainings.map((t) => t.id)).toEqual(['B']);
+    await page.getByRole('button', { name: 'Rückgängig' }).click();
+    expect(await ownNames(page)).toEqual(['Tag A', 'Tag B']);
+    // endgültig löschen: Tag A kommt nicht wieder, auch nach einem Neustart nicht, und der Kalender zeigt den Eintrag weiter
+    await page.locator('[data-act="tr-open"][data-id="A"]').click();
+    await page.getByRole('button', { name: 'Löschen' }).click();
+    await page.reload();
+    await expect(page.locator('nav.nav')).toBeVisible();
+    expect(await ownNames(page)).toEqual(['Tag B']);
+    await tab(page, 'Kalender').click();
+    await page.locator('button.cd[data-key="2026-10-01"]').click();
+    await expect(page.locator('.entry-head')).toContainText('Tag A');
+    await expect(page.locator('.entry-head')).toContainText('6 von 15 Sätzen');
+    // alle löschen: ein ruhiger Hinweis, und ein neues Training funktioniert danach
+    await tab(page, 'Meine Trainings').click();
+    await page.locator('[data-act="tr-open"][data-id="B"]').click();
+    await page.getByRole('button', { name: 'Löschen' }).click();
+    await expect(page.locator('.mrow')).toHaveCount(0);
+    await expect(page.locator('main')).toContainText('Du hast noch kein Training');
+    await page.getByRole('button', { name: 'Neues Training erstellen' }).first().click();
+    await expect(page.locator('#lib-q')).toBeVisible();
   });
 });
 
-test.describe('Erstellen: Training und Übungen in einem Reiter', () => {
-  test('Zwei Teile, ein Wechsel; der Reiter öffnet beim Training, merkt sich aber den letzten Teil', async ({ page, site }) => {
+test.describe('Erstellen: Übungen und Training in einem Reiter', () => {
+  test('Zwei Teile, ein Wechsel; der Reiter öffnet immer bei den Übungen, ohne Filter und ohne Frage nach Geräten', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
-    const seg = page.locator('.seg .chip');
-    await expect(seg).toHaveText(['Training', 'Übungen']);
-    await expect(page.getByRole('button', { name: 'Training', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
-    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
+    await expect(page.locator('.seg .chip')).toHaveText(['Übungen', 'Training']);
+    await expect(seg(page, 'Übungen')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#lib-q')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Alle Übungen' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Übungen', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    // anderer Reiter und zurück: wieder bei den Übungen
+    // nichts überlädt die Seite: weder "Passende Übungen" noch eine Frage nach der Ausrüstung
+    await expect(page.getByText(/Passende Übungen|Nur passende|Ausrüstung|Was hast du/)).toHaveCount(0);
+    await expect(page.locator('[data-act="lib-eq"], [data-act="ex-filter-eq"], [data-act="eq-toggle"]')).toHaveCount(0);
+    await seg(page, 'Training').click();
+    await expect(seg(page, 'Training')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
+    // anderer Reiter und zurück: der Reiter beginnt wieder bei den Übungen
     await tab(page, 'Kalender').click();
     await tab(page, 'Erstellen').click();
     await expect(page.locator('#lib-q')).toBeVisible();
+    await expect(seg(page, 'Übungen')).toHaveAttribute('aria-pressed', 'true');
     // noch einmal auf den Reiter tippen: zurück zum Anfang des Teils
     await page.locator('[data-act="lib-all"]').click();
     await expect(top(page).locator('h2.mt')).toHaveText('Alle Übungen');
     await tab(page, 'Erstellen').click();
     await expect(page.locator('#lib-q')).toBeVisible();
-    await page.getByRole('button', { name: 'Training', exact: true }).click();
+    await seg(page, 'Training').click();
     await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
   });
 });
@@ -86,6 +145,7 @@ test.describe('Neues Training', () => {
   test('Von der Frage bis zum Start: Bereiche, ein Tipp auf den Ort, Anpassen, Wiederholungen, Entfernen, Speichern, Training läuft', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
     // ohne Auswahl geht es nicht weiter, mehrere Bereiche gehen
     const create = page.locator('[data-act="mk-new"]');
@@ -159,12 +219,12 @@ test.describe('Neues Training', () => {
     await page.locator('[data-act="pick-add"]').first().click();
     expect(await rows.count()).toBe(n0);
 
-    // weiter: Namen vergeben, speichern und starten
-    await weiter(page).click();
-    await expect(page.getByRole('heading', { name: 'Wie soll dein Training heissen?' })).toBeVisible();
-    const name = page.getByLabel('Name');
-    await expect(name).toHaveValue('Beine & Gesäss');                         // der Vorschlag nennt die Bereiche, keine Zeit
-    await expect(page.getByText('Du findest es danach unter „Meine Trainings“.')).toBeVisible();
+    // ganz unten: der Name, schon ausgefüllt aus dem, was im Training steckt, ohne eigenen Schritt; speichern und starten
+    await expect(page.getByRole('heading', { name: 'Wie soll dein Training heissen?' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Weiter', exact: true })).toHaveCount(0);
+    const name = nameField(page);
+    await expect(name).toHaveValue(/^(Beine|Gesäss|Ganzkörper)/);               // ein Bereich-Name, keine Zeit
+    await expect(page.getByText('Der Name ergibt sich aus den Übungen. Du kannst ihn ändern.')).toBeVisible();
     await name.fill('Mein Beintag');
     await page.getByRole('button', { name: 'Speichern und starten' }).click();
     await expect(top(page)).toContainText('Mein Beintag');
@@ -172,16 +232,18 @@ test.describe('Neues Training', () => {
     await expect(tab(page, 'Meine Trainings')).toHaveAttribute('aria-current', 'page');
 
     const s = await stored(page);
-    expect(s.schema).toBe(3);
-    expect(s.trainings).toHaveLength(1);
-    expect(s.trainings[0].name).toBe('Mein Beintag');
-    expect(s.trainings[0].items).toHaveLength(n0);
-    expect(s.trainings[0].items[0].sets).toBe(4);
-    expect(s.trainings[0].items[0].reps).toBe('5–7');
-    expect(s.cur).toBe(s.trainings[0].id);
+    expect(s.schema).toBe(4);
+    expect(s.trainings.map((t) => t.id).slice(0, 2)).toEqual(['A', 'B']);
+    expect(s.trainings).toHaveLength(3);
+    const mine = s.trainings[2];
+    expect(mine.name).toBe('Mein Beintag');
+    expect(mine.items).toHaveLength(n0);
+    expect(mine.items[0].sets).toBe(4);
+    expect(mine.items[0].reps).toBe('5–7');
+    expect(s.cur).toBe(mine.id);
     expect(s.prefs).toEqual({ equip: ['kh', 'lh', 'kb', 'bank', 'box', 'stange', 'trx', 'band'] });         // nur der Ort wird gemerkt, keine Zeit, keine Stufe
-    expect(await fits(page, s.trainings[0].items.map((i) => i.ex), s.prefs.equip)).toBe(true);
-    expect(s.trainings[0].items.every((i) => (i.reps === undefined) || /^\d+–\d+$/.test(i.reps))).toBe(true);
+    expect(await fits(page, mine.items.map((i) => i.ex), s.prefs.equip)).toBe(true);
+    expect(mine.items.every((i) => (i.reps === undefined) || /^\d+–\d+$/.test(i.reps))).toBe(true);
     // die Laufansicht zeigt die eigene Wiederholungszahl
     await expect(page.locator('.rx')).toContainText('4 × 5–7');
 
@@ -210,11 +272,11 @@ test.describe('Neues Training', () => {
     await expect(top(page)).toContainText('Dein Vorschlag');
     const s0 = await stored(page);
     expect([...s0.prefs.equip].sort()).toEqual(['bank', 'kh']);
-    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     const s = await stored(page);
-    expect(await fits(page, s.trainings[0].items.map((i) => i.ex), ['kh', 'bank'])).toBe(true);
-    expect(s.trainings[0].items.length).toBeGreaterThanOrEqual(5);
+    const mine = s.trainings[s.trainings.length - 1];
+    expect(await fits(page, mine.items.map((i) => i.ex), ['kh', 'bank'])).toBe(true);
+    expect(mine.items.length).toBeGreaterThanOrEqual(5);
     // der Ort steht beim nächsten Mal als zuletzt gewählt da? Nein: Kurzhanteln + Bank ist keiner der drei Orte, also ist keiner markiert
     await startAssistant(page, ['arme']);
     for (const p of ['gym', 'homegym', 'none']) await expect(place(page, p)).toHaveAttribute('aria-pressed', 'false');
@@ -261,7 +323,7 @@ test.describe('Neues Training', () => {
     // speichern, die Zahlen bleiben
     await page.getByRole('button', { name: 'Speichern', exact: true }).click();
     const s = await stored(page);
-    expect(s.trainings[0].items.map((i) => i.reps)).toEqual(['9', '8–12', undefined, '1–3']);
+    expect(s.trainings.find((t) => t.id === 'u1').items.map((i) => i.reps)).toEqual(['9', '8–12', undefined, '1–3']);
     await page.locator('[data-act="pv-start"]').click();
     await expect(page.locator('.rx')).toContainText('2 × 9');
   });
@@ -283,16 +345,16 @@ test.describe('Neues Training', () => {
     await expect(page.locator('.mrow', { hasText: 'Beine & "Po"' })).toBeVisible();
     await expect(page.locator('main img')).toHaveCount(0);
     expect(await page.evaluate(() => window.pwned)).toBeUndefined();
-    expect((await stored(page)).trainings[0].name).toContain('<img src=x');
+    expect((await stored(page)).trainings.find((t) => t.id === 'u1').name).toContain('<img src=x');
     // Löschen mit Rückgängig
     await page.locator('[data-act="tr-open"][data-id="u1"]').click();
     await page.getByRole('button', { name: 'Löschen' }).click();
     await expect(page.locator('.note.undo')).toContainText('Training gelöscht.');
-    expect((await stored(page)).trainings).toHaveLength(0);
+    expect((await stored(page)).trainings.map((t) => t.id)).toEqual(['A', 'B']);
     await expect(page.locator('.mrow')).toHaveCount(2);
     await page.getByRole('button', { name: 'Rückgängig' }).click();
     await expect(page.locator('.mrow', { has: page.locator('[data-id="u1"]') })).toBeVisible();
-    expect((await stored(page)).trainings).toHaveLength(1);
+    expect((await stored(page)).trainings.map((t) => t.id)).toEqual(['A', 'B', 'u1']);
     // endgültig löschen: der Kalender behält seinen Eintrag mit dem alten Namen
     await page.locator('[data-act="tr-open"][data-id="u1"]').click();
     await page.getByRole('button', { name: 'Löschen' }).click();
@@ -302,9 +364,10 @@ test.describe('Neues Training', () => {
     await expect(page.locator('.entry-head')).toContainText('2 von 7 Sätzen');
   });
 
-  test('Kleiner Start und "Überrasch mich": nur ein paar Übungen, ohne Zeitangabe', async ({ page, site }) => {
+  test('Kleiner Start und "Überrasch mich": nur ein paar Übungen, ohne Zeitangabe, der Name ergibt sich selbst', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await page.locator('[data-act="flow-quick"]').click();
     // beim ersten Mal wird nach dem Ort gefragt
     await expect(top(page)).toContainText('Kleiner Start');
@@ -313,24 +376,55 @@ test.describe('Neues Training', () => {
     await expect(top(page)).toContainText('4 Übungen · 8 Sätze');
     expect(await noTimes(page)).toEqual([]);
     expect(await page.locator('.brow').count()).toBe(4);
-    await weiter(page).click();
-    await expect(page.getByLabel('Name')).toHaveValue('Ganzkörper');
+    await expect(nameField(page)).toHaveValue('Ganzkörper');
     await page.getByRole('button', { name: 'Speichern und starten' }).click();
     await expect(page.locator('h2.name').first()).toBeVisible();
     await page.getByRole('button', { name: 'Zurück' }).first().click();
     // der Ort ist bekannt: "Überrasch mich" zeigt den Vorschlag sofort
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await page.locator('[data-act="flow-surprise"]').click();
     await expect(top(page)).toContainText('Dein Vorschlag');
     expect(await page.locator('.brow').count()).toBeGreaterThanOrEqual(2);
     const ids = await page.locator('.brow-head').evaluateAll((els) => els.map((e) => e.getAttribute('data-ex')));
     expect(await fits(page, ids, [])).toBe(true);                                // ohne Ausrüstung nur Übungen ohne Ausrüstung
     expect((await stored(page)).prefs.equip).toEqual([]);
-    // Name: Ganzkörper gibt es schon, also kommt eine Zahl dazu
+    // Name: Ganzkörper gibt es schon, also kommt die Ausrüstung dazu, danach eine Zahl
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await page.locator('[data-act="flow-quick"]').click();
-    await weiter(page).click();
-    await expect(page.getByLabel('Name')).toHaveValue('Ganzkörper 2');
+    await expect(nameField(page)).toHaveValue('Ganzkörper · Körpergewicht');
+    await page.getByRole('button', { name: 'Nur speichern' }).click();
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
+    await page.locator('[data-act="flow-quick"]').click();
+    await expect(nameField(page)).toHaveValue('Ganzkörper · Körpergewicht 2');
+  });
+
+  test('Der Name: ein eigener Name bleibt, der vorgeschlagene folgt den Übungen, leer fällt auf den Vorschlag zurück', async ({ page, site }) => {
+    await openApp(page, site);
+    await startAssistant(page, ['beine']);
+    await place(page, 'none').click();
+    const name = nameField(page);
+    const first = await name.inputValue();
+    expect(first).toMatch(/^(Beine|Beine & Gesäss|Ganzkörper)/);
+    // entfernt man alle Übungen ausser einer aus dem Bauch-Bereich, ändert sich der vorgeschlagene Name
+    await page.getByRole('button', { name: 'Übung hinzufügen' }).click();
+    await page.locator('[data-act="pick-group"][data-g="bauch"]').click();
+    await page.locator('[data-act="pick-add"]').first().click();
+    expect(await name.inputValue()).toMatch(/^[A-ZÄÖÜ]/);
+    // ein eigener Name bleibt, auch wenn sich der Inhalt ändert
+    await name.fill('Mein Plan');
+    await page.locator('.brow').first().getByRole('button', { name: /entfernen$/ }).click();
+    await expect(name).toHaveValue('Mein Plan');
+    // ein leerer Name wird beim Speichern zum Vorschlag
+    await name.fill('   ');
+    await page.getByRole('button', { name: 'Nur speichern' }).click();
+    const s = await stored(page);
+    const mine = s.trainings[s.trainings.length - 1];
+    expect(mine.name.trim().length).toBeGreaterThan(2);
+    expect(mine.name).not.toBe('Mein Plan');
   });
 });
 
@@ -341,7 +435,6 @@ test.describe('Training aus der Bibliothek zusammenstellen', () => {
   test('Im Teil "Übungen": mit + Übungen sammeln, auf der Übungsseite hinzufügen, weiter zum Training und speichern', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
-    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
     await expect(page.locator('.draftbar')).toHaveCount(0);                          // noch nichts gesammelt
     await page.locator('#lib-q').fill('Kniebeuge');
     await add(page, 'Goblet-Kniebeuge').click();
@@ -366,17 +459,17 @@ test.describe('Training aus der Bibliothek zusammenstellen', () => {
     await add(page, 'Dead Bug').click();
     // weiter: das Training mit genau diesen Übungen
     await page.locator('.draftbar').getByRole('button', { name: 'Weiter' }).click();
-    await expect(top(page)).toContainText('Dein Vorschlag');
+    await expect(top(page)).toContainText('Neues Training');                          // selbst gesammelt, kein Vorschlag der App
     await expect(top(page)).toContainText('3 Übungen');
     expect(await rowNames(page)).toEqual(['Goblet-Kniebeuge', 'Gesässbrücke', 'Dead Bug']);
     await expect(page.getByRole('button', { name: 'Anderen Vorschlag zeigen' })).toHaveCount(0);        // es gibt keinen Vorschlag, den man würfeln könnte
-    await weiter(page).click();
-    await expect(page.getByLabel('Name')).toHaveValue(/^(Beine|Gesäss|Bauch|Ganzkörper)/);
-    await page.getByLabel('Name').fill('Aus der Bibliothek');
+    await expect(nameField(page)).toHaveValue('Beine, Gesäss & Bauch');              // aus dem, was drin ist: Kniebeuge (Beine), Brücke (Gesäss), Dead Bug (Bauch)
+    await nameField(page).fill('Aus der Bibliothek');
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     const s = await stored(page);
-    expect(s.trainings[0].name).toBe('Aus der Bibliothek');
-    expect(s.trainings[0].items.map((i) => i.ex).sort()).toEqual(['x-bridge', 'x-deadbug', 'x-goblet']);
+    const mine = s.trainings[s.trainings.length - 1];
+    expect(mine.name).toBe('Aus der Bibliothek');
+    expect(mine.items.map((i) => i.ex).sort()).toEqual(['x-bridge', 'x-deadbug', 'x-goblet']);
     // danach ist nichts mehr in Arbeit
     await tab(page, 'Erstellen').click();
     await expect(page.locator('.draftbar')).toHaveCount(0);
@@ -423,6 +516,7 @@ test.describe('Vorschläge der App', () => {
   test('Bereich wählen, Vorschläge ansehen: Filter, Vorschau, ohne Zeitangaben', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await tile(page, 'ruecken').click();
     await page.locator('[data-act="mk-existing"]').click();
     await expect(top(page)).toContainText('Vorschläge der App');
@@ -441,11 +535,9 @@ test.describe('Vorschläge der App', () => {
     await sel.click();
     await expect(page.locator('.rc', { hasText: 'Alle Bereiche zeigen' })).toHaveAttribute('aria-pressed', 'false');
     expect(await cards.count()).toBeGreaterThan(n);
-    // "passt zu meiner Ausrüstung": ohne Angabe nur Körpergewicht
-    await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
-    await expect(page.locator('.hint').first()).toContainText('noch keine Ausrüstung gewählt');
-    for (const t of await cards.locator('.tc-need').allInnerTexts()) expect(t).toBe('Nur Körpergewicht');
-    await page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' }).click();
+    // es gibt keinen Ausrüstungsfilter mehr: jede Karte sagt selbst, was man braucht
+    await expect(page.locator('.rc', { hasText: 'Passt zu meiner Ausrüstung' })).toHaveCount(0);
+    for (const t of await cards.locator('.tc-need').allInnerTexts()) expect(t.length).toBeGreaterThan(0);
     // Vorschau eines Vorschlags
     await page.locator('.tcard', { hasText: 'Rücken und Haltung' }).click();
     await expect(page.locator('h2.name')).toHaveText('Rücken und Haltung');
@@ -466,6 +558,7 @@ test.describe('Vorschläge der App', () => {
   test('Ausrüstung fehlt: "An meine Ausrüstung anpassen" ersetzt, was nicht geht', async ({ page, site }) => {
     await openApp(page, site, { state: { schema: 3, prefs: { equip: [] } } });
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await page.locator('[data-act="mk-existing"]').click();
     await page.locator('.tcard[data-id="p-kraft"]').click();
     await expect(page.locator('.note', { hasText: 'Dir fehlt:' })).toContainText('Langhantel');
@@ -474,41 +567,48 @@ test.describe('Vorschläge der App', () => {
     await expect(page.locator('.note').first()).toContainText(/ersetzt|angepasst|entfernt/i);
     const names = await rowNames(page);
     expect(names.length).toBeGreaterThanOrEqual(3);
-    await weiter(page).click();
-    await expect(page.getByLabel('Name')).toHaveValue(/angepasst/);
+    await expect(nameField(page)).toHaveValue(/angepasst/);
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     await expect(page.locator('h2.name')).toContainText('angepasst');
     await expect(page.locator('.eyebrow').first()).toContainText('Mein Training');
     const s = await stored(page);
-    expect(s.trainings).toHaveLength(1);
-    expect(await fits(page, s.trainings[0].items.map((i) => i.ex), [])).toBe(true);
+    expect(s.trainings).toHaveLength(3);
+    expect(await fits(page, s.trainings[2].items.map((i) => i.ex), [])).toBe(true);
     // das Original der App bleibt unverändert
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await page.locator('[data-act="mk-existing"]').click();
     await page.locator('.tcard[data-id="p-kraft"]').click();
     await expect(page.locator('.list .row').first()).toContainText('Langhantel-Kniebeuge');
   });
 
-  test('Tag A als Kopie anpassen: das Original bleibt, die Kopie steht unter "Meine Trainings"', async ({ page, site }) => {
+  test('Ein Vorschlag als Kopie anpassen: das Original bleibt, die Kopie steht unter "Meine Trainings"', async ({ page, site }) => {
     await openApp(page, site);
-    await page.locator('[data-act="tr-open"][data-id="A"]').click();
-    await expect(page.locator('.eyebrow').first()).toContainText('Mein Training');
+    await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
+    await page.locator('[data-act="mk-existing"]').click();
+    await page.locator('.tcard[data-id="p-core"]').click();
+    await expect(page.locator('.eyebrow').first()).toContainText('Vorschlag der App');
+    await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+    const nOrig = await page.locator('.list .row').count();
     await page.getByRole('button', { name: 'Als Kopie anpassen' }).click();
     await expect(top(page)).toContainText('Dein Vorschlag');
     const lastName = await page.locator('.brow').last().locator('.brow-head b').innerText();
     await page.locator('.brow').last().getByRole('button', { name: lastName + ' entfernen' }).click();
-    await weiter(page).click();
-    await expect(page.getByLabel('Name')).toHaveValue('Tag A (angepasst)');
+    await expect(nameField(page)).toHaveValue('Core und Bauch (angepasst)');
     await page.getByRole('button', { name: 'Nur speichern' }).click();
-    await expect(page.locator('h2.name')).toHaveText('Tag A (angepasst)');
+    await expect(page.locator('h2.name')).toHaveText('Core und Bauch (angepasst)');
     const s = await stored(page);
-    expect(s.trainings).toHaveLength(1);
-    expect(s.trainings[0].items).toHaveLength(4);
-    expect(s.trainings[0].items.find((i) => i.ex === 'a-tri').reps).toBe('10–15');           // Tag A behält seine Zahlen aus dem ersten Plan
+    expect(s.trainings).toHaveLength(3);
+    expect(s.trainings[2].items).toHaveLength(nOrig - 1);
     await page.getByRole('button', { name: 'Zurück' }).first().click();
-    await expect(page.locator('.mrow .rn b')).toHaveText(['Tag A', 'Tag B', 'Tag A (angepasst)']);
-    await page.locator('[data-act="tr-open"][data-id="A"]').click();
-    expect(await page.locator('.list .row').count()).toBe(5);
+    await expect(page.locator('.mrow .rn b')).toHaveText(['Tag A', 'Tag B', 'Core und Bauch (angepasst)']);
+    // der Vorschlag der App hat weiter alle Übungen
+    await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
+    await page.locator('[data-act="mk-existing"]').click();
+    await page.locator('.tcard[data-id="p-core"]').click();
+    expect(await page.locator('.list .row').count()).toBe(nOrig);
   });
 });
 
@@ -516,6 +616,7 @@ test.describe('Zurück-Taste', () => {
   test('Die Zurück-Taste des Handys geht einen Schritt zurück, auch im Assistenten', async ({ page, site }) => {
     await openApp(page, site);
     await tab(page, 'Erstellen').click();
+    await seg(page, 'Training').click();
     await tile(page, 'beine').click();
     await page.locator('[data-act="mk-new"]').click();
     await expect(page.getByRole('heading', { name: 'Wo trainierst du?' })).toBeVisible();
@@ -537,7 +638,7 @@ test.describe('Zurück-Taste', () => {
     await page.goBack();
     await expect(page.getByRole('heading', { name: 'Was möchtest du heute trainieren?' })).toBeVisible();
     // Übungen: Alle Übungen, eine Übung, und zurück
-    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
+    await seg(page, 'Übungen').click();
     await page.locator('[data-act="lib-all"]').click();
     await page.locator('[data-act="lib-open"]').first().click();
     await expect(page.getByRole('heading', { name: 'Darauf achten' })).toBeVisible();
@@ -558,7 +659,6 @@ test.describe('Zurück-Taste', () => {
     await expect(top(page)).toContainText('1 von 15 Sätzen');
     // auch ein Blick in die Übungen mitten im Training: danach geht es an derselben Stelle weiter
     await tab(page, 'Erstellen').click();
-    await page.getByRole('button', { name: 'Übungen', exact: true }).click();
     await expect(page.locator('#lib-q')).toBeVisible();
     await tab(page, 'Meine Trainings').click();
     await expect(top(page)).toContainText('1 von 15 Sätzen');
@@ -583,6 +683,7 @@ test.describe('Rechtschreibung und Zeitangaben', () => {
     };
     await look('Meine Trainings');
     await tab(page, 'Erstellen').click(); await look('Erstellen');
+    await seg(page, 'Training').click(); await look('Training');
     await tile(page, 'gesaess').click(); await page.locator('[data-act="mk-existing"]').click(); await look('Vorschläge');
     await page.locator('.tcard').first().click(); await look('Vorschau');
     await page.goBack(); await page.goBack();
@@ -593,10 +694,10 @@ test.describe('Rechtschreibung und Zeitangaben', () => {
     await page.locator('.brow').first().locator('.brow-head').click(); await look('Zeile offen');
     await page.getByRole('button', { name: 'Übung hinzufügen' }).click(); await look('Übung wählen');
     await page.goBack();
-    await weiter(page).click(); await look('Name');
+    await look('Name');
     await page.getByRole('button', { name: 'Speichern und starten' }).click(); await look('Training');
     await page.getByRole('button', { name: 'So geht die Übung' }).click(); await look('Hinweise');
-    await tab(page, 'Erstellen').click(); await page.getByRole('button', { name: 'Übungen', exact: true }).click(); await look('Übungen');
+    await tab(page, 'Erstellen').click(); await look('Übungen');
     await page.locator('[data-act="lib-all"]').click(); await look('Alle Übungen');
     await tab(page, 'Kalender').click(); await look('Kalender');
     await tab(page, 'Essen').click(); await look('Essen');

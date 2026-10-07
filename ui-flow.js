@@ -2,7 +2,9 @@
    Meine Trainings: Tag A, Tag B and the trainings the user made, each one tap away from the run view.
    Erstellen: "Was möchtest du heute trainieren?" (body areas), then either a new training (one question, where the user trains, then an editable
    suggestion that is saved under a name) or a look at the suggestions of the app. The exercise list of the same tab is in ui-lib.js.
-   Screens (R.flow): home, existing, preview, w-equip, build, pick, name. The run view itself is in app.js.
+   Screens (R.flow): home, existing, preview, w-equip, build, pick. The run view itself is in app.js.
+   A new training has no screen of its own for the name: the field at the bottom of the editor is filled in from what is in the training
+   (Builder.nameFor) and follows it until the person types something else.
    There is no time and no level anywhere: a training lasts as long as it lasts, and exercises can be deleted from it.
    FlowUI(A) gets the shared object of app.js, adds its screens as A.views.flow and its button handlers to A.acts. */
 function FlowUI(A) {
@@ -15,8 +17,8 @@ function FlowUI(A) {
   var LVL = ['', 'Einsteiger', 'Geübt', 'Fortgeschritten'];
   var REPS = Builder.REPS;
 
-  R.seg = 'new';                           // the two parts of the tab Erstellen: 'new' (Training) or 'lib' (Übungen)
-  R.exf = { sel: true, eq: false };         // filters of the list of suggestions
+  R.seg = 'lib';                           // the two parts of the tab Erstellen: 'lib' (Übungen, the first one) or 'new' (Training)
+  R.exf = { sel: true };                   // filter of the list of suggestions: only the chosen areas
   R.wiz = null;                            // the assistant: { groups, equip, seed, quick, custom }
   R.bd = null;                             // the training being made or changed: { mode, id, name, items, groups, equip, note, empty, undo }
   R.bOpen = null;                          // the open row in the editor (exercise id)
@@ -51,7 +53,7 @@ function FlowUI(A) {
   }
   /* the switch inside the tab Erstellen */
   function segHTML(cur) {
-    return '<div class="seg" role="group" aria-label="Training oder Übungen">' + [['new', 'Training'], ['lib', 'Übungen']].map(function (o) {
+    return '<div class="seg" role="group" aria-label="Training oder Übungen">' + [['lib', 'Übungen'], ['new', 'Training']].map(function (o) {
       return '<button class="chip" type="button" data-act="mk-seg" data-seg="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>';
     }).join('') + '</div>';
   }
@@ -88,9 +90,12 @@ function FlowUI(A) {
         '<p class="rx"><b>' + tt.done + ' von ' + tt.total + '</b><span>Sätzen erledigt</span></p>' +
         '<button class="btn" type="button" data-act="flow-resume">Weitermachen</button></section>';
     }
-    h += '<section aria-labelledby="mine-h"><h3 class="eyebrow" id="mine-h">Training starten</h3><div class="list">' + all.own.map(mineRow).join('') + '</div></section>';
-    h += '<p class="hint">Tippe auf ein Training, um es zu starten. Mit dem Auge siehst du die Übungen und kannst es ändern.' +
-      (s.trainings.length ? '' : ' Deine eigenen Trainings erscheinen hier, sobald du sie unter „Erstellen“ gespeichert hast.') + '</p>';
+    if (all.own.length) {
+      h += '<section aria-labelledby="mine-h"><h3 class="eyebrow" id="mine-h">Training starten</h3><div class="list">' + all.own.map(mineRow).join('') + '</div></section>' +
+        '<p class="hint">Tippe auf ein Training, um es zu starten. Mit dem Auge siehst du die Übungen und kannst es ändern oder löschen.</p>';
+    } else {
+      h += '<section class="card"><p class="empty">Du hast noch kein Training. Unter „Erstellen“ stellst du dein erstes zusammen.</p></section>';
+    }
     h += '<button class="btn ghost" type="button" data-act="mine-new">Neues Training erstellen</button>';
     return { head: rootBar('Meine Trainings', A.longDate(today())), main: h };
   }
@@ -109,10 +114,6 @@ function FlowUI(A) {
   }
 
   /* ---------- suggestions of the app ---------- */
-  function fitsEquip(t) {
-    var have = haveNow();
-    return t.defItems.every(function (it) { return Builder.eqOK(EX[it.ex], have); });
-  }
   function matchGroups(t) {
     if (!R.exf.sel || !R.sel.length || R.sel.indexOf('ganz') >= 0 || Builder.isFullBody(items(t))) return true;
     return R.sel.some(function (g) { return Builder.groupShare(items(t), g) >= Builder.SHARE; });
@@ -126,11 +127,9 @@ function FlowUI(A) {
   }
   function existingView() {
     var s = S(), all = Store.allTrainings(s), f = R.exf, h = '';
-    var ready = all.ready.filter(function (t) { return matchGroups(t) && (!f.eq || fitsEquip(t)); });
+    var ready = all.ready.filter(matchGroups);
     h += '<div class="chiprow" role="group" aria-label="Filter">' +
-      (R.sel.length ? '<button type="button" class="rc" data-act="ex-filter-sel" aria-pressed="' + f.sel + '">' + (f.sel ? 'Nur ' + esc(joinNice(labelsOf(R.sel))) : 'Alle Bereiche zeigen') + '</button>' : '') +
-      '<button type="button" class="rc" data-act="ex-filter-eq" aria-pressed="' + f.eq + '">Passt zu meiner Ausrüstung</button></div>';
-    if (f.eq && s.prefs.equip == null) h += '<p class="hint">Du hast noch keine Ausrüstung gewählt. Es werden Trainings ohne Geräte gezeigt. Beim Erstellen eines neuen Trainings kannst du sie festlegen.</p>';
+      (R.sel.length ? '<button type="button" class="rc" data-act="ex-filter-sel" aria-pressed="' + f.sel + '">' + (f.sel ? 'Nur ' + esc(joinNice(labelsOf(R.sel))) : 'Alle Bereiche zeigen') + '</button>' : '') + '</div>';
     h += '<section aria-labelledby="rdy-h"><h3 class="eyebrow" id="rdy-h">Vorschläge der App · ' + ready.length + '</h3><div class="list">' +
       (ready.length ? ready.map(tcardHTML).join('') : '<p class="empty">Dazu passt gerade kein Vorschlag. Probier es ohne Filter oder erstelle ein neues Training.</p>') + '</div></section>';
     h += '<p class="hint">Ein Vorschlag lässt sich als Kopie anpassen und unter „Meine Trainings“ speichern.</p>';
@@ -142,7 +141,7 @@ function FlowUI(A) {
   function previewView() {
     var s = S(), t = Store.training(s, R.pv);
     if (!t) return { head: topBar('Training'), foot: false, main: '<section class="card"><p class="empty">Dieses Training gibt es nicht mehr.</p><button class="btn" type="button" data-act="back">Zurück</button></section>' };
-    var its = items(t), need = Builder.needs(its), have = haveNow(), lacking = [], mine = t.origin || !t.builtin;
+    var its = items(t), need = Builder.needs(its), have = haveNow(), lacking = [], mine = !t.builtin;
     if (s.prefs.equip != null) its.forEach(function (it) { Builder.missing(EX[it.ex], have).forEach(function (m) { if (lacking.indexOf(m) < 0) lacking.push(m); }); });
     var rows = t.items.map(function (ex) {
       return '<button type="button" class="row" data-act="pv-ex" data-ex="' + ex.id + '">' + A.thumbHTML(ex.id) + '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + esc(A.rxText(ex)) + ' ' + esc(A.unitText(ex)) + '</small></span>' + I.CHEV_R + '</button>';
@@ -169,12 +168,6 @@ function FlowUI(A) {
   function eqChipsHTML(eq) {
     return '<div class="chiprow" role="group" aria-label="Ausrüstung"><button type="button" class="rc" aria-pressed="true" disabled>Körpergewicht</button>' +
       EQUIP.map(function (e) { return '<button type="button" class="rc" data-act="eq-toggle" data-e="' + e.id + '" aria-pressed="' + (eq.indexOf(e.id) >= 0) + '">' + esc(e.label) + '</button>'; }).join('') + '</div>';
-  }
-  /* the panel of the library (tab Erstellen, part Übungen): the three places and the single pieces of equipment */
-  function eqPanelHTML(eq, cur) {
-    return '<div class="pres" role="group" aria-label="Wo trainierst du?">' + PRESETS.map(function (p) {
-      return '<button type="button" class="pre" data-act="eq-preset" data-p="' + p.id + '" aria-pressed="' + (cur === p.id) + '"><b>' + p.label + '</b><small>' + p.sub + '</small></button>';
-    }).join('') + '</div><p class="eyebrow">Oder einzeln wählen</p>' + eqChipsHTML(eq);
   }
   function wizEquipView() {
     var w = R.wiz, eq = S().prefs.equip, last = eq != null ? presetOf(eq) : '';
@@ -235,9 +228,6 @@ function FlowUI(A) {
     } else {
       h += d.note ? '<div class="note">' + esc(d.note) + '</div>' : (edit ? '' : '<div class="note"><b>Mein Vorschlag für dich.</b> Tippe auf eine Übung, um sie anzupassen oder zu tauschen. Mit dem Papierkorb nimmst du eine Übung heraus. Oder lass alles so.</div>');
     }
-    if (edit) {
-      h += '<div class="fcol"><label for="t-name">Name des Trainings</label><input id="t-name" data-tname="1" type="text" maxlength="' + Store.NAME_MAX + '" autocomplete="off" value="' + esc(d.name) + '"></div>';
-    }
     h += '<div class="list">' + d.items.map(function (it, i) {
       var ex = EX[it.ex], open = R.bOpen === it.ex;
       return '<div class="brow' + (open ? ' open' : '') + '"><div class="brow-top"><button type="button" class="brow-head" data-act="b-open" data-ex="' + it.ex + '" aria-expanded="' + open + '">' + A.thumbHTML(it.ex) +
@@ -246,25 +236,34 @@ function FlowUI(A) {
     }).join('') + '</div>';
     h += '<button class="btn ghost" type="button" data-act="b-add">Übung hinzufügen</button>';
     if (!edit && d.mode === 'new' && R.wiz) h += '<button class="btn ghost sm" type="button" data-act="b-reroll">Anderen Vorschlag zeigen</button>';
-    h += '<button class="btn" type="button" data-act="b-next"' + (n ? '' : ' disabled') + '>' + (edit ? 'Speichern' : 'Weiter') + '</button>';
+    if (d.mode === 'new' && !d.nameTouched) d.name = suggestName();             // follows the exercises until the person writes a name of their own
+    h += '<div class="fcol"><label for="t-name">Name des Trainings</label><input id="t-name" data-tname="1" type="text" maxlength="' + Store.NAME_MAX + '" autocomplete="off" value="' + esc(d.name) + '"></div>';
+    if (d.mode === 'new' && !d.nameTouched) h += '<p class="hint">Der Name ergibt sich aus den Übungen. Du kannst ihn ändern.</p>';
+    if (edit) h += '<button class="btn" type="button" data-act="b-save"' + (n ? '' : ' disabled') + '>Speichern</button>';
+    else h += '<button class="btn" type="button" data-act="b-save" data-start="1"' + (n ? '' : ' disabled') + '>Speichern und starten</button>' +
+      '<button class="btn ghost" type="button" data-act="b-save"' + (n ? '' : ' disabled') + '>Nur speichern</button>';
     var sub = n ? plural(n, 'Übung', 'Übungen') + ' · ' + plural(setCount(d.items), 'Satz', 'Sätze') : 'Noch leer';
-    return { head: topBar(edit ? 'Training bearbeiten' : 'Dein Vorschlag', sub), foot: false, main: h };
+    return { head: topBar(edit ? 'Training bearbeiten' : (d.mode === 'copy' || R.wiz ? 'Dein Vorschlag' : 'Neues Training'), sub), foot: false, main: h };
   }
 
   /* ---------- picking an exercise (add or swap) ---------- */
   function pickList() {
     var c = R.pickCtx, d = R.bd, have = d.equip ? Builder.haveSet(d.equip) : null, taken = d.items.map(function (it) { return it.ex; }), list;
+    c.hidden = 0;
     if (c.mode === 'swap') {
       list = Builder.alternatives(c.ex, { equip: d.equip || EQUIP.map(function (e) { return e.id; }), level: 3, taken: taken }).slice(0, 12);
     } else {
-      list = Builder.listGroup(c.g, null).filter(function (ex) { return taken.indexOf(ex.id) < 0; });
-      if (c.mine && have) list = list.filter(function (ex) { return Builder.eqOK(ex, have); });
+      list = Builder.listGroup(c.g).filter(function (ex) { return taken.indexOf(ex.id) < 0; });
+      if (have) {                                                   // what the place does not have stays out of sight, without a switch to tap: all of it is one tap away
+        var all = list.length;
+        list = list.filter(function (ex) { return Builder.eqOK(ex, have); });
+        c.hidden = all - list.length;
+      }
     }
     return list;
   }
   function pickRow(ex) {
-    var d = R.bd, have = d.equip ? Builder.haveSet(d.equip) : null, miss = have ? Builder.missing(ex, have) : [];
-    var meta = ex.regions.map(function (r) { return LEAVES[r]; }).join(', ') + ' · ' + LVL[ex.lvl] + (miss.length ? ' · braucht: ' + miss.join(', ') : '');
+    var meta = ex.regions.map(function (r) { return LEAVES[r]; }).join(', ') + ' · ' + LVL[ex.lvl];
     return '<div class="prow"><button type="button" class="prow-main" data-act="pick-add" data-ex="' + ex.id + '">' + A.thumbHTML(ex.id) + '<span class="rn"><b>' + esc(ex.name) + '</b><small>' + esc(meta) + '</small></span></button>' +
       '<button type="button" class="prow-i" data-act="pick-view" data-ex="' + ex.id + '" aria-label="' + esc(ex.name) + ' ansehen">' + A.icons.EYE + '</button></div>';
   }
@@ -274,41 +273,25 @@ function FlowUI(A) {
       h += '<div class="chiprow" role="group" aria-label="Bereich">' + GROUPS.map(function (g) {
         return '<button type="button" class="rc" data-act="pick-group" data-g="' + g.id + '" aria-pressed="' + (c.g === g.id) + '">' + g.label + '</button>';
       }).join('') + '</div>';
-      if (d.equip) h += '<div class="chiprow"><button type="button" class="rc" data-act="pick-mine" aria-pressed="' + !!c.mine + '">Nur mit meiner Ausrüstung</button></div>';
       h += A.choiceBtn('pick-library', 'Alle Übungen durchblättern', 'Mit Suche; mit „+“ kommen mehrere auf einmal ins Training.');
+      if (c.hidden) h += '<p class="hint">Hier stehen die Übungen, die zu deinem Ort passen. Alle anderen findest du unter „Alle Übungen durchblättern“.</p>';
     } else {
       h += '<p class="hint">Diese Übungen trainieren dasselbe und passen zu deiner Ausrüstung.</p>';
     }
-    h += '<div class="list">' + (list.length ? list.map(pickRow).join('') : '<p class="empty">Dazu gibt es mit dieser Ausrüstung nichts. ' + (c.mode === 'add' ? 'Schalte den Filter aus oder wähle einen anderen Bereich.' : 'Du kannst die Übung entfernen oder so lassen.') + '</p>') + '</div>';
+    h += '<div class="list">' + (list.length ? list.map(pickRow).join('') : '<p class="empty">' + (c.mode === 'add' ? (c.hidden ? 'Dazu passt an deinem Ort nichts mehr. Unter „Alle Übungen durchblättern“ findest du alle Übungen.' : 'Alle Übungen dieses Bereichs sind schon im Training. Wähle einen anderen Bereich.') : 'Dazu gibt es nichts Passendes. Du kannst die Übung entfernen oder so lassen.') + '</p>') + '</div>';
     return { head: topBar(c.mode === 'swap' ? 'Übung tauschen' : 'Übung hinzufügen', c.mode === 'swap' ? EX[c.ex].name : ''), foot: false, main: h };
   }
 
-  /* ---------- name and save ---------- */
-  /* "Beine & Gesäss", and a number behind it when the user already has a training of that name */
+  /* ---------- the name of a new training ---------- */
+  /* made from the exercises that are in it (Builder.nameFor); a number or the equipment is added when a training of that name exists */
   function suggestName() {
-    var d = R.bd, gs = d.groups && d.groups.length ? d.groups : chipGroups(d.items);
-    var base = gs.length ? joinNice(labelsOf(gs)).replace(/, /g, ' & ').replace(' und ', ' & ') : 'Training';
-    var all = Store.allTrainings(S()), taken = {};
-    all.own.concat(all.ready).forEach(function (t) { taken[t.name.toLowerCase()] = true; });
-    var name = base, i = 2;
-    while (taken[name.toLowerCase()]) name = base + ' ' + (i++);
-    return Store.cleanName(name, 'Mein Training');
-  }
-  function nameView() {
-    var d = R.bd;
-    if (!d.name) d.name = suggestName();
-    return { head: topBar('Speichern'), foot: false,
-      main: '<section class="card"><div><h2 class="name">Wie soll dein Training heissen?</h2><p class="hint">Du findest es danach unter „Meine Trainings“.</p></div>' +
-        '<div class="fcol"><label for="t-name">Name</label><input id="t-name" data-tname="1" type="text" maxlength="' + Store.NAME_MAX + '" autocomplete="off" value="' + esc(d.name) + '"></div>' +
-        '<p class="hint">' + plural(d.items.length, 'Übung', 'Übungen') + ' · ' + plural(setCount(d.items), 'Satz', 'Sätze') + '</p>' +
-        '<button class="btn" type="button" data-act="name-save" data-start="1">Speichern und starten</button>' +
-        '<button class="btn ghost" type="button" data-act="name-save">Nur speichern</button></section>' };
+    var all = Store.allTrainings(S()), taken = all.own.concat(all.ready).map(function (t) { return t.name; });
+    return Store.cleanName(Builder.nameFor(R.bd.items, taken), 'Mein Training');
   }
 
   A.rootBar = rootBar;
   A.segHTML = segHTML;
   A.choiceBtn = choiceBtn;
-  A.eqPanelHTML = function (eq) { var e = S().prefs.equip; return eqPanelHTML(eq, e == null ? '' : presetOf(e)); };
 
   /* the screen of the current flow; "home" is the list of trainings in Meine Trainings and the start of Erstellen */
   A.views.flow = function () {
@@ -318,7 +301,6 @@ function FlowUI(A) {
     if (f === 'w-equip' && R.wiz) return wizEquipView();
     if (f === 'build' && R.bd) return buildView();
     if (f === 'pick' && R.bd && R.pickCtx) return pickView();
-    if (f === 'name' && R.bd) return nameView();
     if (R.tab === 'make') return R.seg === 'lib' ? A.views.lib() : makeView();
     return mineView();
   };
@@ -346,7 +328,7 @@ function FlowUI(A) {
   act('back', function () { A.back(); });
   act('flow-resume', function () { A.startTraining(S().cur); });
   act('flow-start', function (b) { A.startTraining(b.getAttribute('data-id')); });
-  act('mine-new', function () { R.seg = 'new'; A.goTab('make'); });
+  act('mine-new', function () { A.goTab('make'); });
   act('mk-seg', function (b) { R.seg = b.getAttribute('data-seg') === 'lib' ? 'lib' : 'new'; A.render(); A.toTop(); });
   act('tile', function (b) {
     var g = b.getAttribute('data-g'), i = R.sel.indexOf(g);
@@ -358,7 +340,7 @@ function FlowUI(A) {
     R.wiz = newWiz(R.sel.slice(), false);
     A.go({ flow: 'w-equip' });
   });
-  act('mk-existing', function () { R.exf = { sel: R.sel.length > 0, eq: false }; A.go({ flow: 'existing' }); });
+  act('mk-existing', function () { R.exf = { sel: R.sel.length > 0 }; A.go({ flow: 'existing' }); });
   act('choice-new', function () {
     R.wiz = newWiz(R.sel.length ? R.sel.slice() : ['ganz'], false);
     A.go({ flow: 'w-equip' });
@@ -371,7 +353,6 @@ function FlowUI(A) {
     startQuick([g], false);
   });
   act('ex-filter-sel', function () { R.exf.sel = !R.exf.sel; R.trUndo = null; A.render(); });
-  act('ex-filter-eq', function () { R.exf.eq = !R.exf.eq; R.trUndo = null; A.render(); });
   act('tr-open', function (b) { R.trUndo = null; A.go({ flow: 'preview', pv: b.getAttribute('data-id') }); });
   act('tr-undo', function () {
     if (R.trUndo && Store.restoreTraining(S(), R.trUndo)) A.save();
@@ -402,21 +383,11 @@ function FlowUI(A) {
     if (rm) { R.trUndo = rm; A.save(); A.back(); }
   });
 
-  /* the equipment: the assistant (R.wiz) picks single pieces for the suggestion, the library keeps them as the saved equipment */
-  function inWizard() { return !!R.wiz && R.flow === 'w-equip'; }
-  function eqSet(list) {
-    if (inWizard()) R.wiz.equip = list;
-    else { S().prefs.equip = list; A.save(); }
-  }
-  function eqGet() { return inWizard() ? R.wiz.equip : (S().prefs.equip || []); }
-  act('eq-preset', function (b) {
-    var p = PRESET[b.getAttribute('data-p')];
-    if (p) { eqSet(p.equip.slice()); A.render(); }
-  });
+  /* the assistant (R.wiz) picks single pieces of equipment for the suggestion */
   act('eq-toggle', function (b) {
-    var e = b.getAttribute('data-e'), a = eqGet().slice(), i = a.indexOf(e);
+    var e = b.getAttribute('data-e'), a = R.wiz.equip.slice(), i = a.indexOf(e);
     if (i >= 0) a.splice(i, 1); else a.push(e);
-    eqSet(a); A.render();
+    R.wiz.equip = a; A.render();
   });
   /* one tap on a place is the answer: the suggestion appears at once */
   act('wiz-place', function (b) {
@@ -473,11 +444,11 @@ function FlowUI(A) {
     R.bd.undo = null; A.render();
   });
   act('b-view', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
-  act('b-swap', function (b) { R.pickCtx = { mode: 'swap', ex: b.getAttribute('data-ex'), g: null, mine: true }; A.go({ flow: 'pick' }); });
+  act('b-swap', function (b) { R.pickCtx = { mode: 'swap', ex: b.getAttribute('data-ex'), g: null }; A.go({ flow: 'pick' }); });
   act('b-add', function () {
     var g = (R.bd.groups && R.bd.groups[0]) || 'beine';
     if (g === 'ganz') g = 'beine';
-    R.pickCtx = { mode: 'add', ex: null, g: g, mine: !!R.bd.equip };
+    R.pickCtx = { mode: 'add', ex: null, g: g };
     A.go({ flow: 'pick' });
   });
   act('b-reroll', function () {
@@ -500,36 +471,26 @@ function FlowUI(A) {
     R.bd = null; R.wiz = null;
     return t;
   }
-  act('b-next', function () {
-    var d = R.bd;
-    if (!d.items.length) return;
-    if (d.mode === 'edit') {
-      var name = document.getElementById('t-name');
-      if (name) d.name = name.value;
-      saveDraft();
-      A.back();
-    } else A.go({ flow: 'name' });
-  });
-  act('name-save', function (b) {
+  /* one button saves: a changed training goes back to where it was opened, a new one is shown (or started at once) */
+  act('b-save', function (b) {
     var d = R.bd;
     if (!d || !d.items.length) return;
-    var input = document.getElementById('t-name');
+    var input = document.getElementById('t-name'), edit = d.mode === 'edit';
     if (input) d.name = input.value;
-    d.name = Store.cleanName(d.name, suggestName());
-    var start = b && b.getAttribute && b.getAttribute('data-start') === '1';
-    var t = saveDraft();
-    if (start) A.startTraining(t.id, true);
+    d.name = Store.cleanName(d.name, edit ? '' : suggestName());
+    var start = b.getAttribute('data-start') === '1', t = saveDraft();
+    if (edit) A.back();
+    else if (start) A.startTraining(t.id, true);
     else A.resetTo({ tab: 'mine', flow: 'preview', pv: t.id });
   });
-  A.inputs.tname = function (t) { if (R.bd) R.bd.name = t.value; };
+  A.inputs.tname = function (t) { if (R.bd) { R.bd.name = t.value; R.bd.nameTouched = true; } };
 
   /* picking */
   act('pick-group', function (b) { R.pickCtx.g = b.getAttribute('data-g'); A.render(); });
   /* the whole library with the plus buttons: the same training keeps growing, "Weiter" leads back to it */
   act('pick-library', function () {
-    A.go({ tab: 'make', seg: 'lib', flow: 'home', detail: null, lib: { g: null, all: true, q: '', mine: R.lib.mine, eq: false } });
+    A.go({ tab: 'make', seg: 'lib', flow: 'home', detail: null, lib: { g: null, all: true, q: '' } });
   });
-  act('pick-mine', function () { R.pickCtx.mine = !R.pickCtx.mine; A.render(); });
   act('pick-view', function (b) { A.go({ detail: { id: b.getAttribute('data-ex') } }); });
   act('pick-add', function (b) {
     var id = b.getAttribute('data-ex'), c = R.pickCtx, d = R.bd;

@@ -221,3 +221,40 @@ test('Alle Übungen: jede Übung genau einmal, unter ihrem Hauptbereich, Bereich
   assert.ok(flat.every((e) => Builder.eqOK(e, have)));
   assert.equal(flat.length, LIB.filter((e) => Builder.eqOK(e, have)).length);
 });
+
+test('Name eines neuen Trainings: kurz, aus dem Inhalt, ohne dass jemand nachdenken muss', () => {
+  const it = (...l) => l.map((ex) => ({ ex }));
+  const name = (l, taken) => Builder.nameFor(it(...l), taken);
+  assert.equal(Builder.nameFor([], []), 'Training');
+  assert.equal(name(['x-squat', 'x-lunge']), 'Beine');
+  assert.equal(name(['x-squat', 'x-bridge']), 'Beine & Gesäss');
+  assert.equal(name(['x-bench', 'x-bbrow']), 'Brust & Rücken', 'bei gleich vielen kommt die Brust zuerst');
+  assert.equal(name(['x-bench', 'x-bbrow', 'x-ohp']), 'Oberkörper', 'drei Bereiche des Oberkörpers: Oberkörper');
+  assert.equal(name(['b-curl', 'x-pushdown']), 'Arme');
+  assert.equal(name(['x-crunch', 'a-plank']), 'Bauch');
+  assert.equal(name(['x-chintuck', 'x-superman']), 'Rücken & Nacken');
+  assert.equal(name(['x-squat', 'a-push', 'x-superman']), 'Ganzkörper', 'oben und unten, mindestens drei Bereiche');
+  assert.equal(name(['x-burpee', 'x-jack', 'x-squat']), 'Ganzkörper', 'meist Ganzkörper-Übungen');
+  // Wer nur Nebenwirkungen trainiert, bekommt dafür keinen Namen: es zählt der Hauptbereich einer Übung
+  assert.equal(name(['x-legpress', 'x-legext', 'x-legcurl']), 'Beine');
+  // ein Name, den es schon gibt, bekommt die Ausrüstung, dann eine Nummer; Gross und Klein ist egal
+  assert.equal(name(['x-legpress', 'x-legext', 'x-legcurl'], ['beine']), 'Beine · Maschinen');
+  assert.equal(name(['x-squat', 'x-lunge'], ['Beine']), 'Beine · Körpergewicht');
+  assert.equal(name(['x-squat', 'x-lunge'], ['Beine', 'beine · körpergewicht']), 'Beine · Körpergewicht 2');
+  assert.equal(name(['x-squat', 'x-lunge'], ['Beine', 'Beine · Körpergewicht', 'Beine · Körpergewicht 2']), 'Beine · Körpergewicht 3');
+  assert.equal(name(['x-bench', 'x-ohp', 'x-cablefly', 'x-bbrow', 'x-pullup'], ['Oberkörper']), 'Oberkörper 2', 'bei gemischter Ausrüstung nur die Nummer');
+  assert.equal(Builder.equipName(it('x-bench', 'x-ohp', 'x-cablefly', 'x-bbrow', 'x-pullup')), '');
+  assert.equal(Builder.equipName(it('x-legpress', 'x-legext', 'x-legcurl')), 'Maschinen');
+  assert.equal(Builder.equipName(it('x-squat', 'x-lunge')), 'Körpergewicht');
+  assert.equal(Builder.equipName([]), '');
+});
+
+test('Namen: jeder fertige Vorschlag der App und jedes Training aus dem Assistenten bekommt einen sauberen, kurzen Namen', () => {
+  const every = (list) => { for (const t of list) { const nm = Builder.nameFor(t.items, []); assert.ok(nm && nm.length <= 30 && !/undefined|null|NaN/.test(nm), t.id + ': ' + nm); } };
+  every(TEMPLATES);
+  for (const g of GROUPS) {
+    const s = Builder.suggest({ groups: [g.id], equip: ALL, seed: 3 });
+    const nm = Builder.nameFor(s.items, []);
+    assert.ok(nm.length > 0 && nm.length <= 30, g.id + ': ' + nm);
+  }
+});

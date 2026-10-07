@@ -1,6 +1,28 @@
-/* The trainings that come with the app. "A" and "B" are the two days of the first version (their ids are in old calendar entries, so they stay).
-   The others are ready-made suggestions (no times: a training lasts as long as it lasts). A training is a list of items { ex, sets, reps, rest, hold, note };
-   what an item leaves out comes from the exercise in lib.js. Ids of ready-made trainings start with "p-". */
+/* The trainings that come with the app, in two parts.
+   SEEDS are what a new installation starts with: "Tag A" and "Tag B", the two days of the first version. They are copied into the stored data once
+   (store.js) and are from then on trainings like any other: they can be changed, renamed and deleted. Their ids stay "A" and "B" because old
+   calendar entries and checklists carry them.
+   TEMPLATES are ready-made suggestions (no times: a training lasts as long as it lasts); they stay in the app and are only copied when someone adapts one.
+   A training is a list of items { ex, sets, reps, rest, hold, note }; what an item leaves out comes from the exercise in lib.js.
+   Ids of the suggestions start with "p-". */
+var SEEDS = [
+  { id: 'A', name: 'Tag A', sub: 'Kniebeuge + Hüfte + Push', kneeCheck: true, items: [
+    { ex: 'a-box', sets: 3, reps: '8–10', rest: 90 },
+    { ex: 'a-hip', sets: 3, reps: '8–12', rest: 90,
+      note: 'Hip Thrust: Start mit leichter Last (oder nur Körpergewicht bzw. Kurzhantel), Steigerung mit Physio oder MTT abstimmen. Beinvolumen pro Tag ist jetzt 6 Sätze, bei Schwellung oder Steifheit am Folgetag reduzieren.' },
+    { ex: 'a-push', sets: 3, reps: 'max.', rest: 60 },
+    { ex: 'a-tri', sets: 3, reps: '10–15', rest: 60 },
+    { ex: 'a-plank', sets: 3, rest: 45, hold: 45 }
+  ] },
+  { id: 'B', name: 'Tag B', sub: 'Hüftbeuge + Pull', kneeCheck: true, items: [
+    { ex: 'b-rdl', sets: 3, reps: '8–12', rest: 90 },
+    { ex: 'b-row', sets: 3, reps: '10–15', rest: 60 },
+    { ex: 'b-lunge', sets: 3, reps: '8–12', rest: 90 },
+    { ex: 'b-curl', sets: 3, reps: '10–15', rest: 60 },
+    { ex: 'b-crunch', sets: 3, reps: '10–15', rest: 45 }
+  ] }
+];
+
 var TEMPLATES = [];
 var TEMPLATE_MAP = {};
 
@@ -9,23 +31,6 @@ var TEMPLATE_MAP = {};
     if (TEMPLATE_MAP[t.id]) throw new Error('Doppelte Trainings-ID ' + t.id);
     TEMPLATES.push(t); TEMPLATE_MAP[t.id] = t;
   }
-
-  tr({ id: 'A', name: 'Tag A', sub: 'Kniebeuge + Hüfte + Push', origin: true, kneeCheck: true, items: [
-    { ex: 'a-box', sets: 3, reps: '8–10', rest: 90 },
-    { ex: 'a-hip', sets: 3, reps: '8–12', rest: 90,
-      note: '<b>Hip Thrust:</b> Start mit leichter Last (oder nur Körpergewicht bzw. Kurzhantel), Steigerung mit Physio oder MTT abstimmen. Beinvolumen pro Tag ist jetzt 6 Sätze, bei Schwellung oder Steifheit am Folgetag reduzieren.' },
-    { ex: 'a-push', sets: 3, reps: 'max.', rest: 60 },
-    { ex: 'a-tri', sets: 3, reps: '10–15', rest: 60 },
-    { ex: 'a-plank', sets: 3, rest: 45, hold: 45 }
-  ] });
-
-  tr({ id: 'B', name: 'Tag B', sub: 'Hüftbeuge + Pull', origin: true, kneeCheck: true, items: [
-    { ex: 'b-rdl', sets: 3, reps: '8–12', rest: 90 },
-    { ex: 'b-row', sets: 3, reps: '10–15', rest: 60 },
-    { ex: 'b-lunge', sets: 3, reps: '8–12', rest: 90 },
-    { ex: 'b-curl', sets: 3, reps: '10–15', rest: 60 },
-    { ex: 'b-crunch', sets: 3, reps: '10–15', rest: 45 }
-  ] });
 
   /* ----- ohne Geräte und für den Einstieg ----- */
 
@@ -137,4 +142,4 @@ var TEMPLATE_MAP = {};
   /* ==== ready-made trainings below ==== */
 })();
 
-if (typeof module !== 'undefined' && module.exports) module.exports = { TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP };
+if (typeof module !== 'undefined' && module.exports) module.exports = { SEEDS: SEEDS, TEMPLATES: TEMPLATES, TEMPLATE_MAP: TEMPLATE_MAP };
