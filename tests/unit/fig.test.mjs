@@ -689,3 +689,55 @@ test('Maschinen: Schrägbankdrücken, Beinheben im Stütz, Holzhacker am Kabelzu
   const wb = FIG.ANIM['x-woodchop'].steps[5].pose;
   assert.ok(Math.abs(wb.lean) > 20, 'Falsch: der Oberkörper knickt seitlich ein');
 });
+
+
+/* ---------- smooth movement ---------- */
+test('ease: nur in Ruhehaltungen wird abgebremst, durch Durchgangshaltungen läuft die Bewegung weiter', () => {
+  for (const [a, b] of [[true, true], [true, false], [false, true], [false, false]]) {
+    assert.ok(near(FIG.ease(0, a, b), 0, 1e-12) && near(FIG.ease(1, a, b), 1, 1e-12), 'Anfang und Ende');
+    let last = 0;
+    for (let i = 1; i <= 100; i++) { const v = FIG.ease(i / 100, a, b); assert.ok(v >= last - 1e-12, 'nie rückwärts'); last = v; }
+  }
+  const speed = (a, b, p) => (FIG.ease(p + 1e-6, a, b) - FIG.ease(p, a, b)) / 1e-6;
+  assert.ok(speed(true, true, 0) < 1e-3 && speed(true, true, 1 - 1e-6) < 1e-3, 'Ruhe -> Ruhe: langsam an beiden Enden');
+  assert.ok(speed(true, false, 0) < 1e-3 && speed(true, false, 1 - 1e-6) > 1, 'Ruhe -> Durchgang: hinten schnell');
+  assert.ok(speed(false, true, 0) > 1 && speed(false, true, 1 - 1e-6) < 1e-3, 'Durchgang -> Ruhe: vorn schnell');
+  assert.ok(near(speed(false, false, 0.5), 1, 1e-6), 'Durchgang -> Durchgang: gleichmässig');
+});
+
+test('Jede Bewegung läuft rund: wo eine Durchgangshaltung (hold 0) zwischen zwei Moves liegt, steht die Figur dort nie still', () => {
+  let n = 0;
+  for (const id of Object.keys(FIG.ANIM)) {
+    const A = FIG.ANIM[id], st = A.steps;
+    st.forEach((s, i) => {
+      if (s.hold !== 0 || s.flow) return;
+      n++;
+      const from = st[(i + st.length - 1) % st.length], to = st[(i + 1) % st.length];
+      const inSp = (FIG.ease(1, from.hold > 0, false) - FIG.ease(1 - 1e-4, from.hold > 0, false)) / 1e-4;
+      const outSp = (FIG.ease(1e-4, false, to.hold > 0) - FIG.ease(0, false, to.hold > 0)) / 1e-4;
+      assert.ok(inSp > 0.5 && outSp > 0.5, id + ' Schritt ' + (i + 1) + ' bremst in der Mitte ab');
+    });
+  }
+  assert.ok(n > 30, 'viele Durchgangshaltungen geprüft: ' + n);
+});
+
+test('x-trxcurl: die Hände bleiben am Gurt, der Körper zieht sich zum Befestigungspunkt hoch', () => {
+  const A = FIG.ANIM['x-trxcurl'], fr = goodFrames('x-trxcurl', 24), keys = keyJ('x-trxcurl');
+  for (const j of fr) assert.ok(dist(j.wrist, fr[0].wrist) < 1e-9, 'die Hände bewegen sich nicht, das Gurtband bleibt gespannt');
+  for (const j of fr) {
+    assert.ok(Math.abs(dist(j.hip, j.ankle) - 72) < 1e-6, 'Beine gestreckt');
+    const cross = Math.abs((j.hip[0] - j.ankle[0]) * (j.sh[1] - j.ankle[1]) - (j.hip[1] - j.ankle[1]) * (j.sh[0] - j.ankle[0])) / dist(j.sh, j.ankle);
+    assert.ok(cross < 0.01, 'Körper eine gerade Linie');
+    assert.ok(dist(j.ankle, fr[0].ankle) < 1e-9, 'die Füsse bleiben stehen');
+  }
+  const out = keys[0], curl = keys[1], an = A.props.find((p) => p.t === 'anchor');
+  assert.ok(dist(out.sh, out.wrist) > 49.5, 'Start: Arme gestreckt, der Körper lehnt zurück');
+  assert.ok(out.sh[0] < out.ankle[0] - 40, 'zurückgelehnt, weg vom Befestigungspunkt');
+  assert.ok(curl.sh[0] > out.sh[0] + 15, 'der Körper kommt zum Befestigungspunkt hin');
+  assert.ok(dist(curl.sh, curl.wrist) < 30 && dist(curl.head, curl.wrist) < 28, 'oben: Ellbogen gebeugt, die Hände bei der Stirn');
+  assert.ok(curl.elbow[1] <= Math.min(curl.sh[1], curl.wrist[1]) + 2, 'die Ellbogen bleiben hoch');
+  assert.ok(an.x > out.wrist[0] + 40 && an.y < out.wrist[1], 'der Befestigungspunkt liegt vorn oben');
+  const bad = badJ('x-trxcurl');
+  const off = (j) => ((j.hip[0] - j.ankle[0]) * (j.sh[1] - j.ankle[1]) - (j.hip[1] - j.ankle[1]) * (j.sh[0] - j.ankle[0])) / dist(j.sh, j.ankle);
+  assert.ok(Math.abs(off(bad)) > 7 && bad.hip[0] > curl.hip[0] + 7, 'Falsch: die Hüfte weicht sichtbar von der Linie ab (nach vorn unten)');
+});

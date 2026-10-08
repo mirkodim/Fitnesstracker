@@ -182,7 +182,7 @@
     for (r = 0; r < (A0.reps || 3); r++) {
       for (i = 1; i <= n; i++) {
         var from = steps[(i - 1) % n], to = steps[i % n];
-        segs.push({ from: from.pose, to: to.pose, ms: to.ms, hold: to.hold, label: to.label, bad: !!to.bad, flow: !!to.flow, t0: total });
+        segs.push({ from: from.pose, to: to.pose, ms: to.ms, hold: to.hold, label: to.label, bad: !!to.bad, flow: !!to.flow, restStart: from.hold > 0, restEnd: to.hold > 0, t0: total });
         total += to.ms + to.hold;
       }
     }
@@ -198,8 +198,8 @@
       }
       var k = segs.length - 1;
       while (k > 0 && el < segs[k].t0) k--;
-      /* flow: true on a step means "no slowing down into this pose": a swing built from many poses runs as one smooth movement */
-      var s = segs[k], p = Math.min(1, (el - s.t0) / s.ms), ease = s.flow ? p : 0.5 - Math.cos(Math.PI * p) / 2;
+      /* slow down only into and out of the poses the figure rests in; flow: true on a step means no slowing down at all (a swing built from many poses) */
+      var s = segs[k], p = Math.min(1, (el - s.t0) / s.ms), ease = s.flow ? p : FIG.ease(p, s.restStart, s.restEnd);
       Anim.paint(id, FIG.mix(s.from, s.to, ease), s.bad, s.label, null);
       Anim.raf = requestAnimationFrame(frame);
     }
