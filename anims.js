@@ -1171,24 +1171,22 @@
       ] });
   })();
 
-  /* TRX-Curl: leaning back, the hands come to the forehead, the elbows stay high */
+  /* TRX-Curl: the hands hold the handles and stay where the straps hold them, taut towards the anchor. The body leans back with straight arms and
+     pulls itself up towards the anchor, pivoting about the feet; the elbows bend and stay high, the head comes to the hands. */
   (function () {
-    var A = [200, G], AN = [262, 22];
-    var sh = [A[0] + 118 * Math.sin(-25 * D2R), A[1] - 118 * Math.cos(-25 * D2R)];
-    var wOut = [sh[0] + 48.5 * 0.927, sh[1] - 48.5 * 0.374], wIn = [159, 50], wMid = [wIn[0] + (wOut[0] - wIn[0]) / 2, wIn[1] + (wOut[1] - wIn[1]) / 2];
-    var out = norm({ ankle: A, lean: -25, wrist: wOut });
-    var mid = norm({ ankle: A, lean: -25, wrist: wMid });
-    var curl = norm({ ankle: A, lean: -25, wrist: wIn });
-    var b = bendBody(A, [A[0] + 116 * Math.sin(-25 * D2R), A[1] - 116 * Math.cos(-25 * D2R)], 1);
-    var sag = norm({ ankle: A, lean: b.lean, torso: b.torso, wrist: wIn });
-    add('x-trxcurl', { reps: 3, hl: ['upper'], thumb: 2, sweep: true,
+    var A = [200, G], AN = [262, 22], L0 = 25, L1 = 12;
+    function lean(l) { return [A[0] - 118 * Math.sin(l * D2R), A[1] - 118 * Math.cos(l * D2R)]; }
+    var s0 = lean(L0), W = [s0[0] + 49.9 * Math.cos(22 * D2R), s0[1] - 49.9 * Math.sin(22 * D2R)];      // straight arms towards the anchor
+    var out = norm({ ankle: A, lean: -L0, wrist: W, ha: -22, es: -1 });
+    var curl = norm({ ankle: A, lean: -L1, wrist: W, ha: -6, es: -1 });
+    var b = bendBody(A, [A[0] - 112 * Math.sin(L1 * D2R), A[1] - 112 * Math.cos(L1 * D2R)], 1);        // the hips drop below the line from heels to shoulders
+    var sag = norm({ ankle: A, lean: b.lean, torso: b.torso, wrist: W, ha: -6, es: -1 });
+    add('x-trxcurl', { reps: 3, hl: ['upper'], thumb: 1, sweep: true,
       props: [{ t: 'anchor', x: AN[0], y: AN[1] - 3 }, { t: 'strap', anchor: AN, at: 'wrist' }],
       steps: [
         { pose: out, ms: 1500, hold: 400, label: 'Langsam strecken, der Körper bleibt eine Linie' },
-        { pose: mid, ms: 500, hold: 0, label: 'Die Hände zur Stirn ziehen, die Ellbogen bleiben hoch' },
-        { pose: curl, ms: 500, hold: 500, label: 'Oben kurz anspannen' },
-        { pose: mid, ms: 900, hold: 0, label: 'Langsam strecken, der Körper bleibt eine Linie' },
-        { pose: out, ms: 600, hold: 300, label: 'Langsam strecken, der Körper bleibt eine Linie' },
+        { pose: curl, ms: 1100, hold: 500, label: 'Dich selbst zu den Händen hochziehen, die Ellbogen bleiben hoch' },
+        { pose: out, ms: 1500, hold: 300, label: 'Langsam strecken, der Körper bleibt eine Linie' },
         { pose: sag, ms: 800, hold: 1200, bad: true, label: 'Falsch: Die Hüfte hängt durch' }
       ] });
   })();

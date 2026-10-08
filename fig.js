@@ -69,6 +69,14 @@ var FIG = (function () {
     return q;
   }
 
+  /* The speed of one move between two key poses. A pose the figure rests in (a step with a hold) is reached and left slowly; a pose it only passes
+     (a step with hold 0) is not: the move runs on through it. Two such moves in a row are one smooth movement, not two that stop in the middle. */
+  function ease(p, restStart, restEnd) {
+    if (restStart && restEnd) return 0.5 - Math.cos(Math.PI * p) / 2;
+    if (restStart) return 1 - Math.cos(Math.PI * p / 2);
+    if (restEnd) return Math.sin(Math.PI * p / 2);
+    return p;
+  }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function lerpP(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; }
   function mix(a, b, t) {
@@ -391,7 +399,7 @@ var FIG = (function () {
   }
 
   return {
-    ANIM: ANIM, add: add, solve: solve, solveF: solveF, mix: mix, frame: frame, thumb: thumb, icon: icon, W: W, H: H, G: G, FLOOR: FLOOR, D2R: D2R,
+    ANIM: ANIM, add: add, ease: ease, solve: solve, solveF: solveF, mix: mix, frame: frame, thumb: thumb, icon: icon, W: W, H: H, G: G, FLOOR: FLOOR, D2R: D2R,
     LB: LB, LT: LT, LS: LS, LU: LU, LF: LF, HR: HR, FOOT: FOOT, FW: FW,
     propPt: propPt, ik: ik, norm: norm, normF: normF, lineHip: lineHip, tiltHip: tiltHip, leanOf: leanOf, bendBody: bendBody, floorBody: floorBody, body: body
   };
